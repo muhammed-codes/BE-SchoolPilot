@@ -13,14 +13,14 @@ exports.RolesGuard = void 0;
 const common_1 = require("@nestjs/common");
 const core_1 = require("@nestjs/core");
 const graphql_1 = require("@nestjs/graphql");
-const roles_decorator_js_1 = require("../decorators/roles.decorator.js");
+const roles_decorator_1 = require("../decorators/roles.decorator");
 let RolesGuard = class RolesGuard {
     reflector;
     constructor(reflector) {
         this.reflector = reflector;
     }
     canActivate(context) {
-        const requiredRoles = this.reflector.getAllAndOverride(roles_decorator_js_1.ROLES_KEY, [context.getHandler(), context.getClass()]);
+        const requiredRoles = this.reflector.getAllAndOverride(roles_decorator_1.ROLES_KEY, [context.getHandler(), context.getClass()]);
         if (!requiredRoles)
             return true;
         const ctx = graphql_1.GqlExecutionContext.create(context);

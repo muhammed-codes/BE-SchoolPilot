@@ -1,6 +1,9 @@
+import { registerEnumType } from '@nestjs/graphql';
+
 export enum AttendanceStatus {
   PRESENT = 'present',
   ABSENT = 'absent',
   LATE = 'late',
-  EXCUSED = 'excused',
 }
+
+registerEnumType(AttendanceStatus, { name: 'AttendanceStatus' });

@@ -15,8 +15,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthResolver = void 0;
 const graphql_1 = require("@nestjs/graphql");
 const common_1 = require("@nestjs/common");
-const jwt_auth_guard_js_1 = require("../common/guards/jwt-auth.guard.js");
-const current_user_decorator_js_1 = require("../common/decorators/current-user.decorator.js");
+const jwt_auth_guard_1 = require("../common/guards/jwt-auth.guard");
+const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
 let AuthResolver = class AuthResolver {
     me(user) {
         return `Authenticated as ${user.email}`;
@@ -25,8 +25,8 @@ let AuthResolver = class AuthResolver {
 exports.AuthResolver = AuthResolver;
 __decorate([
     (0, graphql_1.Query)(() => String),
-    (0, common_1.UseGuards)(jwt_auth_guard_js_1.JwtAuthGuard),
-    __param(0, (0, current_user_decorator_js_1.CurrentUser)()),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)

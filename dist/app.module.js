@@ -12,17 +12,17 @@ const config_1 = require("@nestjs/config");
 const typeorm_1 = require("@nestjs/typeorm");
 const graphql_1 = require("@nestjs/graphql");
 const apollo_1 = require("@nestjs/apollo");
-const auth_module_js_1 = require("./auth/auth.module.js");
-const users_module_js_1 = require("./users/users.module.js");
-const schools_module_js_1 = require("./schools/schools.module.js");
-const classes_module_js_1 = require("./classes/classes.module.js");
-const subjects_module_js_1 = require("./subjects/subjects.module.js");
-const students_module_js_1 = require("./students/students.module.js");
-const results_module_js_1 = require("./results/results.module.js");
-const attendance_module_js_1 = require("./attendance/attendance.module.js");
-const notifications_module_js_1 = require("./notifications/notifications.module.js");
-const pdf_module_js_1 = require("./pdf/pdf.module.js");
-const upload_module_js_1 = require("./upload/upload.module.js");
+const auth_module_1 = require("./auth/auth.module");
+const users_module_1 = require("./users/users.module");
+const schools_module_1 = require("./schools/schools.module");
+const classes_module_1 = require("./classes/classes.module");
+const subjects_module_1 = require("./subjects/subjects.module");
+const students_module_1 = require("./students/students.module");
+const results_module_1 = require("./results/results.module");
+const attendance_module_1 = require("./attendance/attendance.module");
+const notifications_module_1 = require("./notifications/notifications.module");
+const pdf_module_1 = require("./pdf/pdf.module");
+const upload_module_1 = require("./upload/upload.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -56,17 +56,17 @@ exports.AppModule = AppModule = __decorate([
                     context: ({ req }) => ({ req }),
                 }),
             }),
-            auth_module_js_1.AuthModule,
-            users_module_js_1.UsersModule,
-            schools_module_js_1.SchoolsModule,
-            classes_module_js_1.ClassesModule,
-            subjects_module_js_1.SubjectsModule,
-            students_module_js_1.StudentsModule,
-            results_module_js_1.ResultsModule,
-            attendance_module_js_1.AttendanceModule,
-            notifications_module_js_1.NotificationsModule,
-            pdf_module_js_1.PdfModule,
-            upload_module_js_1.UploadModule,
+            auth_module_1.AuthModule,
+            users_module_1.UsersModule,
+            schools_module_1.SchoolsModule,
+            classes_module_1.ClassesModule,
+            subjects_module_1.SubjectsModule,
+            students_module_1.StudentsModule,
+            results_module_1.ResultsModule,
+            attendance_module_1.AttendanceModule,
+            notifications_module_1.NotificationsModule,
+            pdf_module_1.PdfModule,
+            upload_module_1.UploadModule,
         ],
     })
 ], AppModule);
