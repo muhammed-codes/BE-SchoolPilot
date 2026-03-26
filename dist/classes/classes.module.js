@@ -8,13 +8,19 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ClassesModule = void 0;
 const common_1 = require("@nestjs/common");
+const typeorm_1 = require("@nestjs/typeorm");
+const class_entity_1 = require("./entities/class.entity");
+const class_subject_entity_1 = require("./entities/class-subject.entity");
+const classes_service_1 = require("./classes.service");
+const classes_resolver_1 = require("./classes.resolver");
 let ClassesModule = class ClassesModule {
 };
 exports.ClassesModule = ClassesModule;
 exports.ClassesModule = ClassesModule = __decorate([
     (0, common_1.Module)({
-        providers: [],
-        exports: [],
+        imports: [typeorm_1.TypeOrmModule.forFeature([class_entity_1.ClassEntity, class_subject_entity_1.ClassSubject])],
+        providers: [classes_service_1.ClassesService, classes_resolver_1.ClassesResolver],
+        exports: [classes_service_1.ClassesService],
     })
 ], ClassesModule);
 //# sourceMappingURL=classes.module.js.map
