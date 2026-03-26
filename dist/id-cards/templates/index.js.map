@@ -1,0 +1,1 @@
+{"version":3,"file":"index.js","sourceRoot":"","sources":["../../../src/id-cards/templates/index.ts"],"names":[],"mappings":";;;AAIA,yDAAqD;AACrD,mDAA+C;AAI/C,MAAM,SAAS,GAAqC;IAClD,OAAO,EAAE,kCAAe;IACxB,IAAI,EAAE,4BAAY;CACnB,CAAC;AAEK,MAAM,WAAW,GAAG,CAAC,WAAmB,EAAoB,EAAE;IACnE,OAAO,SAAS,CAAC,WAAW,CAAC,IAAI,kCAAe,CAAC;AACnD,CAAC,CAAC;AAFW,QAAA,WAAW,eAEtB"}

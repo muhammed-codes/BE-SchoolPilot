@@ -15,6 +15,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PdfModule } from './pdf/pdf.module';
 import { UploadModule } from './upload/upload.module';
 import { TermsModule } from './terms/terms.module';
+import { IdCardsModule } from './id-cards/id-cards.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { TermsModule } from './terms/terms.module';
     PdfModule,
     UploadModule,
     TermsModule,
+    IdCardsModule,
   ],
 })
 export class AppModule {}

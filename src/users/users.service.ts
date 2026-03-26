@@ -13,6 +13,8 @@ import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { UploadService } from '../upload/upload.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { IdCardsService } from '../id-cards/id-cards.service';
+import { SchoolsService } from '../schools/schools.service';
 import { UserRole } from '../common/enums';
 import { PaginationArgs } from '../common/pagination';
 
@@ -23,6 +25,8 @@ export class UsersService {
     private readonly usersRepository: Repository<User>,
     private readonly uploadService: UploadService,
     private readonly notificationsService: NotificationsService,
+    private readonly idCardsService: IdCardsService,
+    private readonly schoolsService: SchoolsService,
   ) {}
 
   findByEmail = (email: string) => {
@@ -43,30 +47,44 @@ export class UsersService {
   };
 
   createUser = (input: CreateUserInput, adminSchoolId: string) => {
-    return bcrypt.hash(input.password, 12).then((passwordHash: string) =>
-      this.create({
-        email: input.email,
-        firstName: input.firstName,
-        lastName: input.lastName,
-        role: input.role,
-        phone: input.phone,
-        schoolId: adminSchoolId,
-        passwordHash,
-      }).then((user) => {
-        if (
-          user.expoPushToken &&
-          this.notificationsService.isValidPushToken(user.expoPushToken)
-        ) {
-          this.notificationsService.sendPushNotifications([
-            {
-              to: user.expoPushToken,
-              title: 'Welcome to SchoolPilot',
-              body: `Your account has been created. Login with your email: ${user.email}`,
-            },
-          ]);
-        }
-        return user;
-      }),
+    const isStaffRole =
+      input.role !== UserRole.PARENT && input.role !== UserRole.SUPER_ADMIN;
+
+    const staffIdPromise = isStaffRole
+      ? this.schoolsService
+          .findById(adminSchoolId)
+          .then((school) =>
+            this.idCardsService.generateStaffId(adminSchoolId, school.name),
+          )
+      : Promise.resolve(undefined);
+
+    return staffIdPromise.then((staffId) =>
+      bcrypt.hash(input.password, 12).then((passwordHash: string) =>
+        this.create({
+          email: input.email,
+          firstName: input.firstName,
+          lastName: input.lastName,
+          role: input.role,
+          phone: input.phone,
+          schoolId: adminSchoolId,
+          passwordHash,
+          staffId,
+        }).then((user) => {
+          if (
+            user.expoPushToken &&
+            this.notificationsService.isValidPushToken(user.expoPushToken)
+          ) {
+            this.notificationsService.sendPushNotifications([
+              {
+                to: user.expoPushToken,
+                title: 'Welcome to SchoolPilot',
+                body: `Your account has been created. Login with your email: ${user.email}`,
+              },
+            ]);
+          }
+          return user;
+        }),
+      ),
     );
   };
 

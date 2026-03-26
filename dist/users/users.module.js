@@ -14,6 +14,8 @@ const users_service_1 = require("./users.service");
 const users_resolver_1 = require("./users.resolver");
 const upload_module_1 = require("../upload/upload.module");
 const notifications_module_1 = require("../notifications/notifications.module");
+const id_cards_module_1 = require("../id-cards/id-cards.module");
+const schools_module_1 = require("../schools/schools.module");
 let UsersModule = class UsersModule {
 };
 exports.UsersModule = UsersModule;
@@ -23,6 +25,8 @@ exports.UsersModule = UsersModule = __decorate([
             typeorm_1.TypeOrmModule.forFeature([user_entity_1.User]),
             upload_module_1.UploadModule,
             notifications_module_1.NotificationsModule,
+            id_cards_module_1.IdCardsModule,
+            schools_module_1.SchoolsModule,
         ],
         providers: [users_service_1.UsersService, users_resolver_1.UsersResolver],
         exports: [users_service_1.UsersService],

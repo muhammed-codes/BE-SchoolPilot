@@ -24,6 +24,7 @@ const notifications_module_1 = require("./notifications/notifications.module");
 const pdf_module_1 = require("./pdf/pdf.module");
 const upload_module_1 = require("./upload/upload.module");
 const terms_module_1 = require("./terms/terms.module");
+const id_cards_module_1 = require("./id-cards/id-cards.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -69,6 +70,7 @@ exports.AppModule = AppModule = __decorate([
             pdf_module_1.PdfModule,
             upload_module_1.UploadModule,
             terms_module_1.TermsModule,
+            id_cards_module_1.IdCardsModule,
         ],
     })
 ], AppModule);

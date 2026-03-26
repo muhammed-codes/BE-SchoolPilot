@@ -27,6 +27,7 @@ let User = class User extends base_entity_1.BaseEntity {
     expoPushToken;
     avatarUrl;
     avatarPublicId;
+    staffId;
     get fullName() {
         return `${this.firstName} ${this.lastName}`;
     }
@@ -89,6 +90,11 @@ __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "avatarPublicId", void 0);
+__decorate([
+    (0, graphql_1.Field)({ nullable: true }),
+    (0, typeorm_1.Column)({ nullable: true, unique: true }),
+    __metadata("design:type", String)
+], User.prototype, "staffId", void 0);
 __decorate([
     (0, graphql_1.Field)(),
     __metadata("design:type", String),

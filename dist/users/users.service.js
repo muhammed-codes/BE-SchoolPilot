@@ -53,15 +53,21 @@ const bcrypt = __importStar(require("bcrypt"));
 const user_entity_1 = require("./entities/user.entity");
 const upload_service_1 = require("../upload/upload.service");
 const notifications_service_1 = require("../notifications/notifications.service");
+const id_cards_service_1 = require("../id-cards/id-cards.service");
+const schools_service_1 = require("../schools/schools.service");
 const enums_1 = require("../common/enums");
 let UsersService = class UsersService {
     usersRepository;
     uploadService;
     notificationsService;
-    constructor(usersRepository, uploadService, notificationsService) {
+    idCardsService;
+    schoolsService;
+    constructor(usersRepository, uploadService, notificationsService, idCardsService, schoolsService) {
         this.usersRepository = usersRepository;
         this.uploadService = uploadService;
         this.notificationsService = notificationsService;
+        this.idCardsService = idCardsService;
+        this.schoolsService = schoolsService;
     }
     findByEmail = (email) => {
         return this.usersRepository.findOne({ where: { email } });
@@ -77,7 +83,13 @@ let UsersService = class UsersService {
         return this.usersRepository.update(id, data).then(() => this.findById(id));
     };
     createUser = (input, adminSchoolId) => {
-        return bcrypt.hash(input.password, 12).then((passwordHash) => this.create({
+        const isStaffRole = input.role !== enums_1.UserRole.PARENT && input.role !== enums_1.UserRole.SUPER_ADMIN;
+        const staffIdPromise = isStaffRole
+            ? this.schoolsService
+                .findById(adminSchoolId)
+                .then((school) => this.idCardsService.generateStaffId(adminSchoolId, school.name))
+            : Promise.resolve(undefined);
+        return staffIdPromise.then((staffId) => bcrypt.hash(input.password, 12).then((passwordHash) => this.create({
             email: input.email,
             firstName: input.firstName,
             lastName: input.lastName,
@@ -85,6 +97,7 @@ let UsersService = class UsersService {
             phone: input.phone,
             schoolId: adminSchoolId,
             passwordHash,
+            staffId,
         }).then((user) => {
             if (user.expoPushToken &&
                 this.notificationsService.isValidPushToken(user.expoPushToken)) {
@@ -97,7 +110,7 @@ let UsersService = class UsersService {
                 ]);
             }
             return user;
-        }));
+        })));
     };
     findBySchool = (schoolId, role, pagination) => {
         const page = pagination?.page || 1;
@@ -193,6 +206,8 @@ exports.UsersService = UsersService = __decorate([
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         upload_service_1.UploadService,
-        notifications_service_1.NotificationsService])
+        notifications_service_1.NotificationsService,
+        id_cards_service_1.IdCardsService,
+        schools_service_1.SchoolsService])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

@@ -13,5 +13,6 @@ export declare class User extends BaseEntity {
     expoPushToken: string;
     avatarUrl: string;
     avatarPublicId: string;
+    staffId: string;
     get fullName(): string;
 }

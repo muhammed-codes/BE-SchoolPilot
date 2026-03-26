@@ -51,6 +51,10 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   avatarPublicId: string;
 
+  @Field({ nullable: true })
+  @Column({ nullable: true, unique: true })
+  staffId: string;
+
   @Field()
   get fullName(): string {
     return `${this.firstName} ${this.lastName}`;

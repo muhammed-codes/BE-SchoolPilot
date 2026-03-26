@@ -5,13 +5,17 @@ import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { UploadService } from '../upload/upload.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { IdCardsService } from '../id-cards/id-cards.service';
+import { SchoolsService } from '../schools/schools.service';
 import { UserRole } from '../common/enums';
 import { PaginationArgs } from '../common/pagination';
 export declare class UsersService {
     private readonly usersRepository;
     private readonly uploadService;
     private readonly notificationsService;
-    constructor(usersRepository: Repository<User>, uploadService: UploadService, notificationsService: NotificationsService);
+    private readonly idCardsService;
+    private readonly schoolsService;
+    constructor(usersRepository: Repository<User>, uploadService: UploadService, notificationsService: NotificationsService, idCardsService: IdCardsService, schoolsService: SchoolsService);
     findByEmail: (email: string) => Promise<User | null>;
     findById: (id: string) => Promise<User | null>;
     create: (data: Partial<User>) => Promise<User>;
