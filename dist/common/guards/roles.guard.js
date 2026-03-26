@@ -19,14 +19,18 @@ let RolesGuard = class RolesGuard {
     constructor(reflector) {
         this.reflector = reflector;
     }
-    canActivate(context) {
+    canActivate = (context) => {
         const requiredRoles = this.reflector.getAllAndOverride(roles_decorator_1.ROLES_KEY, [context.getHandler(), context.getClass()]);
         if (!requiredRoles)
             return true;
         const ctx = graphql_1.GqlExecutionContext.create(context);
         const user = ctx.getContext().req.user;
-        return requiredRoles.some((role) => user?.role === role);
-    }
+        const hasRole = requiredRoles.some((role) => user?.role === role);
+        if (!hasRole) {
+            throw new common_1.ForbiddenException('You do not have the required role');
+        }
+        return true;
+    };
 };
 exports.RolesGuard = RolesGuard;
 exports.RolesGuard = RolesGuard = __decorate([
