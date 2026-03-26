@@ -15,23 +15,86 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthResolver = void 0;
 const graphql_1 = require("@nestjs/graphql");
 const common_1 = require("@nestjs/common");
-const jwt_auth_guard_1 = require("../common/guards/jwt-auth.guard");
-const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
+const auth_service_1 = require("./auth.service");
+const register_input_1 = require("./dto/register.input");
+const login_input_1 = require("./dto/login.input");
+const auth_response_type_1 = require("./dto/auth-response.type");
+const guards_1 = require("../common/guards");
+const decorators_1 = require("../common/decorators");
+const roles_decorator_1 = require("../common/decorators/roles.decorator");
+const enums_1 = require("../common/enums");
 let AuthResolver = class AuthResolver {
-    me(user) {
-        return `Authenticated as ${user.email}`;
+    authService;
+    constructor(authService) {
+        this.authService = authService;
     }
+    register(input) {
+        return this.authService.register(input);
+    }
+    login(input) {
+        return this.authService.login(input);
+    }
+    refreshTokens(refreshToken) {
+        return this.authService
+            .refreshTokens(this.extractSubFromRefreshToken(refreshToken), refreshToken)
+            .catch(() => {
+            throw new common_1.ForbiddenException('Invalid refresh token');
+        });
+    }
+    logout(user) {
+        return this.authService.logout(user.sub);
+    }
+    updateExpoPushToken(user, token) {
+        return this.authService.updateExpoPushToken(user.sub, token);
+    }
+    extractSubFromRefreshToken = (token) => {
+        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+        return payload.sub;
+    };
 };
 exports.AuthResolver = AuthResolver;
 __decorate([
-    (0, graphql_1.Query)(() => String),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    (0, graphql_1.Mutation)(() => auth_response_type_1.AuthResponse),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(enums_1.UserRole.SUPER_ADMIN),
+    __param(0, (0, graphql_1.Args)('input')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [register_input_1.RegisterInput]),
+    __metadata("design:returntype", void 0)
+], AuthResolver.prototype, "register", null);
+__decorate([
+    (0, graphql_1.Mutation)(() => auth_response_type_1.AuthResponse),
+    __param(0, (0, graphql_1.Args)('input')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [login_input_1.LoginInput]),
+    __metadata("design:returntype", void 0)
+], AuthResolver.prototype, "login", null);
+__decorate([
+    (0, graphql_1.Mutation)(() => auth_response_type_1.AuthResponse),
+    __param(0, (0, graphql_1.Args)('refreshToken')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], AuthResolver.prototype, "refreshTokens", null);
+__decorate([
+    (0, graphql_1.Mutation)(() => Boolean),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    __param(0, (0, decorators_1.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
-], AuthResolver.prototype, "me", null);
+], AuthResolver.prototype, "logout", null);
+__decorate([
+    (0, graphql_1.Mutation)(() => Boolean),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    __param(0, (0, decorators_1.CurrentUser)()),
+    __param(1, (0, graphql_1.Args)('token')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], AuthResolver.prototype, "updateExpoPushToken", null);
 exports.AuthResolver = AuthResolver = __decorate([
-    (0, graphql_1.Resolver)()
+    (0, graphql_1.Resolver)(),
+    __metadata("design:paramtypes", [auth_service_1.AuthService])
 ], AuthResolver);
 //# sourceMappingURL=auth.resolver.js.map

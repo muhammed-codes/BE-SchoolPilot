@@ -10,10 +10,10 @@ exports.AuthModule = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const passport_1 = require("@nestjs/passport");
-const config_1 = require("@nestjs/config");
 const auth_service_1 = require("./auth.service");
 const auth_resolver_1 = require("./auth.resolver");
-const jwt_strategy_1 = require("./jwt.strategy");
+const jwt_access_strategy_1 = require("./strategies/jwt-access.strategy");
+const jwt_refresh_strategy_1 = require("./strategies/jwt-refresh.strategy");
 const users_module_1 = require("../users/users.module");
 let AuthModule = class AuthModule {
 };
@@ -23,18 +23,9 @@ exports.AuthModule = AuthModule = __decorate([
         imports: [
             users_module_1.UsersModule,
             passport_1.PassportModule.register({ defaultStrategy: 'jwt' }),
-            jwt_1.JwtModule.registerAsync({
-                imports: [config_1.ConfigModule],
-                inject: [config_1.ConfigService],
-                useFactory: (config) => ({
-                    secret: config.get('JWT_ACCESS_SECRET'),
-                    signOptions: {
-                        expiresIn: config.get('JWT_ACCESS_EXPIRES'),
-                    },
-                }),
-            }),
+            jwt_1.JwtModule.register({}),
         ],
-        providers: [auth_service_1.AuthService, auth_resolver_1.AuthResolver, jwt_strategy_1.JwtStrategy],
+        providers: [auth_service_1.AuthService, auth_resolver_1.AuthResolver, jwt_access_strategy_1.JwtAccessStrategy, jwt_refresh_strategy_1.JwtRefreshStrategy],
         exports: [auth_service_1.AuthService],
     })
 ], AuthModule);
