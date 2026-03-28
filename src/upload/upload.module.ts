@@ -6,7 +6,7 @@ import { UploadScalar } from './scalars/upload.scalar';
 
 @Module({
   imports: [ConfigModule],
-  providers: [UploadService, UploadResolver, UploadScalar],
+  providers: [UploadService, UploadResolver],
   exports: [UploadService],
 })
 export class UploadModule {}

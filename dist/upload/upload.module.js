@@ -11,14 +11,13 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const upload_service_1 = require("./upload.service");
 const upload_resolver_1 = require("./upload.resolver");
-const upload_scalar_1 = require("./scalars/upload.scalar");
 let UploadModule = class UploadModule {
 };
 exports.UploadModule = UploadModule;
 exports.UploadModule = UploadModule = __decorate([
     (0, common_1.Module)({
         imports: [config_1.ConfigModule],
-        providers: [upload_service_1.UploadService, upload_resolver_1.UploadResolver, upload_scalar_1.UploadScalar],
+        providers: [upload_service_1.UploadService, upload_resolver_1.UploadResolver],
         exports: [upload_service_1.UploadService],
     })
 ], UploadModule);

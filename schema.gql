@@ -1,0 +1,544 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+enum AttendanceStatus {
+  ABSENT
+  LATE
+  PRESENT
+}
+
+type AttendanceSummary {
+  daysAbsent: Int!
+  daysLate: Int!
+  daysPresent: Int!
+  totalMarkedDays: Int!
+}
+
+type AuthResponse {
+  accessToken: String!
+  refreshToken: String!
+  user: User!
+}
+
+type BulkCardResult {
+  label: String!
+  pdfUrl: String!
+  totalCards: Int!
+}
+
+type BulkImportResult {
+  failed: [FailedRow!]!
+  imported: Int!
+  students: [Student!]!
+}
+
+type BulkPDFResult {
+  reportCards: [ReportCardItem!]!
+  totalGenerated: Int!
+}
+
+type ClassEntity {
+  classSubjects: [ClassSubject!]
+  classTeacher: User
+  classTeacherId: String
+  createdAt: DateTime!
+  id: ID!
+  name: String!
+  schoolId: String!
+  updatedAt: DateTime!
+}
+
+type ClassSubject {
+  classEntity: ClassEntity!
+  classId: String!
+  createdAt: DateTime!
+  id: ID!
+  subject: Subject!
+  subjectId: String!
+  subjectTeacher: User
+  subjectTeacherId: String
+  updatedAt: DateTime!
+}
+
+type ComponentScore {
+  component: ScoreComponent!
+  score: Float!
+}
+
+input ComponentScoreInput {
+  component: ScoreComponent!
+  score: Float!
+}
+
+input CreateClassInput {
+  name: String!
+}
+
+input CreateResultSheetInput {
+  classId: String!
+  gradingSystem: GradingSystem!
+  scoreComponents: [ScoreComponentConfigInput!]!
+  termId: String!
+}
+
+input CreateSchoolInput {
+  address: String
+  email: String
+  name: String!
+  phone: String
+  schoolType: String = "basic"
+}
+
+input CreateSessionInput {
+  name: String!
+}
+
+input CreateStudentInput {
+  address: String
+  admissionNumber: String!
+  classId: String!
+  dateOfBirth: String!
+  firstName: String!
+  gender: Gender!
+  lastName: String!
+  parentPhone: String
+  stateOfOrigin: String
+}
+
+input CreateTermInput {
+  endDate: DateTime!
+  name: String!
+  sessionId: String!
+  startDate: DateTime!
+  totalSchoolDays: Int!
+}
+
+input CreateUserInput {
+  email: String!
+  firstName: String!
+  lastName: String!
+  password: String!
+  phone: String
+  role: UserRole!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type FailedRow {
+  reason: String!
+  row: Int!
+}
+
+enum Gender {
+  FEMALE
+  MALE
+}
+
+enum GradingSystem {
+  GPA
+  LETTER
+  PERCENTAGE
+  WAEC
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input ManualStaffAttendanceInput {
+  clockInTime: String
+  clockOutTime: String
+  date: String!
+  userId: String!
+}
+
+input MarkAttendanceInput {
+  classId: String!
+  date: String!
+  records: [StudentAttendanceRecordInput!]!
+}
+
+type Mutation {
+  activateTerm(termId: String!): Term!
+  approveResult(resultSheetId: String!): ResultSheet!
+  assignClassTeacher(classId: String!, teacherId: String!): ClassEntity!
+  assignSubjectTeacher(classId: String!, subjectId: String!, teacherId: String!): ClassSubject!
+  assignSubjectsToClass(classId: String!, subjectIds: [String!]!): ClassEntity!
+  bulkImportStudents(students: [CreateStudentInput!]!): BulkImportResult!
+  changePassword(newPassword: String!, oldPassword: String!): Boolean!
+  clockAction(qrCode: String!): StaffAttendance!
+  closeTerm(termId: String!): Term!
+  createClass(input: CreateClassInput!): ClassEntity!
+  createResultSheet(input: CreateResultSheetInput!): ResultSheet!
+  createSchool(input: CreateSchoolInput!): School!
+  createSession(input: CreateSessionInput!): Session!
+  createStudent(input: CreateStudentInput!): Student!
+  createSubject(name: String!): Subject!
+  createTerm(input: CreateTermInput!): Term!
+  createUser(input: CreateUserInput!): User!
+  deactivateSchool(id: String!): School!
+  deactivateUser(id: String!): User!
+  deleteSubject(id: String!): Boolean!
+  generateBulkReportCards(resultSheetId: String!): BulkPDFResult!
+  generateBulkStaffCards: BulkCardResult!
+  generateBulkStudentCards(classId: String!): BulkCardResult!
+  generateReportCard(studentResultId: String!): String!
+  generateStaffCard(userId: String!): String!
+  generateStudentCard(studentId: String!): String!
+  linkParent(parentUserId: String!, studentId: String!): Student!
+  login(input: LoginInput!): AuthResponse!
+  logout: Boolean!
+  manualStaffAttendance(input: ManualStaffAttendanceInput!): StaffAttendance!
+  markStudentAttendance(input: MarkAttendanceInput!): [StudentAttendance!]!
+  promoteStudents(input: PromoteStudentsInput!): PromotionResult!
+  refreshTokens(refreshToken: String!): AuthResponse!
+  regenerateQrCode(schoolId: String!): School!
+  register(input: RegisterInput!): AuthResponse!
+  returnResult(reason: String!, resultSheetId: String!): ResultSheet!
+  saveClassTeacherRemark(remark: String!, studentResultId: String!): StudentResult!
+  savePrincipalRemark(remark: String!, studentResultId: String!): StudentResult!
+  saveSubjectScores(input: SaveSubjectScoresInput!): [SubjectScore!]!
+  saveTeacherRemark(remark: String!, subjectScoreId: String!): SubjectScore!
+  singleUpload(file: Upload!, folder: String!): UploadResult!
+  submitForAdminReview(resultSheetId: String!): ResultSheet!
+  submitForPrincipalApproval(resultSheetId: String!): ResultSheet!
+  unlinkParent(parentUserId: String!, studentId: String!): Boolean!
+  unlockTerm(termId: String!): Term!
+  updateExpoPushToken(token: String!): Boolean!
+  updateSchool(id: String!, input: UpdateSchoolInput!): School!
+  updateTotalSchoolDays(days: Int!, termId: String!): Term!
+  updateUser(id: String!, input: UpdateUserInput!): User!
+  uploadAvatar(file: Upload!): User!
+  uploadPassportPhoto(file: Upload!, studentId: String!): Student!
+  uploadSchoolLogo(file: Upload!, schoolId: String!): School!
+  uploadSchoolStamp(file: Upload!, schoolId: String!): School!
+}
+
+type PaginatedClassEntity {
+  items: [ClassEntity!]!
+  page: Int!
+  total: Int!
+  totalPages: Int!
+}
+
+type PaginatedSchool {
+  items: [School!]!
+  page: Int!
+  total: Int!
+  totalPages: Int!
+}
+
+type PaginatedUser {
+  items: [User!]!
+  page: Int!
+  total: Int!
+  totalPages: Int!
+}
+
+input PromoteStudentsInput {
+  archiveGraduated: Boolean!
+  fromClassId: String!
+  studentIds: [String!]!
+  toClassId: String!
+}
+
+type PromotionResult {
+  archived: Int!
+  promoted: Int!
+}
+
+type Query {
+  activeTerm: Term!
+  classAttendance(classId: String!, date: String!): [StudentAttendance!]!
+  classById(id: String!): ClassEntity!
+  me: User!
+  myChildren: [Student!]!
+  myClasses: [ClassEntity!]!
+  mySchool: School!
+  mySubjectScores(resultSheetId: String!): [SubjectScore!]!
+  resultSheet(id: String!): ResultSheet!
+  resultSheetsByClass(classId: String!, termId: String!): [ResultSheet!]!
+  school(id: String!): School!
+  schoolClasses(limit: Int! = 20, page: Int! = 1): PaginatedClassEntity!
+  schoolSubjects: [Subject!]!
+  schoolTeachers: [User!]!
+  schoolUsers(limit: Int! = 20, page: Int! = 1, role: UserRole): PaginatedUser!
+  schools(limit: Int! = 20, page: Int! = 1): PaginatedSchool!
+  searchStudents(query: String!): [Student!]!
+  sessions: [Session!]!
+  staffAttendanceHistory(from: String!, to: String!, userId: String!): [StaffAttendance!]!
+  staffAttendanceLog(date: String!): [StaffAttendance!]!
+  student(id: String!): Student
+  studentAttendanceSummary(studentId: String!, termId: String!): AttendanceSummary!
+  studentResult(studentId: String!, termId: String!): StudentResult
+  studentsByClass(classId: String!): [Student!]!
+  termsBySession(sessionId: String!): [Term!]!
+  unmarkedClasses(date: String!): [ClassEntity!]!
+  user(id: String!): User!
+}
+
+input RegisterInput {
+  email: String!
+  firstName: String!
+  lastName: String!
+  password: String!
+  phone: String
+  role: UserRole!
+  schoolId: String
+}
+
+type ReportCardItem {
+  pdfUrl: String!
+  studentId: String!
+  studentName: String!
+}
+
+type ResultSheet {
+  classId: String!
+  createdAt: DateTime!
+  gradingSystem: GradingSystem!
+  id: ID!
+  returnReason: String
+  schoolId: String!
+  scoreComponents: [ScoreComponentConfig!]!
+  status: ResultStatus!
+  studentResults: [StudentResult!]
+  termId: String!
+  updatedAt: DateTime!
+}
+
+enum ResultStatus {
+  DRAFT
+  PENDING_ADMIN_REVIEW
+  PENDING_PRINCIPAL_APPROVAL
+  PUBLISHED
+  RETURNED
+  SCORES_ENTERED
+}
+
+input SaveSubjectScoresInput {
+  resultSheetId: String!
+  scores: [StudentScoreInput!]!
+  subjectId: String!
+  submit: Boolean!
+}
+
+type School {
+  address: String
+  createdAt: DateTime!
+  defaultReportTemplate: String
+  email: String
+  id: ID!
+  isActive: Boolean!
+  logoUrl: String
+  name: String!
+  phone: String
+  schoolStartTime: String
+  schoolType: String!
+  stampUrl: String
+  uniqueQrCode: String!
+  updatedAt: DateTime!
+}
+
+enum ScoreComponent {
+  ASSIGNMENT
+  CA
+  EXAM
+  MID_TERM
+}
+
+type ScoreComponentConfig {
+  component: ScoreComponent!
+  maxScore: Float!
+}
+
+input ScoreComponentConfigInput {
+  component: ScoreComponent!
+  maxScore: Float!
+}
+
+type Session {
+  createdAt: DateTime!
+  id: ID!
+  isActive: Boolean!
+  name: String!
+  schoolId: String!
+  terms: [Term!]
+  updatedAt: DateTime!
+}
+
+type StaffAttendance {
+  clockInTime: DateTime
+  clockOutTime: DateTime
+  createdAt: DateTime!
+  date: String!
+  id: ID!
+  isLate: Boolean
+  isManual: Boolean!
+  schoolId: String!
+  updatedAt: DateTime!
+  user: User!
+  userId: String!
+}
+
+type Student {
+  address: String
+  admissionNumber: String!
+  createdAt: DateTime!
+  currentClass: ClassEntity
+  currentClassId: String
+  dateOfBirth: DateTime!
+  firstName: String!
+  fullName: String!
+  gender: Gender!
+  id: ID!
+  isArchived: Boolean!
+  lastName: String!
+  passportPhotoUrl: String
+  schoolId: String!
+  stateOfOrigin: String
+  updatedAt: DateTime!
+}
+
+type StudentAttendance {
+  classEntity: ClassEntity!
+  classId: String!
+  createdAt: DateTime!
+  date: String!
+  id: ID!
+  markedAt: DateTime!
+  markedByUser: User!
+  markedByUserId: String!
+  schoolId: String!
+  status: AttendanceStatus!
+  student: Student!
+  studentId: String!
+  term: Term!
+  termId: String!
+  updatedAt: DateTime!
+}
+
+input StudentAttendanceRecordInput {
+  status: AttendanceStatus!
+  studentId: String!
+}
+
+type StudentResult {
+  classTeacherRemark: String
+  createdAt: DateTime!
+  grade: String
+  id: ID!
+  position: Int
+  principalRemark: String
+  resultSheet: ResultSheet!
+  resultSheetId: String!
+  schoolId: String!
+  scores: [ComponentScore!]
+  studentId: String!
+  subjectScores: [SubjectScore!]
+  totalScore: Float
+  updatedAt: DateTime!
+}
+
+input StudentScoreInput {
+  componentScores: [ComponentScoreInput!]!
+  studentId: String!
+}
+
+type Subject {
+  createdAt: DateTime!
+  id: ID!
+  name: String!
+  schoolId: String!
+  updatedAt: DateTime!
+}
+
+type SubjectScore {
+  createdAt: DateTime!
+  enteredByUserId: String!
+  grade: String
+  id: ID!
+  isSubmitted: Boolean!
+  resultSheetId: String!
+  scores: [ComponentScore!]
+  studentResult: StudentResult!
+  studentResultId: String!
+  subjectId: String!
+  submittedAt: DateTime
+  teacherRemark: String
+  totalScore: Float
+  updatedAt: DateTime!
+}
+
+type Term {
+  createdAt: DateTime!
+  endDate: DateTime!
+  id: ID!
+  name: String!
+  schoolId: String!
+  session: Session!
+  sessionId: String!
+  startDate: DateTime!
+  status: TermStatus!
+  totalSchoolDays: Int!
+  updatedAt: DateTime!
+}
+
+enum TermStatus {
+  ACTIVE
+  CLOSED
+}
+
+input UpdateSchoolInput {
+  address: String
+  email: String
+  name: String
+  phone: String
+  schoolType: String = "basic"
+}
+
+input UpdateUserInput {
+  email: String
+  firstName: String
+  lastName: String
+  phone: String
+}
+
+"""The `Upload` scalar type represents a file upload."""
+scalar Upload
+
+type UploadResult {
+  publicId: String!
+  url: String!
+}
+
+type User {
+  avatarUrl: String
+  createdAt: DateTime!
+  email: String
+  expoPushToken: String
+  firstName: String!
+  fullName: String!
+  id: ID!
+  isActive: Boolean!
+  lastName: String!
+  phone: String
+  role: UserRole!
+  schoolId: String
+  staffId: String
+  updatedAt: DateTime!
+}
+
+enum UserRole {
+  CLASS_TEACHER
+  PARENT
+  PRINCIPAL
+  SCHOOL_ADMIN
+  SUBJECT_TEACHER
+  SUPER_ADMIN
+}

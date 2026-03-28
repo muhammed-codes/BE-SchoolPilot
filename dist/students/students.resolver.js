@@ -148,7 +148,7 @@ __decorate([
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, roles_decorator_1.Roles)(enums_1.UserRole.SCHOOL_ADMIN),
     __param(0, (0, graphql_1.Args)('studentId')),
-    __param(1, (0, graphql_1.Args)('file', { type: () => graphql_upload_ts_1.Upload })),
+    __param(1, (0, graphql_1.Args)('file', { type: () => graphql_upload_ts_1.GraphQLUpload })),
     __param(2, (0, decorators_1.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, graphql_upload_ts_1.Upload, Object]),

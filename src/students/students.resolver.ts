@@ -1,6 +1,6 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { Upload } from 'graphql-upload-ts';
+import { GraphQLUpload, Upload } from 'graphql-upload-ts';
 import { StudentsService } from './students.service';
 import { Student } from './entities/student.entity';
 import { CreateStudentInput } from './dto/create-student.input';
@@ -110,7 +110,7 @@ export class StudentsResolver {
   @Roles(UserRole.SCHOOL_ADMIN)
   uploadPassportPhoto(
     @Args('studentId') studentId: string,
-    @Args('file', { type: () => Upload }) file: Upload,
+    @Args('file', { type: () => GraphQLUpload }) file: Upload,
     @CurrentUser() user: { schoolId: string },
   ) {
     return this.studentsService.uploadPassportPhoto(
