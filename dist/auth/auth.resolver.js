@@ -21,8 +21,6 @@ const login_input_1 = require("./dto/login.input");
 const auth_response_type_1 = require("./dto/auth-response.type");
 const guards_1 = require("../common/guards");
 const decorators_1 = require("../common/decorators");
-const roles_decorator_1 = require("../common/decorators/roles.decorator");
-const enums_1 = require("../common/enums");
 let AuthResolver = class AuthResolver {
     authService;
     constructor(authService) {
@@ -55,8 +53,6 @@ let AuthResolver = class AuthResolver {
 exports.AuthResolver = AuthResolver;
 __decorate([
     (0, graphql_1.Mutation)(() => auth_response_type_1.AuthResponse),
-    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(enums_1.UserRole.SUPER_ADMIN),
     __param(0, (0, graphql_1.Args)('input')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [register_input_1.RegisterInput]),

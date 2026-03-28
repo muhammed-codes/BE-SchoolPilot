@@ -14,8 +14,8 @@ export class AuthResolver {
   constructor(private readonly authService: AuthService) {}
 
   @Mutation(() => AuthResponse)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  // @Roles(UserRole.SUPER_ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
   register(@Args('input') input: RegisterInput) {
     return this.authService.register(input);
   }
