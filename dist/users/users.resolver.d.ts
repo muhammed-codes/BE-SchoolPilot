@@ -28,6 +28,7 @@ export declare class UsersResolver {
         role: string;
         schoolId: string;
     }): Promise<User> | undefined;
+    assignUserToSchool(userId: string, schoolId: string): Promise<User | null>;
     updateUser(id: string, input: UpdateUserInput, user: {
         sub: string;
         role: string;

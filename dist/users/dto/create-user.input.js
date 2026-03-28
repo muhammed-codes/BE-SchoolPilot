@@ -20,6 +20,7 @@ let CreateUserInput = class CreateUserInput {
     lastName;
     role;
     phone;
+    schoolId;
 };
 exports.CreateUserInput = CreateUserInput;
 __decorate([
@@ -53,6 +54,11 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreateUserInput.prototype, "phone", void 0);
+__decorate([
+    (0, graphql_1.Field)({ nullable: true }),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateUserInput.prototype, "schoolId", void 0);
 exports.CreateUserInput = CreateUserInput = __decorate([
     (0, graphql_1.InputType)()
 ], CreateUserInput);

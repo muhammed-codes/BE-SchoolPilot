@@ -460,6 +460,24 @@ export class ResultsService {
     });
   };
 
+  getPendingApprovals = (schoolId: string) => {
+    return this.resultSheetRepo.find({
+      where: { schoolId, status: ResultStatus.PENDING_PRINCIPAL_APPROVAL },
+      order: { createdAt: 'DESC' },
+      relations: ['class'],
+    });
+  };
+
+  getSchoolResultSheets = (schoolId: string, status?: ResultStatus) => {
+    const where: any = { schoolId };
+    if (status) where.status = status;
+    return this.resultSheetRepo.find({
+      where,
+      order: { createdAt: 'DESC' },
+      relations: ['class'],
+    });
+  };
+
   getStudentResult = (studentId: string, termId: string) => {
     return this.studentResultRepo
       .createQueryBuilder('sr')

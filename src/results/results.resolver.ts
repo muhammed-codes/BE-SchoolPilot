@@ -40,6 +40,23 @@ export class ResultsResolver {
     );
   }
 
+  @Query(() => [ResultSheet])
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.PRINCIPAL)
+  pendingPrincipalApprovals(@CurrentUser() user: { schoolId: string }) {
+    return this.resultsService.getPendingApprovals(user.schoolId);
+  }
+
+  @Query(() => [ResultSheet])
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.PRINCIPAL, UserRole.SCHOOL_ADMIN)
+  schoolResultSheets(
+    @Args('status', { type: () => String, nullable: true }) status: any,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.resultsService.getSchoolResultSheets(user.schoolId, status);
+  }
+
   @Query(() => StudentResult, { nullable: true })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PARENT, UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL)

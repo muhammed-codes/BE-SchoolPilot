@@ -121,6 +121,7 @@ input CreateUserInput {
   password: String!
   phone: String
   role: UserRole!
+  schoolId: String
 }
 
 """
@@ -169,6 +170,7 @@ type Mutation {
   assignClassTeacher(classId: String!, teacherId: String!): ClassEntity!
   assignSubjectTeacher(classId: String!, subjectId: String!, teacherId: String!): ClassSubject!
   assignSubjectsToClass(classId: String!, subjectIds: [String!]!): ClassEntity!
+  assignUserToSchool(schoolId: String!, userId: String!): User!
   bulkImportStudents(students: [CreateStudentInput!]!): BulkImportResult!
   changePassword(newPassword: String!, oldPassword: String!): Boolean!
   clockAction(qrCode: String!): StaffAttendance!
@@ -261,10 +263,12 @@ type Query {
   myClasses: [ClassEntity!]!
   mySchool: School!
   mySubjectScores(resultSheetId: String!): [SubjectScore!]!
+  pendingPrincipalApprovals: [ResultSheet!]!
   resultSheet(id: String!): ResultSheet!
   resultSheetsByClass(classId: String!, termId: String!): [ResultSheet!]!
   school(id: String!): School!
   schoolClasses(limit: Int! = 20, page: Int! = 1): PaginatedClassEntity!
+  schoolResultSheets(status: String): [ResultSheet!]!
   schoolSubjects: [Subject!]!
   schoolTeachers: [User!]!
   schoolUsers(limit: Int! = 20, page: Int! = 1, role: UserRole): PaginatedUser!

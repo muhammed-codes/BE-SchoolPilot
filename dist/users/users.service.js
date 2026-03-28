@@ -136,6 +136,15 @@ let UsersService = class UsersService {
                 .then(() => this.findById(id));
         });
     };
+    assignSchool = (userId, schoolId) => {
+        return this.findById(userId).then((user) => {
+            if (!user)
+                throw new common_1.NotFoundException('User not found');
+            return this.usersRepository
+                .update(userId, { schoolId })
+                .then(() => this.findById(userId));
+        });
+    };
     changePassword = (userId, oldPassword, newPassword) => {
         return this.findById(userId).then((user) => {
             if (!user)

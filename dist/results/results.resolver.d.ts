@@ -13,6 +13,12 @@ export declare class ResultsResolver {
     resultSheetsByClass(classId: string, termId: string, user: {
         schoolId: string;
     }): Promise<ResultSheet[]>;
+    pendingPrincipalApprovals(user: {
+        schoolId: string;
+    }): Promise<ResultSheet[]>;
+    schoolResultSheets(status: any, user: {
+        schoolId: string;
+    }): Promise<ResultSheet[]>;
     studentResult(studentId: string, termId: string): Promise<StudentResult>;
     mySubjectScores(resultSheetId: string, user: {
         sub: string;

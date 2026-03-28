@@ -36,6 +36,12 @@ let ResultsResolver = class ResultsResolver {
     resultSheetsByClass(classId, termId, user) {
         return this.resultsService.getResultSheetsByClass(classId, termId, user.schoolId);
     }
+    pendingPrincipalApprovals(user) {
+        return this.resultsService.getPendingApprovals(user.schoolId);
+    }
+    schoolResultSheets(status, user) {
+        return this.resultsService.getSchoolResultSheets(user.schoolId, status);
+    }
     studentResult(studentId, termId) {
         return this.resultsService.getStudentResult(studentId, termId);
     }
@@ -92,6 +98,25 @@ __decorate([
     __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", void 0)
 ], ResultsResolver.prototype, "resultSheetsByClass", null);
+__decorate([
+    (0, graphql_1.Query)(() => [result_sheet_entity_1.ResultSheet]),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(enums_1.UserRole.PRINCIPAL),
+    __param(0, (0, decorators_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], ResultsResolver.prototype, "pendingPrincipalApprovals", null);
+__decorate([
+    (0, graphql_1.Query)(() => [result_sheet_entity_1.ResultSheet]),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(enums_1.UserRole.PRINCIPAL, enums_1.UserRole.SCHOOL_ADMIN),
+    __param(0, (0, graphql_1.Args)('status', { type: () => String, nullable: true })),
+    __param(1, (0, decorators_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], ResultsResolver.prototype, "schoolResultSheets", null);
 __decorate([
     (0, graphql_1.Query)(() => student_result_entity_1.StudentResult, { nullable: true }),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),

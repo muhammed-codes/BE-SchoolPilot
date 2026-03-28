@@ -59,8 +59,11 @@ let UsersResolver = class UsersResolver {
             if (input.role !== enums_1.UserRole.SCHOOL_ADMIN) {
                 throw new common_1.ForbiddenException('Super admins can only create school admins via this endpoint');
             }
-            return this.usersService.createUser(input, user.schoolId);
+            return this.usersService.createUser(input, input.schoolId || user.schoolId);
         }
+    }
+    assignUserToSchool(userId, schoolId) {
+        return this.usersService.assignSchool(userId, schoolId);
     }
     updateUser(id, input, user) {
         return this.usersService.updateUser(id, input, user.sub, user.role);
@@ -123,6 +126,16 @@ __decorate([
     __metadata("design:paramtypes", [create_user_input_1.CreateUserInput, Object]),
     __metadata("design:returntype", void 0)
 ], UsersResolver.prototype, "createUser", null);
+__decorate([
+    (0, graphql_1.Mutation)(() => user_entity_1.User),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(enums_1.UserRole.SUPER_ADMIN),
+    __param(0, (0, graphql_1.Args)('userId')),
+    __param(1, (0, graphql_1.Args)('schoolId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], UsersResolver.prototype, "assignUserToSchool", null);
 __decorate([
     (0, graphql_1.Mutation)(() => user_entity_1.User),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard),

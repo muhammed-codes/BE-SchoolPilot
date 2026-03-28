@@ -75,8 +75,21 @@ export class UsersResolver {
           'Super admins can only create school admins via this endpoint',
         );
       }
-      return this.usersService.createUser(input, user.schoolId);
+      return this.usersService.createUser(
+        input,
+        input.schoolId || user.schoolId,
+      );
     }
+  }
+
+  @Mutation(() => User)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN)
+  assignUserToSchool(
+    @Args('userId') userId: string,
+    @Args('schoolId') schoolId: string,
+  ) {
+    return this.usersService.assignSchool(userId, schoolId);
   }
 
   @Mutation(() => User)

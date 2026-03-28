@@ -28,6 +28,7 @@ export declare class UsersService {
         totalPages: number;
     }>;
     updateUser: (id: string, input: UpdateUserInput, requesterId: string, requesterRole: string) => Promise<User | null>;
+    assignSchool: (userId: string, schoolId: string) => Promise<User | null>;
     changePassword: (userId: string, oldPassword: string, newPassword: string) => Promise<boolean>;
     updateAvatar: (userId: string, file: Upload) => Promise<User | null>;
     deactivateUser: (id: string, requesterId: string, requesterRole: string, requesterSchoolId: string) => Promise<User | null>;

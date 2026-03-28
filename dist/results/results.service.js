@@ -366,6 +366,23 @@ let ResultsService = class ResultsService {
             order: { createdAt: 'DESC' },
         });
     };
+    getPendingApprovals = (schoolId) => {
+        return this.resultSheetRepo.find({
+            where: { schoolId, status: enums_1.ResultStatus.PENDING_PRINCIPAL_APPROVAL },
+            order: { createdAt: 'DESC' },
+            relations: ['class'],
+        });
+    };
+    getSchoolResultSheets = (schoolId, status) => {
+        const where = { schoolId };
+        if (status)
+            where.status = status;
+        return this.resultSheetRepo.find({
+            where,
+            order: { createdAt: 'DESC' },
+            relations: ['class'],
+        });
+    };
     getStudentResult = (studentId, termId) => {
         return this.studentResultRepo
             .createQueryBuilder('sr')

@@ -129,6 +129,17 @@ export class UsersService {
     });
   };
 
+  assignSchool = (userId: string, schoolId: string) => {
+    return this.findById(userId).then((user) => {
+      if (!user) throw new NotFoundException('User not found');
+
+      // Update the user's schoolId
+      return this.usersRepository
+        .update(userId, { schoolId })
+        .then(() => this.findById(userId));
+    });
+  };
+
   changePassword = (
     userId: string,
     oldPassword: string,

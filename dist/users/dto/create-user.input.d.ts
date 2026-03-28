@@ -6,4 +6,5 @@ export declare class CreateUserInput {
     lastName: string;
     role: UserRole;
     phone?: string;
+    schoolId?: string;
 }

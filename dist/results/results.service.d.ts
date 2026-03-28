@@ -11,6 +11,7 @@ import { User } from '../users/entities/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateResultSheetInput } from './dto/create-result-sheet.input';
 import { SaveSubjectScoresInput } from './dto/save-subject-scores.input';
+import { ResultStatus } from '../common/enums';
 export declare class ResultsService {
     private readonly resultSheetRepo;
     private readonly studentResultRepo;
@@ -39,6 +40,8 @@ export declare class ResultsService {
     saveClassTeacherRemark: (studentResultId: string, remark: string) => Promise<StudentResult>;
     getResultSheet: (id: string, schoolId: string) => Promise<ResultSheet>;
     getResultSheetsByClass: (classId: string, termId: string, schoolId: string) => Promise<ResultSheet[]>;
+    getPendingApprovals: (schoolId: string) => Promise<ResultSheet[]>;
+    getSchoolResultSheets: (schoolId: string, status?: ResultStatus) => Promise<ResultSheet[]>;
     getStudentResult: (studentId: string, termId: string) => Promise<StudentResult>;
     getMySubjectScores: (teacherId: string, resultSheetId: string) => Promise<SubjectScore[]>;
     private sendResultNotifications;
