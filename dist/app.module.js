@@ -45,6 +45,8 @@ exports.AppModule = AppModule = __decorate([
                     ssl: { rejectUnauthorized: false },
                     synchronize: false,
                     autoLoadEntities: true,
+                    migrationsRun: config.get('NODE_ENV') === 'production',
+                    migrations: [__dirname + '/migrations/*{.ts,.js}'],
                 }),
             }),
             graphql_1.GraphQLModule.forRootAsync({

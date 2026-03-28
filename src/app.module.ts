@@ -34,6 +34,8 @@ import { IdCardsModule } from './id-cards/id-cards.module';
         ssl: { rejectUnauthorized: false },
         synchronize: false,
         autoLoadEntities: true,
+        migrationsRun: config.get<string>('NODE_ENV') === 'production',
+        migrations: [__dirname + '/migrations/*{.ts,.js}'],
       }),
     }),
 
