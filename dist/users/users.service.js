@@ -99,15 +99,8 @@ let UsersService = class UsersService {
             passwordHash,
             staffId,
         }).then((user) => {
-            if (user.expoPushToken &&
-                this.notificationsService.isValidPushToken(user.expoPushToken)) {
-                this.notificationsService.sendPushNotifications([
-                    {
-                        to: user.expoPushToken,
-                        title: 'Welcome to SchoolPilot',
-                        body: `Your account has been created. Login with your email: ${user.email}`,
-                    },
-                ]);
+            if (user.expoPushToken) {
+                this.notificationsService.sendPushNotification(user.expoPushToken, 'Welcome to SchoolPilot', `Your account has been created. Login with your email: ${user.email}`);
             }
             return user;
         })));

@@ -400,17 +400,12 @@ let ResultsService = class ResultsService {
                 return this.userRepo
                     .find({ where: parentIds.map((pid) => ({ id: pid })) })
                     .then((parents) => {
-                    const messages = parents
-                        .filter((p) => p.expoPushToken &&
-                        this.notificationsService.isValidPushToken(p.expoPushToken))
-                        .map((p) => ({
-                        to: p.expoPushToken,
-                        title: 'Results Published',
-                        body: "Your child's results have been published. Check the app to view.",
-                    }));
-                    return messages.length > 0
-                        ? this.notificationsService.sendPushNotifications(messages)
-                        : Promise.resolve([]);
+                    const tokens = parents
+                        .map((p) => p.expoPushToken)
+                        .filter((token) => !!token);
+                    return tokens.length > 0
+                        ? this.notificationsService.sendBulkNotifications(tokens, 'Results Published', "Your child's results have been published. Check the app to view.")
+                        : Promise.resolve();
                 });
             });
         });
@@ -422,16 +417,9 @@ let ResultsService = class ResultsService {
             relations: ['classTeacher'],
         })
             .then((classEntity) => {
-            if (!classEntity?.classTeacher?.expoPushToken ||
-                !this.notificationsService.isValidPushToken(classEntity.classTeacher.expoPushToken))
-                return Promise.resolve([]);
-            return this.notificationsService.sendPushNotifications([
-                {
-                    to: classEntity.classTeacher.expoPushToken,
-                    title: 'Result Sheet Returned',
-                    body: `Your result sheet has been returned. Reason: ${reason}`,
-                },
-            ]);
+            if (!classEntity?.classTeacher?.expoPushToken)
+                return Promise.resolve();
+            return this.notificationsService.sendPushNotification(classEntity.classTeacher.expoPushToken, 'Result Sheet Returned', `Your result sheet has been returned. Reason: ${reason}`);
         });
     };
 };
