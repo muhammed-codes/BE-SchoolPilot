@@ -2,62 +2,40 @@
 > BE-SchoolPilot@0.0.1 start
 > nest start
 
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:18 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +37ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +4ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mGraphQLSchemaBuilderModule dependencies initialized[39m[38;5;3m +63ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUploadModule dependencies initialized[39m[38;5;3m +2ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mGraphQLModule dependencies initialized[39m[38;5;3m +2ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmCoreModule dependencies initialized[39m[38;5;3m +1938ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNotificationsModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAttendanceModule dependencies initialized[39m[38;5;3m +6ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mClassesModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mSubjectsModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTermsModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mSchoolsModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mResultsModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPdfModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mIdCardsModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUsersModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mStudentsModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[GraphQLModule] [39m[32mMapped {/graphql, POST} route[39m[38;5;3m +231ms[39m
-[32m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +4ms[39m
-[31m[Nest] 19529  - [39m03/28/2026, 12:58:20 PM [31m  ERROR[39m [38;5;3m[NestApplication] [39m[31mError: listen EADDRINUSE: address already in use :::3000[39m[38;5;3m +2ms[39m
-node:net:1940
-    const ex = new UVExceptionWithHostPort(err, 'listen', address, port);
-               ^
-
-Error: listen EADDRINUSE: address already in use :::3000
-    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
-    at listenInCluster (node:net:1997:12)
-    at Server.listen (node:net:2102:7)
-    at ExpressAdapter.listen (/home/muhammad/Desktop/SchoolPilot/BE-SchoolPilot/node_modules/.pnpm/@nestjs+platform-express@11.1.17_@nestjs+common@11.1.17_class-transformer@0.5.1_class-v_66e78004f9ffddb083198f7787d44643/node_modules/@nestjs/platform-express/adapters/express-adapter.js:127:32)
-    at /home/muhammad/Desktop/SchoolPilot/BE-SchoolPilot/node_modules/.pnpm/@nestjs+core@11.1.17_@nestjs+common@11.1.17_class-transformer@0.5.1_class-validator@0.1_07c33ceafb5c4f04f472e7b134012c3a/node_modules/@nestjs/core/nest-application.js:188:30
-    at new Promise (<anonymous>)
-    at NestApplication.listen (/home/muhammad/Desktop/SchoolPilot/BE-SchoolPilot/node_modules/.pnpm/@nestjs+core@11.1.17_@nestjs+common@11.1.17_class-transformer@0.5.1_class-validator@0.1_07c33ceafb5c4f04f472e7b134012c3a/node_modules/@nestjs/core/nest-application.js:178:16)
-    at async bootstrap (/home/muhammad/Desktop/SchoolPilot/BE-SchoolPilot/src/main.ts:15:3) {
-  code: 'EADDRINUSE',
-  errno: -98,
-  syscall: 'listen',
-  address: '::',
-  port: 3000
-}
-
-Node.js v24.13.1
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:45 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:45 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +36ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:45 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:45 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:45 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:45 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:45 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +4ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:45 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:46 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mGraphQLSchemaBuilderModule dependencies initialized[39m[38;5;3m +45ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:46 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUploadModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:46 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mGraphQLModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmCoreModule dependencies initialized[39m[38;5;3m +7027ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNotificationsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAttendanceModule dependencies initialized[39m[38;5;3m +7ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mClassesModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mSubjectsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTermsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mSchoolsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mResultsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPdfModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mIdCardsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUsersModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mStudentsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[GraphQLModule] [39m[32mMapped {/graphql, POST} route[39m[38;5;3m +226ms[39m
+[32m[Nest] 20013  - [39m03/28/2026, 1:01:53 PM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +3ms[39m
