@@ -28,6 +28,16 @@ export class AttendanceResolver {
     return this.attendanceService.getClassAttendance(classId, date);
   }
 
+  @Query(() => [StudentAttendance])
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.PARENT, UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL)
+  studentAttendance(
+    @Args('studentId') studentId: string,
+    @Args('termId') termId: string,
+  ) {
+    return this.attendanceService.getStudentAttendance(studentId, termId);
+  }
+
   @Query(() => AttendanceSummary)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PARENT, UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL)

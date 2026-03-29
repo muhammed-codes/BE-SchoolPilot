@@ -278,6 +278,7 @@ type Query {
   staffAttendanceHistory(from: String!, to: String!, userId: String!): [StaffAttendance!]!
   staffAttendanceLog(date: String!): [StaffAttendance!]!
   student(id: String!): Student
+  studentAttendance(studentId: String!, termId: String!): [StudentAttendance!]!
   studentAttendanceSummary(studentId: String!, termId: String!): AttendanceSummary!
   studentResult(studentId: String!, termId: String!): StudentResult
   studentsByClass(classId: String!): [Student!]!

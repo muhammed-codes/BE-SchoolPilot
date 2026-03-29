@@ -32,6 +32,9 @@ let AttendanceResolver = class AttendanceResolver {
     classAttendance(classId, date) {
         return this.attendanceService.getClassAttendance(classId, date);
     }
+    studentAttendance(studentId, termId) {
+        return this.attendanceService.getStudentAttendance(studentId, termId);
+    }
     studentAttendanceSummary(studentId, termId) {
         return this.attendanceService.getStudentAttendanceSummary(studentId, termId);
     }
@@ -65,6 +68,16 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], AttendanceResolver.prototype, "classAttendance", null);
+__decorate([
+    (0, graphql_1.Query)(() => [student_attendance_entity_1.StudentAttendance]),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(enums_1.UserRole.PARENT, enums_1.UserRole.SCHOOL_ADMIN, enums_1.UserRole.PRINCIPAL),
+    __param(0, (0, graphql_1.Args)('studentId')),
+    __param(1, (0, graphql_1.Args)('termId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], AttendanceResolver.prototype, "studentAttendance", null);
 __decorate([
     (0, graphql_1.Query)(() => attendance_dto_1.AttendanceSummary),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),

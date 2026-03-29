@@ -7,6 +7,7 @@ export declare class AttendanceResolver {
     private readonly attendanceService;
     constructor(attendanceService: AttendanceService);
     classAttendance(classId: string, date: string): Promise<StudentAttendance[]>;
+    studentAttendance(studentId: string, termId: string): Promise<StudentAttendance[]>;
     studentAttendanceSummary(studentId: string, termId: string): Promise<AttendanceSummary>;
     staffAttendanceLog(date: string, user: {
         schoolId: string;
