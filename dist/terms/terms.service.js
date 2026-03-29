@@ -33,14 +33,29 @@ let TermsService = class TermsService {
         });
         return this.sessionsRepository.save(session);
     };
+    calculateWeekdays(startDate, endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        let count = 0;
+        const current = new Date(start);
+        while (current <= end) {
+            const dayOfWeek = current.getDay();
+            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                count++;
+            }
+            current.setDate(current.getDate() + 1);
+        }
+        return count;
+    }
     createTerm = (input, schoolId) => {
+        const calculatedDays = this.calculateWeekdays(input.startDate, input.endDate);
         const term = this.termsRepository.create({
             name: input.name,
             sessionId: input.sessionId,
             schoolId,
             startDate: input.startDate,
             endDate: input.endDate,
-            totalSchoolDays: input.totalSchoolDays,
+            totalSchoolDays: calculatedDays,
             status: enums_1.TermStatus.CLOSED,
         });
         return this.termsRepository.save(term);
@@ -72,6 +87,7 @@ let TermsService = class TermsService {
     getSessionsBySchool = (schoolId) => {
         return this.sessionsRepository.find({
             where: { schoolId },
+            relations: ['terms'],
             order: { createdAt: 'DESC' },
         });
     };

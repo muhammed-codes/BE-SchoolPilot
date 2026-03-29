@@ -111,7 +111,6 @@ input CreateTermInput {
   name: String!
   sessionId: String!
   startDate: DateTime!
-  totalSchoolDays: Int!
 }
 
 input CreateUserInput {
@@ -353,8 +352,11 @@ type School {
 enum ScoreComponent {
   ASSIGNMENT
   CA
+  CA1
+  CA2
   EXAM
   MID_TERM
+  PROJECT
 }
 
 type ScoreComponentConfig {
@@ -482,13 +484,13 @@ type SubjectScore {
 
 type Term {
   createdAt: DateTime!
-  endDate: DateTime!
+  endDate: String!
   id: ID!
   name: String!
   schoolId: String!
   session: Session!
   sessionId: String!
-  startDate: DateTime!
+  startDate: String!
   status: TermStatus!
   totalSchoolDays: Int!
   updatedAt: DateTime!

@@ -19,11 +19,11 @@ export class Term extends BaseEntity {
   @Column({ type: 'uuid' })
   schoolId: string;
 
-  @Field()
+  @Field(() => String)
   @Column({ type: 'date' })
   startDate: Date;
 
-  @Field()
+  @Field(() => String)
   @Column({ type: 'date' })
   endDate: Date;
 

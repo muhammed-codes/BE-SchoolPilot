@@ -37,16 +37,25 @@ let ClassesService = class ClassesService {
             .update({ id: classId, schoolId }, { classTeacherId: teacherId })
             .then(() => this.getClassById(classId, schoolId));
     };
-    assignSubjectsToClass = (classId, subjectIds, schoolId) => {
-        return this.getClassById(classId, schoolId).then(() => {
-            const classSubjects = subjectIds.map((subjectId) => this.classSubjectsRepository.create({
+    assignSubjectsToClass = async (classId, subjectIds, schoolId) => {
+        await this.getClassById(classId, schoolId);
+        const existingAssignments = await this.classSubjectsRepository.find({
+            where: { classId },
+        });
+        const existingSubjectIds = existingAssignments.map((cs) => cs.subjectId);
+        const toRemove = existingAssignments.filter((cs) => !subjectIds.includes(cs.subjectId));
+        const toAddIds = subjectIds.filter((id) => !existingSubjectIds.includes(id));
+        if (toRemove.length > 0) {
+            await this.classSubjectsRepository.remove(toRemove);
+        }
+        if (toAddIds.length > 0) {
+            const newSubjects = toAddIds.map((subjectId) => this.classSubjectsRepository.create({
                 classId,
                 subjectId,
             }));
-            return this.classSubjectsRepository
-                .save(classSubjects)
-                .then(() => this.getClassById(classId, schoolId));
-        });
+            await this.classSubjectsRepository.save(newSubjects);
+        }
+        return this.getClassById(classId, schoolId);
     };
     assignSubjectTeacher = (classId, subjectId, teacherId, schoolId) => {
         return this.getClassById(classId, schoolId).then(() => this.classSubjectsRepository
@@ -79,7 +88,7 @@ let ClassesService = class ClassesService {
         return this.classesRepository
             .findAndCount({
             where: { schoolId },
-            relations: ['classTeacher'],
+            relations: ['classTeacher', 'classSubjects', 'classSubjects.subject'],
             skip,
             take: limit,
             order: { name: 'ASC' },

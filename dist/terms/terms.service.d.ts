@@ -8,6 +8,7 @@ export declare class TermsService {
     private readonly termsRepository;
     constructor(sessionsRepository: Repository<Session>, termsRepository: Repository<Term>);
     createSession: (input: CreateSessionInput, schoolId: string) => Promise<Session>;
+    private calculateWeekdays;
     createTerm: (input: CreateTermInput, schoolId: string) => Promise<Term>;
     activateTerm: (termId: string, schoolId: string) => Promise<Term>;
     closeTerm: (termId: string, schoolId: string) => Promise<Term>;

@@ -115,7 +115,21 @@ export class ResultsService {
                       return manager
                         .save(SubjectScore, subjectScores)
                         .then(() =>
-                          this.getResultSheet(savedSheet.id, schoolId),
+                          manager
+                            .findOne(ResultSheet, {
+                              where: { id: savedSheet.id, schoolId },
+                              relations: [
+                                'studentResults',
+                                'studentResults.subjectScores',
+                              ],
+                            })
+                            .then((sheet) => {
+                              if (!sheet)
+                                throw new NotFoundException(
+                                  'Result sheet not found',
+                                );
+                              return sheet;
+                            }),
                         );
                     }),
                 );
@@ -481,7 +495,6 @@ export class ResultsService {
     return this.resultSheetRepo.find({
       where: { schoolId, status: ResultStatus.PENDING_PRINCIPAL_APPROVAL },
       order: { createdAt: 'DESC' },
-      relations: ['class'],
     });
   };
 
@@ -491,7 +504,6 @@ export class ResultsService {
     return this.resultSheetRepo.find({
       where,
       order: { createdAt: 'DESC' },
-      relations: ['class'],
     });
   };
 

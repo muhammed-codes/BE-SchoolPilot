@@ -42,12 +42,12 @@ __decorate([
     __metadata("design:type", String)
 ], Term.prototype, "schoolId", void 0);
 __decorate([
-    (0, graphql_1.Field)(),
+    (0, graphql_1.Field)(() => String),
     (0, typeorm_1.Column)({ type: 'date' }),
     __metadata("design:type", Date)
 ], Term.prototype, "startDate", void 0);
 __decorate([
-    (0, graphql_1.Field)(),
+    (0, graphql_1.Field)(() => String),
     (0, typeorm_1.Column)({ type: 'date' }),
     __metadata("design:type", Date)
 ], Term.prototype, "endDate", void 0);

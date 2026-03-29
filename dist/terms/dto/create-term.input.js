@@ -17,7 +17,6 @@ let CreateTermInput = class CreateTermInput {
     sessionId;
     startDate;
     endDate;
-    totalSchoolDays;
 };
 exports.CreateTermInput = CreateTermInput;
 __decorate([
@@ -40,12 +39,6 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", Date)
 ], CreateTermInput.prototype, "endDate", void 0);
-__decorate([
-    (0, graphql_1.Field)(() => graphql_1.Int),
-    (0, class_validator_1.IsInt)(),
-    (0, class_validator_1.Min)(1),
-    __metadata("design:type", Number)
-], CreateTermInput.prototype, "totalSchoolDays", void 0);
 exports.CreateTermInput = CreateTermInput = __decorate([
     (0, graphql_1.InputType)()
 ], CreateTermInput);
