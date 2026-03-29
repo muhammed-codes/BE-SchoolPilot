@@ -25,6 +25,10 @@ export declare class TermsResolver {
     closeTerm(termId: string, user: {
         schoolId: string;
     }): Promise<Term>;
-    unlockTerm(termId: string): Promise<Term>;
-    updateTotalSchoolDays(termId: string, days: number): Promise<Term>;
+    unlockTerm(termId: string, user: {
+        schoolId: string;
+    }): Promise<Term>;
+    updateTotalSchoolDays(termId: string, days: number, user: {
+        schoolId: string;
+    }): Promise<Term>;
 }

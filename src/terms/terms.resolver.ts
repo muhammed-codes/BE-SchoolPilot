@@ -76,8 +76,11 @@ export class TermsResolver {
   @Mutation(() => Term)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SCHOOL_ADMIN)
-  unlockTerm(@Args('termId') termId: string) {
-    return this.termsService.unlockTerm(termId);
+  unlockTerm(
+    @Args('termId') termId: string,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.termsService.unlockTerm(termId, user.schoolId);
   }
 
   @Mutation(() => Term)
@@ -86,7 +89,8 @@ export class TermsResolver {
   updateTotalSchoolDays(
     @Args('termId') termId: string,
     @Args('days', { type: () => Int }) days: number,
+    @CurrentUser() user: { schoolId: string },
   ) {
-    return this.termsService.updateTotalSchoolDays(termId, days);
+    return this.termsService.updateTotalSchoolDays(termId, days, user.schoolId);
   }
 }

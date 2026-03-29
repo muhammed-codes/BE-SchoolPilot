@@ -179,12 +179,13 @@ let AttendanceService = class AttendanceService {
             });
         });
     };
-    manualStaffAttendance = (input, adminId) => {
+    manualStaffAttendance = (input, adminId, schoolId) => {
         return this.userRepo
             .findOne({ where: { id: input.userId } })
             .then((user) => {
-            if (!user)
-                throw new common_1.NotFoundException('User not found');
+            if (!user || user.schoolId !== schoolId) {
+                throw new common_1.ForbiddenException('User not found in this school');
+            }
             return this.staffAttendanceRepo
                 .findOne({ where: { userId: input.userId, date: input.date } })
                 .then((existing) => {

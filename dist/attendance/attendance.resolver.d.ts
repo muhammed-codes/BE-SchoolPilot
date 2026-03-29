@@ -27,5 +27,6 @@ export declare class AttendanceResolver {
     }): Promise<StaffAttendance>;
     manualStaffAttendance(input: ManualStaffAttendanceInput, user: {
         sub: string;
+        schoolId: string;
     }): Promise<StaffAttendance>;
 }

@@ -81,14 +81,14 @@ let TermsService = class TermsService {
             order: { startDate: 'ASC' },
         });
     };
-    unlockTerm = (termId) => {
+    unlockTerm = (termId, schoolId) => {
         return this.termsRepository
-            .update(termId, { status: enums_1.TermStatus.ACTIVE })
+            .update({ id: termId, schoolId }, { status: enums_1.TermStatus.ACTIVE })
             .then(() => this.findTermById(termId));
     };
-    updateTotalSchoolDays = (termId, days) => {
+    updateTotalSchoolDays = (termId, days, schoolId) => {
         return this.termsRepository
-            .update(termId, { totalSchoolDays: days })
+            .update({ id: termId, schoolId }, { totalSchoolDays: days })
             .then(() => this.findTermById(termId));
     };
     findTermById = (id) => {

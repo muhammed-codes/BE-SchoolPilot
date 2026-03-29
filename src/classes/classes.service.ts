@@ -61,21 +61,25 @@ export class ClassesService {
     teacherId: string,
     schoolId: string,
   ) => {
-    return this.classSubjectsRepository
-      .findOne({ where: { classId, subjectId } })
-      .then((cs) => {
-        if (!cs) {
-          throw new NotFoundException('Subject is not assigned to this class');
-        }
-        return this.classSubjectsRepository
-          .update(cs.id, { subjectTeacherId: teacherId })
-          .then(() =>
-            this.classSubjectsRepository.findOne({
-              where: { id: cs.id },
-              relations: ['subject', 'subjectTeacher'],
-            }),
-          );
-      });
+    return this.getClassById(classId, schoolId).then(() =>
+      this.classSubjectsRepository
+        .findOne({ where: { classId, subjectId } })
+        .then((cs) => {
+          if (!cs) {
+            throw new NotFoundException(
+              'Subject is not assigned to this class',
+            );
+          }
+          return this.classSubjectsRepository
+            .update(cs.id, { subjectTeacherId: teacherId })
+            .then(() =>
+              this.classSubjectsRepository.findOne({
+                where: { id: cs.id },
+                relations: ['subject', 'subjectTeacher'],
+              }),
+            );
+        }),
+    );
   };
 
   removeSubjectFromClass = (
@@ -83,13 +87,15 @@ export class ClassesService {
     subjectId: string,
     schoolId: string,
   ) => {
-    return this.classSubjectsRepository
-      .findOne({ where: { classId, subjectId } })
-      .then((cs) => {
-        if (!cs)
-          throw new NotFoundException('Class-subject assignment not found');
-        return this.classSubjectsRepository.remove(cs).then(() => true);
-      });
+    return this.getClassById(classId, schoolId).then(() =>
+      this.classSubjectsRepository
+        .findOne({ where: { classId, subjectId } })
+        .then((cs) => {
+          if (!cs)
+            throw new NotFoundException('Class-subject assignment not found');
+          return this.classSubjectsRepository.remove(cs).then(() => true);
+        }),
+    );
   };
 
   getClassesBySchool = (schoolId: string, pagination?: PaginationArgs) => {

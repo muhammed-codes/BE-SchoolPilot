@@ -14,7 +14,7 @@ export declare class TermsService {
     getActiveTerm: (schoolId: string) => Promise<Term>;
     getSessionsBySchool: (schoolId: string) => Promise<Session[]>;
     getTermsBySession: (sessionId: string) => Promise<Term[]>;
-    unlockTerm: (termId: string) => Promise<Term>;
-    updateTotalSchoolDays: (termId: string, days: number) => Promise<Term>;
+    unlockTerm: (termId: string, schoolId: string) => Promise<Term>;
+    updateTotalSchoolDays: (termId: string, days: number, schoolId: string) => Promise<Term>;
     private findTermById;
 }

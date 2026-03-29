@@ -48,7 +48,7 @@ __decorate([
 ], ClassSubject.prototype, "classEntity", void 0);
 __decorate([
     (0, graphql_1.Field)(() => subject_entity_1.Subject),
-    (0, typeorm_1.ManyToOne)(() => subject_entity_1.Subject, { eager: true }),
+    (0, typeorm_1.ManyToOne)(() => subject_entity_1.Subject),
     (0, typeorm_1.JoinColumn)({ name: 'subjectId' }),
     __metadata("design:type", subject_entity_1.Subject)
 ], ClassSubject.prototype, "subject", void 0);

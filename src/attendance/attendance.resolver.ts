@@ -117,8 +117,12 @@ export class AttendanceResolver {
   @Roles(UserRole.SCHOOL_ADMIN)
   manualStaffAttendance(
     @Args('input') input: ManualStaffAttendanceInput,
-    @CurrentUser() user: { sub: string },
+    @CurrentUser() user: { sub: string; schoolId: string },
   ) {
-    return this.attendanceService.manualStaffAttendance(input, user.sub);
+    return this.attendanceService.manualStaffAttendance(
+      input,
+      user.sub,
+      user.schoolId,
+    );
   }
 }

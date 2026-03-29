@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GraphQLModule } from '@nestjs/graphql';
@@ -65,5 +66,6 @@ import { IdCardsModule } from './id-cards/id-cards.module';
     TermsModule,
     IdCardsModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}

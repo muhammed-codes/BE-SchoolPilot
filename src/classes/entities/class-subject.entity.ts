@@ -26,7 +26,7 @@ export class ClassSubject extends BaseEntity {
   classEntity: ClassEntity;
 
   @Field(() => Subject)
-  @ManyToOne(() => Subject, { eager: true })
+  @ManyToOne(() => Subject)
   @JoinColumn({ name: 'subjectId' })
   subject: Subject;
 

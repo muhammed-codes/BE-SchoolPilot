@@ -83,15 +83,15 @@ export class TermsService {
     });
   };
 
-  unlockTerm = (termId: string) => {
+  unlockTerm = (termId: string, schoolId: string) => {
     return this.termsRepository
-      .update(termId, { status: TermStatus.ACTIVE })
+      .update({ id: termId, schoolId }, { status: TermStatus.ACTIVE })
       .then(() => this.findTermById(termId));
   };
 
-  updateTotalSchoolDays = (termId: string, days: number) => {
+  updateTotalSchoolDays = (termId: string, days: number, schoolId: string) => {
     return this.termsRepository
-      .update(termId, { totalSchoolDays: days })
+      .update({ id: termId, schoolId }, { totalSchoolDays: days })
       .then(() => this.findTermById(termId));
   };
 

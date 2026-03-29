@@ -19,7 +19,7 @@ export declare class AttendanceService {
     getClassAttendance: (classId: string, date: string) => Promise<StudentAttendance[]>;
     getStudentAttendanceSummary: (studentId: string, termId: string) => Promise<AttendanceSummary>;
     clockAction: (qrCode: string, userId: string) => Promise<StaffAttendance>;
-    manualStaffAttendance: (input: ManualStaffAttendanceInput, adminId: string) => Promise<StaffAttendance>;
+    manualStaffAttendance: (input: ManualStaffAttendanceInput, adminId: string, schoolId: string) => Promise<StaffAttendance>;
     getStaffAttendanceLog: (schoolId: string, date: string) => Promise<StaffAttendance[]>;
     getStaffAttendanceHistory: (userId: string, schoolId: string, from: string, to: string) => Promise<StaffAttendance[]>;
     getUnmarkedClasses: (schoolId: string, date: string) => Promise<ClassEntity[]>;

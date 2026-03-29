@@ -52,19 +52,19 @@ let ResultsResolver = class ResultsResolver {
         return this.resultsService.createResultSheet(input, user.sub, user.schoolId);
     }
     saveSubjectScores(input, user) {
-        return this.resultsService.saveSubjectScores(input, user.sub);
+        return this.resultsService.saveSubjectScores(input, user.sub, user.schoolId);
     }
     submitForAdminReview(resultSheetId, user) {
-        return this.resultsService.submitForAdminReview(resultSheetId, user.sub);
+        return this.resultsService.submitForAdminReview(resultSheetId, user.sub, user.schoolId);
     }
     submitForPrincipalApproval(resultSheetId, user) {
-        return this.resultsService.submitForPrincipalApproval(resultSheetId, user.sub);
+        return this.resultsService.submitForPrincipalApproval(resultSheetId, user.sub, user.schoolId);
     }
     approveResult(resultSheetId, user) {
-        return this.resultsService.approveResult(resultSheetId, user.sub);
+        return this.resultsService.approveResult(resultSheetId, user.sub, user.schoolId);
     }
     returnResult(resultSheetId, reason, user) {
-        return this.resultsService.returnResult(resultSheetId, user.sub, reason);
+        return this.resultsService.returnResult(resultSheetId, user.sub, user.schoolId, reason);
     }
     saveTeacherRemark(subjectScoreId, remark) {
         return this.resultsService.saveTeacherRemark(subjectScoreId, remark);

@@ -54,7 +54,7 @@ let AttendanceResolver = class AttendanceResolver {
         return this.attendanceService.clockAction(qrCode, user.sub);
     }
     manualStaffAttendance(input, user) {
-        return this.attendanceService.manualStaffAttendance(input, user.sub);
+        return this.attendanceService.manualStaffAttendance(input, user.sub, user.schoolId);
     }
 };
 exports.AttendanceResolver = AttendanceResolver;

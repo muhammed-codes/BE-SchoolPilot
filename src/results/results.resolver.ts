@@ -96,9 +96,13 @@ export class ResultsResolver {
   @Roles(UserRole.SUBJECT_TEACHER, UserRole.CLASS_TEACHER)
   saveSubjectScores(
     @Args('input') input: SaveSubjectScoresInput,
-    @CurrentUser() user: { sub: string },
+    @CurrentUser() user: { sub: string; schoolId: string },
   ) {
-    return this.resultsService.saveSubjectScores(input, user.sub);
+    return this.resultsService.saveSubjectScores(
+      input,
+      user.sub,
+      user.schoolId,
+    );
   }
 
   @Mutation(() => ResultSheet)
@@ -106,9 +110,13 @@ export class ResultsResolver {
   @Roles(UserRole.SCHOOL_ADMIN)
   submitForAdminReview(
     @Args('resultSheetId') resultSheetId: string,
-    @CurrentUser() user: { sub: string },
+    @CurrentUser() user: { sub: string; schoolId: string },
   ) {
-    return this.resultsService.submitForAdminReview(resultSheetId, user.sub);
+    return this.resultsService.submitForAdminReview(
+      resultSheetId,
+      user.sub,
+      user.schoolId,
+    );
   }
 
   @Mutation(() => ResultSheet)
@@ -116,11 +124,12 @@ export class ResultsResolver {
   @Roles(UserRole.SCHOOL_ADMIN)
   submitForPrincipalApproval(
     @Args('resultSheetId') resultSheetId: string,
-    @CurrentUser() user: { sub: string },
+    @CurrentUser() user: { sub: string; schoolId: string },
   ) {
     return this.resultsService.submitForPrincipalApproval(
       resultSheetId,
       user.sub,
+      user.schoolId,
     );
   }
 
@@ -129,9 +138,13 @@ export class ResultsResolver {
   @Roles(UserRole.PRINCIPAL)
   approveResult(
     @Args('resultSheetId') resultSheetId: string,
-    @CurrentUser() user: { sub: string },
+    @CurrentUser() user: { sub: string; schoolId: string },
   ) {
-    return this.resultsService.approveResult(resultSheetId, user.sub);
+    return this.resultsService.approveResult(
+      resultSheetId,
+      user.sub,
+      user.schoolId,
+    );
   }
 
   @Mutation(() => ResultSheet)
@@ -140,9 +153,14 @@ export class ResultsResolver {
   returnResult(
     @Args('resultSheetId') resultSheetId: string,
     @Args('reason') reason: string,
-    @CurrentUser() user: { sub: string },
+    @CurrentUser() user: { sub: string; schoolId: string },
   ) {
-    return this.resultsService.returnResult(resultSheetId, user.sub, reason);
+    return this.resultsService.returnResult(
+      resultSheetId,
+      user.sub,
+      user.schoolId,
+      reason,
+    );
   }
 
   @Mutation(() => SubjectScore)

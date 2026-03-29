@@ -29,18 +29,23 @@ export declare class ResultsResolver {
     }): Promise<ResultSheet>;
     saveSubjectScores(input: SaveSubjectScoresInput, user: {
         sub: string;
+        schoolId: string;
     }): Promise<SubjectScore[]>;
     submitForAdminReview(resultSheetId: string, user: {
         sub: string;
+        schoolId: string;
     }): Promise<ResultSheet | null>;
     submitForPrincipalApproval(resultSheetId: string, user: {
         sub: string;
+        schoolId: string;
     }): Promise<ResultSheet | null>;
     approveResult(resultSheetId: string, user: {
         sub: string;
+        schoolId: string;
     }): Promise<ResultSheet | null>;
     returnResult(resultSheetId: string, reason: string, user: {
         sub: string;
+        schoolId: string;
     }): Promise<ResultSheet | null>;
     saveTeacherRemark(subjectScoreId: string, remark: string): Promise<SubjectScore>;
     savePrincipalRemark(studentResultId: string, remark: string): Promise<StudentResult>;

@@ -199,11 +199,14 @@ export class AttendanceService {
   manualStaffAttendance = (
     input: ManualStaffAttendanceInput,
     adminId: string,
+    schoolId: string,
   ) => {
     return this.userRepo
       .findOne({ where: { id: input.userId } })
       .then((user) => {
-        if (!user) throw new NotFoundException('User not found');
+        if (!user || user.schoolId !== schoolId) {
+          throw new ForbiddenException('User not found in this school');
+        }
 
         return this.staffAttendanceRepo
           .findOne({ where: { userId: input.userId, date: input.date } })

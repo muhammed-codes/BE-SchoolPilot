@@ -114,9 +114,9 @@ let ResultsService = class ResultsService {
             });
         });
     };
-    saveSubjectScores = (input, teacherId) => {
+    saveSubjectScores = (input, teacherId, schoolId) => {
         return this.resultSheetRepo
-            .findOne({ where: { id: input.resultSheetId } })
+            .findOne({ where: { id: input.resultSheetId, schoolId } })
             .then((sheet) => {
             if (!sheet)
                 throw new common_1.NotFoundException('Result sheet not found');
@@ -228,9 +228,9 @@ let ResultsService = class ResultsService {
             return this.resultSheetRepo.findOne({ where: { id: resultSheetId } });
         });
     };
-    submitForAdminReview = (resultSheetId, adminId) => {
+    submitForAdminReview = (resultSheetId, adminId, schoolId) => {
         return this.resultSheetRepo
-            .findOne({ where: { id: resultSheetId } })
+            .findOne({ where: { id: resultSheetId, schoolId } })
             .then((sheet) => {
             if (!sheet)
                 throw new common_1.NotFoundException('Result sheet not found');
@@ -241,9 +241,9 @@ let ResultsService = class ResultsService {
                 .then(() => this.resultSheetRepo.findOne({ where: { id: resultSheetId } }));
         });
     };
-    submitForPrincipalApproval = (resultSheetId, principalId) => {
+    submitForPrincipalApproval = (resultSheetId, principalId, schoolId) => {
         return this.resultSheetRepo
-            .findOne({ where: { id: resultSheetId } })
+            .findOne({ where: { id: resultSheetId, schoolId } })
             .then((sheet) => {
             if (!sheet)
                 throw new common_1.NotFoundException('Result sheet not found');
@@ -254,9 +254,9 @@ let ResultsService = class ResultsService {
                 .then(() => this.resultSheetRepo.findOne({ where: { id: resultSheetId } }));
         });
     };
-    approveResult = (resultSheetId, principalId) => {
+    approveResult = (resultSheetId, principalId, schoolId) => {
         return this.resultSheetRepo
-            .findOne({ where: { id: resultSheetId } })
+            .findOne({ where: { id: resultSheetId, schoolId } })
             .then((sheet) => {
             if (!sheet)
                 throw new common_1.NotFoundException('Result sheet not found');
@@ -267,9 +267,9 @@ let ResultsService = class ResultsService {
                 .then(() => this.resultSheetRepo.findOne({ where: { id: resultSheetId } }));
         });
     };
-    returnResult = (resultSheetId, returnedById, reason) => {
+    returnResult = (resultSheetId, returnedById, schoolId, reason) => {
         return this.resultSheetRepo
-            .findOne({ where: { id: resultSheetId } })
+            .findOne({ where: { id: resultSheetId, schoolId } })
             .then((sheet) => {
             if (!sheet)
                 throw new common_1.NotFoundException('Result sheet not found');

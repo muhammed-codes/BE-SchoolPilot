@@ -49,7 +49,7 @@ let ClassesService = class ClassesService {
         });
     };
     assignSubjectTeacher = (classId, subjectId, teacherId, schoolId) => {
-        return this.classSubjectsRepository
+        return this.getClassById(classId, schoolId).then(() => this.classSubjectsRepository
             .findOne({ where: { classId, subjectId } })
             .then((cs) => {
             if (!cs) {
@@ -61,16 +61,16 @@ let ClassesService = class ClassesService {
                 where: { id: cs.id },
                 relations: ['subject', 'subjectTeacher'],
             }));
-        });
+        }));
     };
     removeSubjectFromClass = (classId, subjectId, schoolId) => {
-        return this.classSubjectsRepository
+        return this.getClassById(classId, schoolId).then(() => this.classSubjectsRepository
             .findOne({ where: { classId, subjectId } })
             .then((cs) => {
             if (!cs)
                 throw new common_1.NotFoundException('Class-subject assignment not found');
             return this.classSubjectsRepository.remove(cs).then(() => true);
-        });
+        }));
     };
     getClassesBySchool = (schoolId, pagination) => {
         const page = pagination?.page || 1;

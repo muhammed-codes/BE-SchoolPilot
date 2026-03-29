@@ -50,11 +50,11 @@ let TermsResolver = class TermsResolver {
     closeTerm(termId, user) {
         return this.termsService.closeTerm(termId, user.schoolId);
     }
-    unlockTerm(termId) {
-        return this.termsService.unlockTerm(termId);
+    unlockTerm(termId, user) {
+        return this.termsService.unlockTerm(termId, user.schoolId);
     }
-    updateTotalSchoolDays(termId, days) {
-        return this.termsService.updateTotalSchoolDays(termId, days);
+    updateTotalSchoolDays(termId, days, user) {
+        return this.termsService.updateTotalSchoolDays(termId, days, user.schoolId);
     }
 };
 exports.TermsResolver = TermsResolver;
@@ -128,8 +128,9 @@ __decorate([
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, roles_decorator_1.Roles)(enums_1.UserRole.SCHOOL_ADMIN),
     __param(0, (0, graphql_1.Args)('termId')),
+    __param(1, (0, decorators_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], TermsResolver.prototype, "unlockTerm", null);
 __decorate([
@@ -138,8 +139,9 @@ __decorate([
     (0, roles_decorator_1.Roles)(enums_1.UserRole.SCHOOL_ADMIN),
     __param(0, (0, graphql_1.Args)('termId')),
     __param(1, (0, graphql_1.Args)('days', { type: () => graphql_1.Int })),
+    __param(2, (0, decorators_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Number]),
+    __metadata("design:paramtypes", [String, Number, Object]),
     __metadata("design:returntype", void 0)
 ], TermsResolver.prototype, "updateTotalSchoolDays", null);
 exports.TermsResolver = TermsResolver = __decorate([
