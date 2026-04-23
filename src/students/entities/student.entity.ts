@@ -20,9 +20,9 @@ export class Student extends BaseEntity {
   @Column()
   admissionNumber: string;
 
-  @Field()
+  @Field(() => String)
   @Column({ type: 'date' })
-  dateOfBirth: Date;
+  dateOfBirth: string;
 
   @Field(() => Gender)
   @Column({ type: 'enum', enum: Gender })

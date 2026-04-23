@@ -33,7 +33,7 @@ export class StudentsService {
       firstName: input.firstName,
       lastName: input.lastName,
       admissionNumber: input.admissionNumber,
-      dateOfBirth: new Date(input.dateOfBirth),
+      dateOfBirth: input.dateOfBirth,
       gender: input.gender,
       currentClassId: input.classId,
       address: input.address,
@@ -74,9 +74,7 @@ export class StudentsService {
         firstName: input.firstName,
         lastName: input.lastName,
         admissionNumber: input.admissionNumber,
-        dateOfBirth: input.dateOfBirth
-          ? new Date(input.dateOfBirth)
-          : undefined,
+        dateOfBirth: input.dateOfBirth || undefined,
         gender: input.gender,
         currentClassId: input.classId,
         address: input.address,

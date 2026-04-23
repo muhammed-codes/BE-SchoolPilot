@@ -399,7 +399,7 @@ type Student {
   createdAt: DateTime!
   currentClass: ClassEntity
   currentClassId: String
-  dateOfBirth: DateTime!
+  dateOfBirth: String!
   firstName: String!
   fullName: String!
   gender: Gender!
