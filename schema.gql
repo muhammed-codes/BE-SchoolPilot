@@ -514,6 +514,7 @@ input UpdateUserInput {
   firstName: String
   lastName: String
   phone: String
+  role: UserRole
 }
 
 """The `Upload` scalar type represents a file upload."""
@@ -543,9 +544,11 @@ type User {
 
 enum UserRole {
   CLASS_TEACHER
+  HEAD_TEACHER
   PARENT
   PRINCIPAL
   SCHOOL_ADMIN
   SUBJECT_TEACHER
   SUPER_ADMIN
+  VICE_PRINCIPAL
 }

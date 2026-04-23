@@ -15,11 +15,16 @@ export declare class UsersService {
     private readonly notificationsService;
     private readonly idCardsService;
     private readonly schoolsService;
+    private readonly singleLeadershipRoles;
+    private readonly singleLeadershipRoleUniqueConstraint;
     constructor(usersRepository: Repository<User>, uploadService: UploadService, notificationsService: NotificationsService, idCardsService: IdCardsService, schoolsService: SchoolsService);
     findByEmail: (email: string) => Promise<User | null>;
     findById: (id: string) => Promise<User | null>;
     create: (data: Partial<User>) => Promise<User>;
     update: (id: string, data: Partial<User>) => Promise<User | null>;
+    private formatRoleLabel;
+    private ensureUniqueLeadershipRolePerSchool;
+    private mapLeadershipRoleDbConstraintError;
     createUser: (input: CreateUserInput, adminSchoolId: string) => Promise<User>;
     findBySchool: (schoolId: string, role?: UserRole, pagination?: PaginationArgs) => Promise<{
         items: User[];

@@ -7,6 +7,8 @@ var UserRole;
     UserRole["SUPER_ADMIN"] = "super_admin";
     UserRole["SCHOOL_ADMIN"] = "school_admin";
     UserRole["PRINCIPAL"] = "principal";
+    UserRole["VICE_PRINCIPAL"] = "vice_principal";
+    UserRole["HEAD_TEACHER"] = "head_teacher";
     UserRole["CLASS_TEACHER"] = "class_teacher";
     UserRole["SUBJECT_TEACHER"] = "subject_teacher";
     UserRole["PARENT"] = "parent";

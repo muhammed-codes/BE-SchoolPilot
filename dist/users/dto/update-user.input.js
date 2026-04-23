@@ -12,11 +12,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpdateUserInput = void 0;
 const graphql_1 = require("@nestjs/graphql");
 const class_validator_1 = require("class-validator");
+const enums_1 = require("../../common/enums");
 let UpdateUserInput = class UpdateUserInput {
     firstName;
     lastName;
     phone;
     email;
+    role;
 };
 exports.UpdateUserInput = UpdateUserInput;
 __decorate([
@@ -40,6 +42,12 @@ __decorate([
     (0, class_validator_1.IsEmail)(),
     __metadata("design:type", String)
 ], UpdateUserInput.prototype, "email", void 0);
+__decorate([
+    (0, graphql_1.Field)(() => enums_1.UserRole, { nullable: true }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(enums_1.UserRole),
+    __metadata("design:type", String)
+], UpdateUserInput.prototype, "role", void 0);
 exports.UpdateUserInput = UpdateUserInput = __decorate([
     (0, graphql_1.InputType)()
 ], UpdateUserInput);

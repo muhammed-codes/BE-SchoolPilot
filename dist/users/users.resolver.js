@@ -46,12 +46,15 @@ let UsersResolver = class UsersResolver {
     createUser(input, user) {
         if (user.role === enums_1.UserRole.SCHOOL_ADMIN) {
             const allowedRoles = [
+                enums_1.UserRole.PRINCIPAL,
+                enums_1.UserRole.VICE_PRINCIPAL,
+                enums_1.UserRole.HEAD_TEACHER,
                 enums_1.UserRole.CLASS_TEACHER,
                 enums_1.UserRole.SUBJECT_TEACHER,
                 enums_1.UserRole.PARENT,
             ];
             if (!allowedRoles.includes(input.role)) {
-                throw new common_1.ForbiddenException('School admins can only create teachers and parents');
+                throw new common_1.ForbiddenException('School admins can only create leadership, teachers, and parents');
             }
             return this.usersService.createUser(input, user.schoolId);
         }

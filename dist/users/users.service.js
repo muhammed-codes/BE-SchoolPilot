@@ -62,6 +62,12 @@ let UsersService = class UsersService {
     notificationsService;
     idCardsService;
     schoolsService;
+    singleLeadershipRoles = [
+        enums_1.UserRole.PRINCIPAL,
+        enums_1.UserRole.VICE_PRINCIPAL,
+        enums_1.UserRole.HEAD_TEACHER,
+    ];
+    singleLeadershipRoleUniqueConstraint = 'UQ_users_single_active_leadership_role_per_school';
     constructor(usersRepository, uploadService, notificationsService, idCardsService, schoolsService) {
         this.usersRepository = usersRepository;
         this.uploadService = uploadService;
@@ -82,6 +88,39 @@ let UsersService = class UsersService {
     update = (id, data) => {
         return this.usersRepository.update(id, data).then(() => this.findById(id));
     };
+    formatRoleLabel = (role) => {
+        return role
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, (m) => m.toUpperCase());
+    };
+    ensureUniqueLeadershipRolePerSchool = (schoolId, role, excludeUserId) => {
+        if (!schoolId || !role || !this.singleLeadershipRoles.includes(role)) {
+            return Promise.resolve();
+        }
+        return this.usersRepository
+            .findOne({
+            where: {
+                schoolId,
+                role,
+                isActive: true,
+            },
+        })
+            .then((existing) => {
+            if (existing && existing.id !== excludeUserId) {
+                throw new common_1.ForbiddenException(`This school already has an active ${this.formatRoleLabel(role)}.`);
+            }
+        });
+    };
+    mapLeadershipRoleDbConstraintError = (err, role) => {
+        if (err?.code === '23505' &&
+            err?.constraint === this.singleLeadershipRoleUniqueConstraint) {
+            if (role) {
+                throw new common_1.ForbiddenException(`This school already has an active ${this.formatRoleLabel(role)}.`);
+            }
+            throw new common_1.ForbiddenException('This school already has an active user for that leadership role.');
+        }
+        throw err;
+    };
     createUser = (input, adminSchoolId) => {
         const isStaffRole = input.role !== enums_1.UserRole.PARENT && input.role !== enums_1.UserRole.SUPER_ADMIN;
         const staffIdPromise = isStaffRole
@@ -89,7 +128,9 @@ let UsersService = class UsersService {
                 .findById(adminSchoolId)
                 .then((school) => this.idCardsService.generateStaffId(adminSchoolId, school.name))
             : Promise.resolve(undefined);
-        return staffIdPromise.then((staffId) => bcrypt.hash(input.password, 12).then((passwordHash) => this.create({
+        return this.ensureUniqueLeadershipRolePerSchool(adminSchoolId, input.role)
+            .then(() => staffIdPromise)
+            .then((staffId) => bcrypt.hash(input.password, 12).then((passwordHash) => this.create({
             email: input.email,
             firstName: input.firstName,
             lastName: input.lastName,
@@ -103,7 +144,7 @@ let UsersService = class UsersService {
                 this.notificationsService.sendPushNotification(user.expoPushToken, 'Welcome to SchoolPilot', `Your account has been created. Login with your email: ${user.email}`);
             }
             return user;
-        })));
+        }).catch((err) => this.mapLeadershipRoleDbConstraintError(err, input.role))));
     };
     findBySchool = (schoolId, role, pagination) => {
         const page = pagination?.page || 1;
@@ -131,17 +172,27 @@ let UsersService = class UsersService {
             if (!isSelfUpdate && !isAdmin) {
                 throw new common_1.ForbiddenException('You can only update your own profile');
             }
-            return this.usersRepository
+            if (input.role && !isAdmin) {
+                throw new common_1.ForbiddenException('Only admins can update user roles');
+            }
+            if (input.role === enums_1.UserRole.SUPER_ADMIN &&
+                requesterRole !== enums_1.UserRole.SUPER_ADMIN) {
+                throw new common_1.ForbiddenException('Only super admins can assign the super admin role');
+            }
+            return this.ensureUniqueLeadershipRolePerSchool(user.schoolId, input.role, user.id).then(() => this.usersRepository
                 .update(id, input)
-                .then(() => this.findById(id));
+                .catch((err) => this.mapLeadershipRoleDbConstraintError(err, input.role))
+                .then(() => this.findById(id)));
         });
     };
     assignSchool = (userId, schoolId) => {
         return this.findById(userId).then((user) => {
             if (!user)
                 throw new common_1.NotFoundException('User not found');
-            return this.usersRepository
+            return this.ensureUniqueLeadershipRolePerSchool(schoolId, user.role, user.id)
+                .then(() => this.usersRepository
                 .update(userId, { schoolId })
+                .catch((err) => this.mapLeadershipRoleDbConstraintError(err, user.role)))
                 .then(() => this.findById(userId));
         });
     };
