@@ -484,6 +484,7 @@ type SubjectScore {
 
 type Term {
   createdAt: DateTime!
+  currentWeek: Int!
   endDate: String!
   id: ID!
   name: String!
@@ -493,6 +494,7 @@ type Term {
   startDate: String!
   status: TermStatus!
   totalSchoolDays: Int!
+  totalWeeks: Int!
   updatedAt: DateTime!
 }
 
