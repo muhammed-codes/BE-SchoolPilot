@@ -17,6 +17,7 @@ import { PdfModule } from './pdf/pdf.module';
 import { UploadModule } from './upload/upload.module';
 import { TermsModule } from './terms/terms.module';
 import { IdCardsModule } from './id-cards/id-cards.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { IdCardsModule } from './id-cards/id-cards.module';
     UploadModule,
     TermsModule,
     IdCardsModule,
+    MailModule,
   ],
   controllers: [AppController],
 })

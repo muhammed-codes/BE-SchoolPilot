@@ -5,7 +5,9 @@ import { UploadResult } from './dto/upload-result.type';
 export declare class UploadService implements OnModuleInit {
     private readonly configService;
     private readonly logger;
+    private readonly pdfUrlDurationSeconds;
     private readonly getCloudinaryErrorMessage;
+    private readonly getDeliveryUrl;
     constructor(configService: ConfigService);
     private readonly validateCloudinaryConnection;
     onModuleInit: () => Promise<void>;

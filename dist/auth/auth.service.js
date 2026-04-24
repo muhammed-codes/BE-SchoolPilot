@@ -47,15 +47,19 @@ const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const config_1 = require("@nestjs/config");
 const bcrypt = __importStar(require("bcrypt"));
+const crypto = __importStar(require("crypto"));
 const users_service_1 = require("../users/users.service");
+const mail_service_1 = require("../mail/mail.service");
 let AuthService = class AuthService {
     usersService;
     jwtService;
     configService;
-    constructor(usersService, jwtService, configService) {
+    mailService;
+    constructor(usersService, jwtService, configService, mailService) {
         this.usersService = usersService;
         this.jwtService = jwtService;
         this.configService = configService;
+        this.mailService = mailService;
     }
     register = (input) => {
         return this.usersService
@@ -145,12 +149,51 @@ let AuthService = class AuthService {
     hashData = (data) => {
         return bcrypt.hash(data, 12);
     };
+    forgotPassword = (email) => {
+        return this.usersService.findByEmail(email).then((user) => {
+            if (!user) {
+                return true;
+            }
+            const token = crypto.randomBytes(32).toString('hex');
+            const expires = new Date();
+            expires.setHours(expires.getHours() + 1);
+            return this.usersService
+                .update(user.id, {
+                resetPasswordToken: token,
+                resetPasswordExpires: expires,
+            })
+                .then(() => {
+                return this.mailService.sendPasswordResetEmail(email, token);
+            })
+                .then(() => true);
+        });
+    };
+    resetPassword = (token, newPassword) => {
+        return this.usersService.findByResetToken(token).then((user) => {
+            if (!user || !user.resetPasswordExpires) {
+                throw new common_1.BadRequestException('Invalid or expired reset token');
+            }
+            if (user.resetPasswordExpires < new Date()) {
+                throw new common_1.BadRequestException('Reset token has expired');
+            }
+            return bcrypt.hash(newPassword, 12).then((passwordHash) => {
+                return this.usersService
+                    .update(user.id, {
+                    passwordHash,
+                    resetPasswordToken: null,
+                    resetPasswordExpires: null,
+                })
+                    .then(() => true);
+            });
+        });
+    };
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [users_service_1.UsersService,
         jwt_1.JwtService,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        mail_service_1.MailService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AddLeadershipRoles1774709361453 = void 0;
 class AddLeadershipRoles1774709361453 {
     name = 'AddLeadershipRoles1774709361453';
+    transaction = false;
     async up(queryRunner) {
         await queryRunner.query(`
       DO $$

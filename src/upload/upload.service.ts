@@ -14,6 +14,7 @@ import { UploadResult } from './dto/upload-result.type';
 @Injectable()
 export class UploadService implements OnModuleInit {
   private readonly logger = new Logger(UploadService.name);
+  private readonly pdfUrlDurationSeconds = 60 * 60 * 24 * 7;
   private readonly getCloudinaryErrorMessage = (rawMessage?: string) => {
     const message = rawMessage || 'Unknown Cloudinary error';
     const normalized = message.toLowerCase();
@@ -24,6 +25,20 @@ export class UploadService implements OnModuleInit {
       return 'Cloudinary configuration mismatch: CLOUDINARY_CLOUD_NAME must match the same Cloudinary product environment as CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET';
     }
     return message;
+  };
+  private readonly getDeliveryUrl = (result) => {
+    const format = (result?.format || '').toLowerCase();
+    if (format !== 'pdf') {
+      return result?.secure_url || '';
+    }
+    const expiresAt =
+      Math.floor(Date.now() / 1000) + this.pdfUrlDurationSeconds;
+    return cloudinary.utils.private_download_url(result.public_id, format, {
+      resource_type: result.resource_type || 'image',
+      type: result.type || 'upload',
+      expires_at: expiresAt,
+      attachment: true,
+    });
   };
 
   constructor(private readonly configService: ConfigService) {}
@@ -85,7 +100,10 @@ export class UploadService implements OnModuleInit {
                   ),
                 );
               }
-              resolve({ url: result!.secure_url, publicId: result!.public_id });
+              resolve({
+                url: this.getDeliveryUrl(result),
+                publicId: result!.public_id,
+              });
             },
           );
           stream.pipe(uploadStream);
@@ -149,7 +167,10 @@ export class UploadService implements OnModuleInit {
               ),
             );
           }
-          resolve({ url: result!.secure_url, publicId: result!.public_id });
+          resolve({
+            url: this.getDeliveryUrl(result),
+            publicId: result!.public_id,
+          });
         },
       );
 

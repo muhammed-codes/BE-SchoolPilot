@@ -26,6 +26,7 @@ const pdf_module_1 = require("./pdf/pdf.module");
 const upload_module_1 = require("./upload/upload.module");
 const terms_module_1 = require("./terms/terms.module");
 const id_cards_module_1 = require("./id-cards/id-cards.module");
+const mail_module_1 = require("./mail/mail.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -74,6 +75,7 @@ exports.AppModule = AppModule = __decorate([
             upload_module_1.UploadModule,
             terms_module_1.TermsModule,
             id_cards_module_1.IdCardsModule,
+            mail_module_1.MailModule,
         ],
         controllers: [app_controller_1.AppController],
     })

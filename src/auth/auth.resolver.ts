@@ -52,6 +52,19 @@ export class AuthResolver {
     return this.authService.updateExpoPushToken(user.sub, token);
   }
 
+  @Mutation(() => Boolean)
+  forgotPassword(@Args('email') email: string) {
+    return this.authService.forgotPassword(email);
+  }
+
+  @Mutation(() => Boolean)
+  resetPassword(
+    @Args('token') token: string,
+    @Args('newPassword') newPassword: string,
+  ) {
+    return this.authService.resetPassword(token, newPassword);
+  }
+
   private extractSubFromRefreshToken = (token: string): string => {
     const payload = JSON.parse(
       Buffer.from(token.split('.')[1], 'base64').toString(),

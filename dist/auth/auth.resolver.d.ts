@@ -25,5 +25,7 @@ export declare class AuthResolver {
     updateExpoPushToken(user: {
         sub: string;
     }, token: string): Promise<boolean>;
+    forgotPassword(email: string): Promise<boolean>;
+    resetPassword(token: string, newPassword: string): Promise<boolean>;
     private extractSubFromRefreshToken;
 }

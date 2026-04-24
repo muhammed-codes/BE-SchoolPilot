@@ -81,6 +81,11 @@ let UsersService = class UsersService {
     findById = (id) => {
         return this.usersRepository.findOne({ where: { id } });
     };
+    findByResetToken = (token) => {
+        return this.usersRepository.findOne({
+            where: { resetPasswordToken: token },
+        });
+    };
     create = (data) => {
         const user = this.usersRepository.create(data);
         return this.usersRepository.save(user);

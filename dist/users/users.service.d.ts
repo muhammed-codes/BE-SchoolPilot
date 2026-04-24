@@ -20,6 +20,7 @@ export declare class UsersService {
     constructor(usersRepository: Repository<User>, uploadService: UploadService, notificationsService: NotificationsService, idCardsService: IdCardsService, schoolsService: SchoolsService);
     findByEmail: (email: string) => Promise<User | null>;
     findById: (id: string) => Promise<User | null>;
+    findByResetToken: (token: string) => Promise<User | null>;
     create: (data: Partial<User>) => Promise<User>;
     update: (id: string, data: Partial<User>) => Promise<User | null>;
     private formatRoleLabel;

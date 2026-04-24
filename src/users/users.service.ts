@@ -45,6 +45,12 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { id } });
   };
 
+  findByResetToken = (token: string) => {
+    return this.usersRepository.findOne({
+      where: { resetPasswordToken: token },
+    });
+  };
+
   create = (data: Partial<User>) => {
     const user = this.usersRepository.create(data);
     return this.usersRepository.save(user);

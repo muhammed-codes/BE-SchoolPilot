@@ -185,6 +185,7 @@ type Mutation {
   deactivateSchool(id: String!): School!
   deactivateUser(id: String!): User!
   deleteSubject(id: String!): Boolean!
+  forgotPassword(email: String!): Boolean!
   generateBulkReportCards(resultSheetId: String!): BulkPDFResult!
   generateBulkStaffCards: BulkCardResult!
   generateBulkStudentCards(classId: String!): BulkCardResult!
@@ -200,6 +201,7 @@ type Mutation {
   refreshTokens(refreshToken: String!): AuthResponse!
   regenerateQrCode(schoolId: String!): School!
   register(input: RegisterInput!): AuthResponse!
+  resetPassword(newPassword: String!, token: String!): Boolean!
   returnResult(reason: String!, resultSheetId: String!): ResultSheet!
   saveClassTeacherRemark(remark: String!, studentResultId: String!): StudentResult!
   savePrincipalRemark(remark: String!, studentResultId: String!): StudentResult!

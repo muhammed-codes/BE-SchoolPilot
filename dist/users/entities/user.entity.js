@@ -28,6 +28,8 @@ let User = class User extends base_entity_1.BaseEntity {
     avatarUrl;
     avatarPublicId;
     staffId;
+    resetPasswordToken;
+    resetPasswordExpires;
     get fullName() {
         return `${this.firstName} ${this.lastName}`;
     }
@@ -95,6 +97,14 @@ __decorate([
     (0, typeorm_1.Column)({ nullable: true, unique: true }),
     __metadata("design:type", String)
 ], User.prototype, "staffId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "resetPasswordToken", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamp', nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "resetPasswordExpires", void 0);
 __decorate([
     (0, graphql_1.Field)(),
     __metadata("design:type", String),
