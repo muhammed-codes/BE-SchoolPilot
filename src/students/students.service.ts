@@ -43,6 +43,19 @@ export class StudentsService {
     return this.studentsRepository.save(student);
   };
 
+  updateStudent = (id: string, input: any, schoolId: string) => {
+    return this.getStudentById(id, schoolId).then((student) => {
+      const updateData: any = { ...input };
+      if (input.classId) {
+        updateData.currentClassId = input.classId;
+        delete updateData.classId;
+      }
+      return this.studentsRepository
+        .update(id, updateData)
+        .then(() => this.getStudentById(id, schoolId));
+    });
+  };
+
   bulkImportStudents = (
     students: CreateStudentInput[],
     schoolId: string,

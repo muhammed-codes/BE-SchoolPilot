@@ -214,6 +214,7 @@ type Mutation {
   unlockTerm(termId: String!): Term!
   updateExpoPushToken(token: String!): Boolean!
   updateSchool(id: String!, input: UpdateSchoolInput!): School!
+  updateStudent(id: String!, input: UpdateStudentInput!): Student!
   updateTotalSchoolDays(days: Int!, termId: String!): Term!
   updateUser(id: String!, input: UpdateUserInput!): User!
   uploadAvatar(file: Upload!): User!
@@ -511,6 +512,18 @@ input UpdateSchoolInput {
   name: String
   phone: String
   schoolType: String = "basic"
+}
+
+input UpdateStudentInput {
+  address: String
+  admissionNumber: String
+  classId: String
+  dateOfBirth: String
+  firstName: String
+  gender: Gender
+  lastName: String
+  parentPhone: String
+  stateOfOrigin: String
 }
 
 input UpdateUserInput {

@@ -4,6 +4,7 @@ import { GraphQLUpload, Upload } from 'graphql-upload-ts';
 import { StudentsService } from './students.service';
 import { Student } from './entities/student.entity';
 import { CreateStudentInput } from './dto/create-student.input';
+import { UpdateStudentInput } from './dto/update-student.input';
 import { PromoteStudentsInput } from './dto/promote-students.input';
 import { BulkImportResult } from './dto/bulk-import-result.type';
 import { PromotionResult } from './dto/promotion-result.type';
@@ -62,6 +63,17 @@ export class StudentsResolver {
     @CurrentUser() user: { schoolId: string },
   ) {
     return this.studentsService.createStudent(input, user.schoolId);
+  }
+
+  @Mutation(() => Student)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SCHOOL_ADMIN)
+  updateStudent(
+    @Args('id') id: string,
+    @Args('input') input: UpdateStudentInput,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.studentsService.updateStudent(id, input, user.schoolId);
   }
 
   @Mutation(() => BulkImportResult)
