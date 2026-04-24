@@ -182,33 +182,34 @@ let IdCardsService = class IdCardsService {
                 throw new common_1.NotFoundException('No students found in this class');
             const className = students[0].currentClass?.name || 'Unknown';
             return this.schoolsService.findById(schoolId).then((school) => {
-                const cardDataPromises = students.map((student) => Promise.all([
-                    (0, fetch_image_helper_1.fetchImageAsBase64)(student.passportPhotoUrl),
-                    (0, fetch_image_helper_1.fetchImageAsBase64)(school.logoUrl),
-                    this.generateQrCodeBase64(student.admissionNumber),
-                ]).then(([photoBase64, schoolLogoBase64, qrCodeBase64]) => ({
-                    studentName: student.fullName,
-                    admissionNumber: student.admissionNumber,
-                    className: student.currentClass?.name || 'N/A',
-                    schoolName: school.name,
-                    schoolLogoBase64,
-                    photoBase64,
-                    qrCodeBase64,
-                    session: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
-                    gender: student.gender,
-                })));
-                return Promise.all(cardDataPromises).then((allCardData) => {
-                    const templateFn = (0, templates_1.getTemplate)(school.defaultReportTemplate || 'classic');
-                    const cardHtmls = allCardData.map((d) => templateFn(d));
-                    const fullHtml = (0, bulk_layout_template_1.bulkLayoutTemplate)(cardHtmls);
-                    return this.pdfService
-                        .generatePdfFromHtml(fullHtml)
-                        .then((buffer) => this.uploadService.uploadBuffer(buffer, 'id-cards/students', `class-${classId}-${Date.now()}`))
-                        .then((result) => ({
-                        totalCards: students.length,
-                        pdfUrl: result.url,
-                        label: className,
-                    }));
+                return (0, fetch_image_helper_1.fetchImageAsBase64)(school.logoUrl).then((schoolLogoBase64) => {
+                    const cardDataPromises = students.map((student) => Promise.all([
+                        (0, fetch_image_helper_1.fetchImageAsBase64)(student.passportPhotoUrl),
+                        this.generateQrCodeBase64(student.admissionNumber),
+                    ]).then(([photoBase64, qrCodeBase64]) => ({
+                        studentName: student.fullName,
+                        admissionNumber: student.admissionNumber,
+                        className: student.currentClass?.name || 'N/A',
+                        schoolName: school.name,
+                        schoolLogoBase64,
+                        photoBase64,
+                        qrCodeBase64,
+                        session: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
+                        gender: student.gender,
+                    })));
+                    return Promise.all(cardDataPromises).then((allCardData) => {
+                        const templateFn = (0, templates_1.getTemplate)(school.defaultReportTemplate || 'classic');
+                        const cardHtmls = allCardData.map((d) => templateFn(d));
+                        const fullHtml = (0, bulk_layout_template_1.bulkLayoutTemplate)(cardHtmls);
+                        return this.pdfService
+                            .generatePdfFromHtml(fullHtml)
+                            .then((buffer) => this.uploadService.uploadBuffer(buffer, 'id-cards/students', `class-${classId}-${Date.now()}`))
+                            .then((result) => ({
+                            totalCards: students.length,
+                            pdfUrl: result.url,
+                            label: className,
+                        }));
+                    });
                 });
             });
         });
@@ -240,32 +241,33 @@ let IdCardsService = class IdCardsService {
             if (!users.length)
                 throw new common_1.NotFoundException('No staff found');
             return this.schoolsService.findById(schoolId).then((school) => {
-                const cardDataPromises = users.map((user) => Promise.all([
-                    (0, fetch_image_helper_1.fetchImageAsBase64)(user.avatarUrl),
-                    (0, fetch_image_helper_1.fetchImageAsBase64)(school.logoUrl),
-                    this.generateQrCodeBase64(user.id),
-                ]).then(([photoBase64, schoolLogoBase64, qrCodeBase64]) => ({
-                    staffName: user.fullName,
-                    staffId: user.staffId || 'N/A',
-                    role: user.role,
-                    schoolName: school.name,
-                    schoolLogoBase64,
-                    photoBase64,
-                    qrCodeBase64,
-                    session: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
-                })));
-                return Promise.all(cardDataPromises).then((allCardData) => {
-                    const templateFn = (0, templates_1.getTemplate)(school.defaultReportTemplate || 'classic');
-                    const cardHtmls = allCardData.map((d) => templateFn(d));
-                    const fullHtml = (0, bulk_layout_template_1.bulkLayoutTemplate)(cardHtmls);
-                    return this.pdfService
-                        .generatePdfFromHtml(fullHtml)
-                        .then((buffer) => this.uploadService.uploadBuffer(buffer, 'id-cards/staff', `school-staff-${schoolId}-${Date.now()}`))
-                        .then((result) => ({
-                        totalCards: users.length,
-                        pdfUrl: result.url,
-                        label: school.name,
-                    }));
+                return (0, fetch_image_helper_1.fetchImageAsBase64)(school.logoUrl).then((schoolLogoBase64) => {
+                    const cardDataPromises = users.map((user) => Promise.all([
+                        (0, fetch_image_helper_1.fetchImageAsBase64)(user.avatarUrl),
+                        this.generateQrCodeBase64(user.id),
+                    ]).then(([photoBase64, qrCodeBase64]) => ({
+                        staffName: user.fullName,
+                        staffId: user.staffId || 'N/A',
+                        role: user.role,
+                        schoolName: school.name,
+                        schoolLogoBase64,
+                        photoBase64,
+                        qrCodeBase64,
+                        session: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
+                    })));
+                    return Promise.all(cardDataPromises).then((allCardData) => {
+                        const templateFn = (0, templates_1.getTemplate)(school.defaultReportTemplate || 'classic');
+                        const cardHtmls = allCardData.map((d) => templateFn(d));
+                        const fullHtml = (0, bulk_layout_template_1.bulkLayoutTemplate)(cardHtmls);
+                        return this.pdfService
+                            .generatePdfFromHtml(fullHtml)
+                            .then((buffer) => this.uploadService.uploadBuffer(buffer, 'id-cards/staff', `school-staff-${schoolId}-${Date.now()}`))
+                            .then((result) => ({
+                            totalCards: users.length,
+                            pdfUrl: result.url,
+                            label: school.name,
+                        }));
+                    });
                 });
             });
         });
