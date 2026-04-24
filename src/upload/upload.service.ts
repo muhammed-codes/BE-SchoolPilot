@@ -14,20 +14,71 @@ import { UploadResult } from './dto/upload-result.type';
 @Injectable()
 export class UploadService implements OnModuleInit {
   private readonly logger = new Logger(UploadService.name);
+  private readonly pdfUrlDurationSeconds = 60 * 60 * 24 * 7;
+  private readonly getCloudinaryErrorMessage = (rawMessage?: string) => {
+    const message = rawMessage || 'Unknown Cloudinary error';
+    const normalized = message.toLowerCase();
+    if (
+      normalized.includes('invalid cloud_name') ||
+      normalized.includes('cloud_name mismatch')
+    ) {
+      return 'Cloudinary configuration mismatch: CLOUDINARY_CLOUD_NAME must match the same Cloudinary product environment as CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET';
+    }
+    return message;
+  };
+  private readonly getDeliveryUrl = (result) => {
+    const format = (result?.format || '').toLowerCase();
+    if (format !== 'pdf') {
+      return result?.secure_url || '';
+    }
+    const expiresAt =
+      Math.floor(Date.now() / 1000) + this.pdfUrlDurationSeconds;
+    return cloudinary.utils.private_download_url(result.public_id, format, {
+      resource_type: result.resource_type || 'image',
+      type: result.type || 'upload',
+      expires_at: expiresAt,
+      attachment: true,
+    });
+  };
 
   constructor(private readonly configService: ConfigService) {}
 
-  onModuleInit() {
-    cloudinary.config({
-      cloud_name: this.configService.getOrThrow<string>(
-        'CLOUDINARY_CLOUD_NAME',
-      ),
-      api_key: this.configService.getOrThrow<string>('CLOUDINARY_API_KEY'),
-      api_secret: this.configService.getOrThrow<string>(
-        'CLOUDINARY_API_SECRET',
-      ),
+  private readonly validateCloudinaryConnection = (): Promise<void> => {
+    return new Promise<void>((resolve, reject) => {
+      cloudinary.api.ping((error) => {
+        if (error) {
+          return reject(error);
+        }
+        resolve();
+      });
     });
-  }
+  };
+
+  onModuleInit = (): Promise<void> => {
+    cloudinary.config({
+      cloud_name: this.configService
+        .getOrThrow<string>('CLOUDINARY_CLOUD_NAME')
+        .trim(),
+      api_key: this.configService.getOrThrow<string>('CLOUDINARY_API_KEY').trim(),
+      api_secret: this.configService
+        .getOrThrow<string>('CLOUDINARY_API_SECRET')
+        .trim(),
+    });
+    return this.validateCloudinaryConnection()
+      .then(() => {
+        this.logger.log('Cloudinary startup validation passed');
+      })
+      .catch((error) => {
+        const cloudinaryError = this.getCloudinaryErrorMessage(error.message);
+        this.logger.error(
+          `Cloudinary startup validation failed: ${cloudinaryError}`,
+        );
+        throw new HttpException(
+          `Cloudinary startup validation failed: ${cloudinaryError}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      });
+  };
 
   uploadFile = (file: Upload, folder: string): Promise<UploadResult> => {
     return (file as any)
@@ -38,15 +89,21 @@ export class UploadService implements OnModuleInit {
             { folder, resource_type: 'auto' },
             (error, result) => {
               if (error) {
-                this.logger.error(`Cloudinary upload failed: ${error.message}`);
+                const cloudinaryError = this.getCloudinaryErrorMessage(
+                  error.message,
+                );
+                this.logger.error(`Cloudinary upload failed: ${cloudinaryError}`);
                 return reject(
                   new HttpException(
-                    `File upload failed: ${error.message}`,
+                    `File upload failed: ${cloudinaryError}`,
                     HttpStatus.BAD_REQUEST,
                   ),
                 );
               }
-              resolve({ url: result!.secure_url, publicId: result!.public_id });
+              resolve({
+                url: this.getDeliveryUrl(result),
+                publicId: result!.public_id,
+              });
             },
           );
           stream.pipe(uploadStream);
@@ -66,10 +123,11 @@ export class UploadService implements OnModuleInit {
     return new Promise<void>((resolve, reject) => {
       cloudinary.uploader.destroy(publicId, (error) => {
         if (error) {
-          this.logger.error(`Cloudinary delete failed: ${error.message}`);
+          const cloudinaryError = this.getCloudinaryErrorMessage(error.message);
+          this.logger.error(`Cloudinary delete failed: ${cloudinaryError}`);
           return reject(
             new HttpException(
-              `File deletion failed: ${error.message}`,
+              `File deletion failed: ${cloudinaryError}`,
               HttpStatus.BAD_REQUEST,
             ),
           );
@@ -96,17 +154,23 @@ export class UploadService implements OnModuleInit {
         { folder, resource_type: 'auto', public_id: filename },
         (error, result) => {
           if (error) {
+            const cloudinaryError = this.getCloudinaryErrorMessage(
+              error.message,
+            );
             this.logger.error(
-              `Cloudinary buffer upload failed: ${error.message}`,
+              `Cloudinary buffer upload failed: ${cloudinaryError}`,
             );
             return reject(
               new HttpException(
-                `Buffer upload failed: ${error.message}`,
+                `Buffer upload failed: ${cloudinaryError}`,
                 HttpStatus.BAD_REQUEST,
               ),
             );
           }
-          resolve({ url: result!.secure_url, publicId: result!.public_id });
+          resolve({
+            url: this.getDeliveryUrl(result),
+            publicId: result!.public_id,
+          });
         },
       );
 

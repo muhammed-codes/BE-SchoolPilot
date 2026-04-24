@@ -18,16 +18,62 @@ const stream_1 = require("stream");
 let UploadService = UploadService_1 = class UploadService {
     configService;
     logger = new common_1.Logger(UploadService_1.name);
+    pdfUrlDurationSeconds = 60 * 60 * 24 * 7;
+    getCloudinaryErrorMessage = (rawMessage) => {
+        const message = rawMessage || 'Unknown Cloudinary error';
+        const normalized = message.toLowerCase();
+        if (normalized.includes('invalid cloud_name') ||
+            normalized.includes('cloud_name mismatch')) {
+            return 'Cloudinary configuration mismatch: CLOUDINARY_CLOUD_NAME must match the same Cloudinary product environment as CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET';
+        }
+        return message;
+    };
+    getDeliveryUrl = (result) => {
+        const format = (result?.format || '').toLowerCase();
+        if (format !== 'pdf') {
+            return result?.secure_url || '';
+        }
+        const expiresAt = Math.floor(Date.now() / 1000) + this.pdfUrlDurationSeconds;
+        return cloudinary_1.v2.utils.private_download_url(result.public_id, format, {
+            resource_type: result.resource_type || 'image',
+            type: result.type || 'upload',
+            expires_at: expiresAt,
+            attachment: true,
+        });
+    };
     constructor(configService) {
         this.configService = configService;
     }
-    onModuleInit() {
-        cloudinary_1.v2.config({
-            cloud_name: this.configService.getOrThrow('CLOUDINARY_CLOUD_NAME'),
-            api_key: this.configService.getOrThrow('CLOUDINARY_API_KEY'),
-            api_secret: this.configService.getOrThrow('CLOUDINARY_API_SECRET'),
+    validateCloudinaryConnection = () => {
+        return new Promise((resolve, reject) => {
+            cloudinary_1.v2.api.ping((error) => {
+                if (error) {
+                    return reject(error);
+                }
+                resolve();
+            });
         });
-    }
+    };
+    onModuleInit = () => {
+        cloudinary_1.v2.config({
+            cloud_name: this.configService
+                .getOrThrow('CLOUDINARY_CLOUD_NAME')
+                .trim(),
+            api_key: this.configService.getOrThrow('CLOUDINARY_API_KEY').trim(),
+            api_secret: this.configService
+                .getOrThrow('CLOUDINARY_API_SECRET')
+                .trim(),
+        });
+        return this.validateCloudinaryConnection()
+            .then(() => {
+            this.logger.log('Cloudinary startup validation passed');
+        })
+            .catch((error) => {
+            const cloudinaryError = this.getCloudinaryErrorMessage(error.message);
+            this.logger.error(`Cloudinary startup validation failed: ${cloudinaryError}`);
+            throw new common_1.HttpException(`Cloudinary startup validation failed: ${cloudinaryError}`, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        });
+    };
     uploadFile = (file, folder) => {
         return file
             .then(({ createReadStream }) => {
@@ -35,10 +81,14 @@ let UploadService = UploadService_1 = class UploadService {
                 const stream = createReadStream();
                 const uploadStream = cloudinary_1.v2.uploader.upload_stream({ folder, resource_type: 'auto' }, (error, result) => {
                     if (error) {
-                        this.logger.error(`Cloudinary upload failed: ${error.message}`);
-                        return reject(new common_1.HttpException(`File upload failed: ${error.message}`, common_1.HttpStatus.BAD_REQUEST));
+                        const cloudinaryError = this.getCloudinaryErrorMessage(error.message);
+                        this.logger.error(`Cloudinary upload failed: ${cloudinaryError}`);
+                        return reject(new common_1.HttpException(`File upload failed: ${cloudinaryError}`, common_1.HttpStatus.BAD_REQUEST));
                     }
-                    resolve({ url: result.secure_url, publicId: result.public_id });
+                    resolve({
+                        url: this.getDeliveryUrl(result),
+                        publicId: result.public_id,
+                    });
                 });
                 stream.pipe(uploadStream);
             });
@@ -54,8 +104,9 @@ let UploadService = UploadService_1 = class UploadService {
         return new Promise((resolve, reject) => {
             cloudinary_1.v2.uploader.destroy(publicId, (error) => {
                 if (error) {
-                    this.logger.error(`Cloudinary delete failed: ${error.message}`);
-                    return reject(new common_1.HttpException(`File deletion failed: ${error.message}`, common_1.HttpStatus.BAD_REQUEST));
+                    const cloudinaryError = this.getCloudinaryErrorMessage(error.message);
+                    this.logger.error(`Cloudinary delete failed: ${cloudinaryError}`);
+                    return reject(new common_1.HttpException(`File deletion failed: ${cloudinaryError}`, common_1.HttpStatus.BAD_REQUEST));
                 }
                 resolve();
             });
@@ -70,10 +121,14 @@ let UploadService = UploadService_1 = class UploadService {
         return new Promise((resolve, reject) => {
             const uploadStream = cloudinary_1.v2.uploader.upload_stream({ folder, resource_type: 'auto', public_id: filename }, (error, result) => {
                 if (error) {
-                    this.logger.error(`Cloudinary buffer upload failed: ${error.message}`);
-                    return reject(new common_1.HttpException(`Buffer upload failed: ${error.message}`, common_1.HttpStatus.BAD_REQUEST));
+                    const cloudinaryError = this.getCloudinaryErrorMessage(error.message);
+                    this.logger.error(`Cloudinary buffer upload failed: ${cloudinaryError}`);
+                    return reject(new common_1.HttpException(`Buffer upload failed: ${cloudinaryError}`, common_1.HttpStatus.BAD_REQUEST));
                 }
-                resolve({ url: result.secure_url, publicId: result.public_id });
+                resolve({
+                    url: this.getDeliveryUrl(result),
+                    publicId: result.public_id,
+                });
             });
             const readable = new stream_1.Readable();
             readable.push(buffer);

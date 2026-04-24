@@ -55,6 +55,12 @@ export class User extends BaseEntity {
   @Column({ nullable: true, unique: true })
   staffId: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  resetPasswordToken: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resetPasswordExpires: Date | null;
+
   @Field()
   get fullName(): string {
     return `${this.firstName} ${this.lastName}`;

@@ -111,7 +111,6 @@ input CreateTermInput {
   name: String!
   sessionId: String!
   startDate: DateTime!
-  totalSchoolDays: Int!
 }
 
 input CreateUserInput {
@@ -186,6 +185,7 @@ type Mutation {
   deactivateSchool(id: String!): School!
   deactivateUser(id: String!): User!
   deleteSubject(id: String!): Boolean!
+  forgotPassword(email: String!): Boolean!
   generateBulkReportCards(resultSheetId: String!): BulkPDFResult!
   generateBulkStaffCards: BulkCardResult!
   generateBulkStudentCards(classId: String!): BulkCardResult!
@@ -201,6 +201,7 @@ type Mutation {
   refreshTokens(refreshToken: String!): AuthResponse!
   regenerateQrCode(schoolId: String!): School!
   register(input: RegisterInput!): AuthResponse!
+  resetPassword(newPassword: String!, token: String!): Boolean!
   returnResult(reason: String!, resultSheetId: String!): ResultSheet!
   saveClassTeacherRemark(remark: String!, studentResultId: String!): StudentResult!
   savePrincipalRemark(remark: String!, studentResultId: String!): StudentResult!
@@ -213,6 +214,7 @@ type Mutation {
   unlockTerm(termId: String!): Term!
   updateExpoPushToken(token: String!): Boolean!
   updateSchool(id: String!, input: UpdateSchoolInput!): School!
+  updateStudent(id: String!, input: UpdateStudentInput!): Student!
   updateTotalSchoolDays(days: Int!, termId: String!): Term!
   updateUser(id: String!, input: UpdateUserInput!): User!
   uploadAvatar(file: Upload!): User!
@@ -353,8 +355,11 @@ type School {
 enum ScoreComponent {
   ASSIGNMENT
   CA
+  CA1
+  CA2
   EXAM
   MID_TERM
+  PROJECT
 }
 
 type ScoreComponentConfig {
@@ -397,7 +402,7 @@ type Student {
   createdAt: DateTime!
   currentClass: ClassEntity
   currentClassId: String
-  dateOfBirth: DateTime!
+  dateOfBirth: String!
   firstName: String!
   fullName: String!
   gender: Gender!
@@ -482,15 +487,17 @@ type SubjectScore {
 
 type Term {
   createdAt: DateTime!
-  endDate: DateTime!
+  currentWeek: Int!
+  endDate: String!
   id: ID!
   name: String!
   schoolId: String!
   session: Session!
   sessionId: String!
-  startDate: DateTime!
+  startDate: String!
   status: TermStatus!
   totalSchoolDays: Int!
+  totalWeeks: Int!
   updatedAt: DateTime!
 }
 
@@ -507,11 +514,24 @@ input UpdateSchoolInput {
   schoolType: String = "basic"
 }
 
+input UpdateStudentInput {
+  address: String
+  admissionNumber: String
+  classId: String
+  dateOfBirth: String
+  firstName: String
+  gender: Gender
+  lastName: String
+  parentPhone: String
+  stateOfOrigin: String
+}
+
 input UpdateUserInput {
   email: String
   firstName: String
   lastName: String
   phone: String
+  role: UserRole
 }
 
 """The `Upload` scalar type represents a file upload."""
@@ -541,9 +561,11 @@ type User {
 
 enum UserRole {
   CLASS_TEACHER
+  HEAD_TEACHER
   PARENT
   PRINCIPAL
   SCHOOL_ADMIN
   SUBJECT_TEACHER
   SUPER_ADMIN
+  VICE_PRINCIPAL
 }

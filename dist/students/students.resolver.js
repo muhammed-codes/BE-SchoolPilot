@@ -19,6 +19,7 @@ const graphql_upload_ts_1 = require("graphql-upload-ts");
 const students_service_1 = require("./students.service");
 const student_entity_1 = require("./entities/student.entity");
 const create_student_input_1 = require("./dto/create-student.input");
+const update_student_input_1 = require("./dto/update-student.input");
 const promote_students_input_1 = require("./dto/promote-students.input");
 const bulk_import_result_type_1 = require("./dto/bulk-import-result.type");
 const promotion_result_type_1 = require("./dto/promotion-result.type");
@@ -45,6 +46,9 @@ let StudentsResolver = class StudentsResolver {
     }
     createStudent(input, user) {
         return this.studentsService.createStudent(input, user.schoolId);
+    }
+    updateStudent(id, input, user) {
+        return this.studentsService.updateStudent(id, input, user.schoolId);
     }
     bulkImportStudents(students, user) {
         return this.studentsService.bulkImportStudents(students, user.schoolId);
@@ -111,6 +115,17 @@ __decorate([
     __metadata("design:paramtypes", [create_student_input_1.CreateStudentInput, Object]),
     __metadata("design:returntype", void 0)
 ], StudentsResolver.prototype, "createStudent", null);
+__decorate([
+    (0, graphql_1.Mutation)(() => student_entity_1.Student),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(enums_1.UserRole.SCHOOL_ADMIN),
+    __param(0, (0, graphql_1.Args)('id')),
+    __param(1, (0, graphql_1.Args)('input')),
+    __param(2, (0, decorators_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, update_student_input_1.UpdateStudentInput, Object]),
+    __metadata("design:returntype", void 0)
+], StudentsResolver.prototype, "updateStudent", null);
 __decorate([
     (0, graphql_1.Mutation)(() => bulk_import_result_type_1.BulkImportResult),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),

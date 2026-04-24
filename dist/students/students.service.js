@@ -39,7 +39,7 @@ let StudentsService = class StudentsService {
             firstName: input.firstName,
             lastName: input.lastName,
             admissionNumber: input.admissionNumber,
-            dateOfBirth: new Date(input.dateOfBirth),
+            dateOfBirth: input.dateOfBirth,
             gender: input.gender,
             currentClassId: input.classId,
             address: input.address,
@@ -47,6 +47,18 @@ let StudentsService = class StudentsService {
             schoolId,
         });
         return this.studentsRepository.save(student);
+    };
+    updateStudent = (id, input, schoolId) => {
+        return this.getStudentById(id, schoolId).then((student) => {
+            const updateData = { ...input };
+            if (input.classId) {
+                updateData.currentClassId = input.classId;
+                delete updateData.classId;
+            }
+            return this.studentsRepository
+                .update(id, updateData)
+                .then(() => this.getStudentById(id, schoolId));
+        });
     };
     bulkImportStudents = (students, schoolId) => {
         const failed = [];
@@ -75,9 +87,7 @@ let StudentsService = class StudentsService {
                 firstName: input.firstName,
                 lastName: input.lastName,
                 admissionNumber: input.admissionNumber,
-                dateOfBirth: input.dateOfBirth
-                    ? new Date(input.dateOfBirth)
-                    : undefined,
+                dateOfBirth: input.dateOfBirth || undefined,
                 gender: input.gender,
                 currentClassId: input.classId,
                 address: input.address,

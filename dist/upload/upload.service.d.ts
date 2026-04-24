@@ -5,8 +5,12 @@ import { UploadResult } from './dto/upload-result.type';
 export declare class UploadService implements OnModuleInit {
     private readonly configService;
     private readonly logger;
+    private readonly pdfUrlDurationSeconds;
+    private readonly getCloudinaryErrorMessage;
+    private readonly getDeliveryUrl;
     constructor(configService: ConfigService);
-    onModuleInit(): void;
+    private readonly validateCloudinaryConnection;
+    onModuleInit: () => Promise<void>;
     uploadFile: (file: Upload, folder: string) => Promise<UploadResult>;
     deleteFile: (publicId: string) => Promise<void>;
     uploadBuffer: (buffer: Buffer, folder: string, filename: string) => Promise<UploadResult>;

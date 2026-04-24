@@ -45,6 +45,12 @@ let AuthResolver = class AuthResolver {
     updateExpoPushToken(user, token) {
         return this.authService.updateExpoPushToken(user.sub, token);
     }
+    forgotPassword(email) {
+        return this.authService.forgotPassword(email);
+    }
+    resetPassword(token, newPassword) {
+        return this.authService.resetPassword(token, newPassword);
+    }
     extractSubFromRefreshToken = (token) => {
         const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
         return payload.sub;
@@ -89,6 +95,21 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], AuthResolver.prototype, "updateExpoPushToken", null);
+__decorate([
+    (0, graphql_1.Mutation)(() => Boolean),
+    __param(0, (0, graphql_1.Args)('email')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], AuthResolver.prototype, "forgotPassword", null);
+__decorate([
+    (0, graphql_1.Mutation)(() => Boolean),
+    __param(0, (0, graphql_1.Args)('token')),
+    __param(1, (0, graphql_1.Args)('newPassword')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], AuthResolver.prototype, "resetPassword", null);
 exports.AuthResolver = AuthResolver = __decorate([
     (0, graphql_1.Resolver)(),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

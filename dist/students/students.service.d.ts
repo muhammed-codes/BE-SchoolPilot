@@ -16,6 +16,7 @@ export declare class StudentsService {
     private readonly dataSource;
     constructor(studentsRepository: Repository<Student>, studentParentsRepository: Repository<StudentParent>, usersService: UsersService, uploadService: UploadService, dataSource: DataSource);
     createStudent: (input: CreateStudentInput, schoolId: string) => Promise<Student>;
+    updateStudent: (id: string, input: any, schoolId: string) => Promise<Student>;
     bulkImportStudents: (students: CreateStudentInput[], schoolId: string) => Promise<BulkImportResult>;
     linkParent: (studentId: string, parentUserId: string, schoolId: string) => Promise<Student>;
     unlinkParent: (studentId: string, parentUserId: string, schoolId: string) => Promise<boolean>;

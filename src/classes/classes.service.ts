@@ -42,17 +42,38 @@ export class ClassesService {
     subjectIds: string[],
     schoolId: string,
   ) => {
-    return this.getClassById(classId, schoolId).then(() => {
-      const classSubjects = subjectIds.map((subjectId) =>
-        this.classSubjectsRepository.create({
-          classId,
-          subjectId,
-        }),
-      );
-      return this.classSubjectsRepository
-        .save(classSubjects)
-        .then(() => this.getClassById(classId, schoolId));
-    });
+    return this.getClassById(classId, schoolId)
+      .then(() => this.classSubjectsRepository.find({ where: { classId } }))
+      .then((existingAssignments) => {
+        const existingSubjectIds = existingAssignments.map((cs) => cs.subjectId);
+        const toRemove = existingAssignments.filter(
+          (cs) => !subjectIds.includes(cs.subjectId),
+        );
+        const toAddIds = subjectIds.filter(
+          (id) => !existingSubjectIds.includes(id),
+        );
+
+        return this.classSubjectsRepository.manager.transaction((manager) => {
+          const transactionalRepo = manager.withRepository(
+            this.classSubjectsRepository,
+          );
+          const removalPromise =
+            toRemove.length > 0
+              ? transactionalRepo.remove(toRemove)
+              : Promise.resolve();
+
+          return removalPromise.then(() => {
+            if (toAddIds.length > 0) {
+              const newSubjects = toAddIds.map((subjectId) =>
+                transactionalRepo.create({ classId, subjectId }),
+              );
+              return transactionalRepo.save(newSubjects);
+            }
+            return Promise.resolve();
+          });
+        });
+      })
+      .then(() => this.getClassById(classId, schoolId));
   };
 
   assignSubjectTeacher = (
@@ -106,7 +127,7 @@ export class ClassesService {
     return this.classesRepository
       .findAndCount({
         where: { schoolId },
-        relations: ['classTeacher'],
+        relations: ['classTeacher', 'classSubjects', 'classSubjects.subject'],
         skip,
         take: limit,
         order: { name: 'ASC' },

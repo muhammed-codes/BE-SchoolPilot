@@ -3,5 +3,4 @@ export declare class CreateTermInput {
     sessionId: string;
     startDate: Date;
     endDate: Date;
-    totalSchoolDays: number;
 }

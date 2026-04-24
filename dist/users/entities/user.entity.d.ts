@@ -14,5 +14,7 @@ export declare class User extends BaseEntity {
     avatarUrl: string;
     avatarPublicId: string;
     staffId: string;
+    resetPasswordToken: string | null;
+    resetPasswordExpires: Date | null;
     get fullName(): string;
 }

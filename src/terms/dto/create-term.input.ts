@@ -18,9 +18,4 @@ export class CreateTermInput {
   @Field()
   @IsNotEmpty()
   endDate: Date;
-
-  @Field(() => Int)
-  @IsInt()
-  @Min(1)
-  totalSchoolDays: number;
 }

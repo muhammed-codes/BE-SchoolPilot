@@ -2,6 +2,7 @@ import { Upload } from 'graphql-upload-ts';
 import { StudentsService } from './students.service';
 import { Student } from './entities/student.entity';
 import { CreateStudentInput } from './dto/create-student.input';
+import { UpdateStudentInput } from './dto/update-student.input';
 import { PromoteStudentsInput } from './dto/promote-students.input';
 import { BulkImportResult } from './dto/bulk-import-result.type';
 import { PromotionResult } from './dto/promotion-result.type';
@@ -21,6 +22,9 @@ export declare class StudentsResolver {
         schoolId: string;
     }): Promise<Student[]>;
     createStudent(input: CreateStudentInput, user: {
+        schoolId: string;
+    }): Promise<Student>;
+    updateStudent(id: string, input: UpdateStudentInput, user: {
         schoolId: string;
     }): Promise<Student>;
     bulkImportStudents(students: CreateStudentInput[], user: {

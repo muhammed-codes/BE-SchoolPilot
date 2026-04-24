@@ -1,6 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
+import { MailService } from '../mail/mail.service';
 import { RegisterInput } from './dto/register.input';
 import { LoginInput } from './dto/login.input';
 import { User } from '../users/entities/user.entity';
@@ -8,7 +9,8 @@ export declare class AuthService {
     private readonly usersService;
     private readonly jwtService;
     private readonly configService;
-    constructor(usersService: UsersService, jwtService: JwtService, configService: ConfigService);
+    private readonly mailService;
+    constructor(usersService: UsersService, jwtService: JwtService, configService: ConfigService, mailService: MailService);
     register: (input: RegisterInput) => Promise<{
         user: User;
         accessToken: string;
@@ -32,4 +34,6 @@ export declare class AuthService {
         refreshToken: string;
     }>;
     hashData: (data: string) => Promise<string>;
+    forgotPassword: (email: string) => Promise<boolean>;
+    resetPassword: (token: string, newPassword: string) => Promise<boolean>;
 }

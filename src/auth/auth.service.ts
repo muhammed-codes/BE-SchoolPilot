@@ -7,7 +7,9 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { UsersService } from '../users/users.service';
+import { MailService } from '../mail/mail.service';
 import { RegisterInput } from './dto/register.input';
 import { LoginInput } from './dto/login.input';
 import { User } from '../users/entities/user.entity';
@@ -18,6 +20,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly mailService: MailService,
   ) {}
 
   register = (input: RegisterInput) => {
@@ -136,5 +139,52 @@ export class AuthService {
 
   hashData = (data: string): Promise<string> => {
     return bcrypt.hash(data, 12);
+  };
+
+  forgotPassword = (email: string) => {
+    return this.usersService.findByEmail(email).then((user) => {
+      if (!user) {
+        return true;
+      }
+
+      const token = crypto.randomBytes(32).toString("hex");
+      const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+      const expires = new Date();
+      expires.setHours(expires.getHours() + 1);
+
+      return this.usersService
+        .update(user.id, {
+          resetPasswordToken: hashedToken,
+          resetPasswordExpires: expires,
+        })
+        .then(() => {
+          return this.mailService.sendPasswordResetEmail(email, token);
+        })
+        .then(() => true);
+    });
+  };
+
+  resetPassword = (token: string, newPassword: string) => {
+    return this.usersService.findByResetToken(token).then((user) => {
+      if (!user || !user.resetPasswordExpires) {
+        throw new BadRequestException('Invalid or expired reset token');
+      }
+
+      if (user.resetPasswordExpires < new Date()) {
+        throw new BadRequestException('Reset token has expired');
+      }
+
+      return bcrypt.hash(newPassword, 12).then((passwordHash: string) => {
+        return this.usersService
+          .update(user.id, {
+            passwordHash,
+            refreshToken: null,
+            resetPasswordToken: null,
+            resetPasswordExpires: null,
+          })
+          .then(() => true);
+          .then(() => true);
+      });
+    });
   };
 }

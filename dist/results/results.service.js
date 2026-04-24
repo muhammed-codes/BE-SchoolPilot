@@ -108,7 +108,19 @@ let ResultsService = class ResultsService {
                         });
                         return manager
                             .save(subject_score_entity_1.SubjectScore, subjectScores)
-                            .then(() => this.getResultSheet(savedSheet.id, schoolId));
+                            .then(() => manager
+                            .findOne(result_sheet_entity_1.ResultSheet, {
+                            where: { id: savedSheet.id, schoolId },
+                            relations: [
+                                'studentResults',
+                                'studentResults.subjectScores',
+                            ],
+                        })
+                            .then((sheet) => {
+                            if (!sheet)
+                                throw new common_1.NotFoundException('Result sheet not found');
+                            return sheet;
+                        }));
                     }));
                 }));
             });
@@ -370,7 +382,6 @@ let ResultsService = class ResultsService {
         return this.resultSheetRepo.find({
             where: { schoolId, status: enums_1.ResultStatus.PENDING_PRINCIPAL_APPROVAL },
             order: { createdAt: 'DESC' },
-            relations: ['class'],
         });
     };
     getSchoolResultSheets = (schoolId, status) => {
@@ -380,7 +391,6 @@ let ResultsService = class ResultsService {
         return this.resultSheetRepo.find({
             where,
             order: { createdAt: 'DESC' },
-            relations: ['class'],
         });
     };
     getStudentResult = (studentId, termId) => {
