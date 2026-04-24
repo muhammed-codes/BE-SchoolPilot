@@ -177,9 +177,11 @@ export class AuthService {
         return this.usersService
           .update(user.id, {
             passwordHash,
+            refreshToken: null,
             resetPasswordToken: null,
             resetPasswordExpires: null,
           })
+          .then(() => true);
           .then(() => true);
       });
     });
