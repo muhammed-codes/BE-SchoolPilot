@@ -50,6 +50,7 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const bcrypt = __importStar(require("bcrypt"));
+const crypto = __importStar(require("crypto"));
 const user_entity_1 = require("./entities/user.entity");
 const upload_service_1 = require("../upload/upload.service");
 const notifications_service_1 = require("../notifications/notifications.service");
@@ -82,8 +83,9 @@ let UsersService = class UsersService {
         return this.usersRepository.findOne({ where: { id } });
     };
     findByResetToken = (token) => {
+        const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
         return this.usersRepository.findOne({
-            where: { resetPasswordToken: token },
+            where: { resetPasswordToken: hashedToken },
         });
     };
     create = (data) => {

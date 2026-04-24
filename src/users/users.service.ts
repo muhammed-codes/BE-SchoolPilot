@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { Upload } from 'graphql-upload-ts';
 import { User } from './entities/user.entity';
 import { CreateUserInput } from './dto/create-user.input';
@@ -46,8 +47,9 @@ export class UsersService {
   };
 
   findByResetToken = (token: string) => {
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
     return this.usersRepository.findOne({
-      where: { resetPasswordToken: token },
+      where: { resetPasswordToken: hashedToken },
     });
   };
 

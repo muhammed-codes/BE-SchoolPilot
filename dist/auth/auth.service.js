@@ -154,12 +154,13 @@ let AuthService = class AuthService {
             if (!user) {
                 return true;
             }
-            const token = crypto.randomBytes(32).toString('hex');
+            const token = crypto.randomBytes(32).toString("hex");
+            const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
             const expires = new Date();
             expires.setHours(expires.getHours() + 1);
             return this.usersService
                 .update(user.id, {
-                resetPasswordToken: token,
+                resetPasswordToken: hashedToken,
                 resetPasswordExpires: expires,
             })
                 .then(() => {
@@ -180,10 +181,12 @@ let AuthService = class AuthService {
                 return this.usersService
                     .update(user.id, {
                     passwordHash,
+                    refreshToken: null,
                     resetPasswordToken: null,
                     resetPasswordExpires: null,
                 })
                     .then(() => true);
+                then(() => true);
             });
         });
     };
