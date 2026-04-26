@@ -15,6 +15,7 @@ const students_service_1 = require("./students.service");
 const students_resolver_1 = require("./students.resolver");
 const users_module_1 = require("../users/users.module");
 const upload_module_1 = require("../upload/upload.module");
+const classes_module_1 = require("../classes/classes.module");
 let StudentsModule = class StudentsModule {
 };
 exports.StudentsModule = StudentsModule;
@@ -24,6 +25,7 @@ exports.StudentsModule = StudentsModule = __decorate([
             typeorm_1.TypeOrmModule.forFeature([student_entity_1.Student, student_parent_entity_1.StudentParent]),
             users_module_1.UsersModule,
             upload_module_1.UploadModule,
+            classes_module_1.ClassesModule,
         ],
         providers: [students_service_1.StudentsService, students_resolver_1.StudentsResolver],
         exports: [students_service_1.StudentsService],

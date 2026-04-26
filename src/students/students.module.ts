@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Student } from './entities/student.entity';
 import { StudentParent } from './entities/student-parent.entity';
@@ -13,6 +13,7 @@ import { ClassesModule } from '../classes/classes.module';
     TypeOrmModule.forFeature([Student, StudentParent]),
     UsersModule,
     UploadModule,
+    ClassesModule,
   ],
   providers: [StudentsService, StudentsResolver],
   exports: [StudentsService],

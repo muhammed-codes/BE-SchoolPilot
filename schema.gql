@@ -133,6 +133,10 @@ type FailedRow {
   row: Int!
 }
 
+input ForgotPasswordInput {
+  email: String!
+}
+
 enum Gender {
   FEMALE
   MALE
@@ -185,7 +189,7 @@ type Mutation {
   deactivateSchool(id: String!): School!
   deactivateUser(id: String!): User!
   deleteSubject(id: String!): Boolean!
-  forgotPassword(email: String!): Boolean!
+  forgotPassword(input: ForgotPasswordInput!): Boolean!
   generateBulkReportCards(resultSheetId: String!): BulkPDFResult!
   generateBulkStaffCards: BulkCardResult!
   generateBulkStudentCards(classId: String!): BulkCardResult!
@@ -201,7 +205,7 @@ type Mutation {
   refreshTokens(refreshToken: String!): AuthResponse!
   regenerateQrCode(schoolId: String!): School!
   register(input: RegisterInput!): AuthResponse!
-  resetPassword(newPassword: String!, token: String!): Boolean!
+  resetPassword(input: ResetPasswordInput!): Boolean!
   returnResult(reason: String!, resultSheetId: String!): ResultSheet!
   saveClassTeacherRemark(remark: String!, studentResultId: String!): StudentResult!
   savePrincipalRemark(remark: String!, studentResultId: String!): StudentResult!
@@ -305,6 +309,11 @@ type ReportCardItem {
   studentName: String!
 }
 
+input ResetPasswordInput {
+  newPassword: String!
+  token: String!
+}
+
 type ResultSheet {
   classId: String!
   createdAt: DateTime!
@@ -402,7 +411,7 @@ type Student {
   createdAt: DateTime!
   currentClass: ClassEntity
   currentClassId: String
-  dateOfBirth: String!
+  dateOfBirth: DateTime!
   firstName: String!
   fullName: String!
   gender: Gender!
@@ -538,6 +547,8 @@ input UpdateUserInput {
 scalar Upload
 
 type UploadResult {
+  expiresAt: Float
+  pdfPrivateUrl: String
   publicId: String!
   url: String!
 }
