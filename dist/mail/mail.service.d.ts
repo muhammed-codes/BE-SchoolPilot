@@ -4,5 +4,6 @@ export declare class MailService {
     private resend;
     private readonly logger;
     constructor(configService: ConfigService);
-    sendPasswordResetEmail(email: string, token: string): Promise<void>;
+    private maskEmail;
+    sendPasswordResetEmail: (email: string, token: string) => Promise<boolean>;
 }

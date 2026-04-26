@@ -76,7 +76,7 @@ __decorate([
 ], User.prototype, "schoolId", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", String)
+    __metadata("design:type", Object)
 ], User.prototype, "refreshToken", void 0);
 __decorate([
     (0, graphql_1.Field)({ nullable: true }),

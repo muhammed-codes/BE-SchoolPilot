@@ -38,7 +38,7 @@ export class User extends BaseEntity {
   schoolId: string;
 
   @Column({ nullable: true })
-  refreshToken: string;
+  refreshToken: string | null;
 
   @Field({ nullable: true })
   @Column({ nullable: true })

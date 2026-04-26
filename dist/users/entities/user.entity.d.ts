@@ -9,7 +9,7 @@ export declare class User extends BaseEntity {
     role: UserRole;
     isActive: boolean;
     schoolId: string;
-    refreshToken: string;
+    refreshToken: string | null;
     expoPushToken: string;
     avatarUrl: string;
     avatarPublicId: string;

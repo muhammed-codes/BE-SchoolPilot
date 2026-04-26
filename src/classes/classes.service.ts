@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClassEntity } from './entities/class.entity';
@@ -45,7 +41,9 @@ export class ClassesService {
     return this.getClassById(classId, schoolId)
       .then(() => this.classSubjectsRepository.find({ where: { classId } }))
       .then((existingAssignments) => {
-        const existingSubjectIds = existingAssignments.map((cs) => cs.subjectId);
+        const existingSubjectIds = existingAssignments.map(
+          (cs) => cs.subjectId,
+        );
         const toRemove = existingAssignments.filter(
           (cs) => !subjectIds.includes(cs.subjectId),
         );
@@ -53,16 +51,16 @@ export class ClassesService {
           (id) => !existingSubjectIds.includes(id),
         );
 
-        return this.classSubjectsRepository.manager.transaction((manager) => {
-          const transactionalRepo = manager.withRepository(
-            this.classSubjectsRepository,
-          );
-          const removalPromise =
-            toRemove.length > 0
-              ? transactionalRepo.remove(toRemove)
-              : Promise.resolve();
+        return this.classSubjectsRepository.manager.transaction(
+          async (manager) => {
+            const transactionalRepo = manager.withRepository(
+              this.classSubjectsRepository,
+            );
 
-          return removalPromise.then(() => {
+            if (toRemove.length > 0) {
+              await transactionalRepo.remove(toRemove);
+            }
+
             if (toAddIds.length > 0) {
               const newSubjects = toAddIds.map((subjectId) =>
                 transactionalRepo.create({ classId, subjectId }),
@@ -70,8 +68,8 @@ export class ClassesService {
               return transactionalRepo.save(newSubjects);
             }
             return Promise.resolve();
-          });
-        });
+          },
+        );
       })
       .then(() => this.getClassById(classId, schoolId));
   };

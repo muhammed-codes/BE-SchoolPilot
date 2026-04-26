@@ -166,7 +166,7 @@ let IdCardsService = class IdCardsService {
                 return this.pdfService
                     .generatePdfFromHtml(fullHtml)
                     .then((buffer) => this.uploadService.uploadBuffer(buffer, 'id-cards/students', `student-${studentId}-${Date.now()}`))
-                    .then((result) => result.url);
+                    .then((result) => result.pdfPrivateUrl || result.url);
             });
         });
     };
@@ -206,7 +206,7 @@ let IdCardsService = class IdCardsService {
                             .then((buffer) => this.uploadService.uploadBuffer(buffer, 'id-cards/students', `class-${classId}-${Date.now()}`))
                             .then((result) => ({
                             totalCards: students.length,
-                            pdfUrl: result.url,
+                            pdfUrl: result.pdfPrivateUrl || result.url,
                             label: className,
                         }));
                     });
@@ -223,7 +223,7 @@ let IdCardsService = class IdCardsService {
                 return this.pdfService
                     .generatePdfFromHtml(fullHtml)
                     .then((buffer) => this.uploadService.uploadBuffer(buffer, 'id-cards/staff', `staff-${userId}-${Date.now()}`))
-                    .then((result) => result.url);
+                    .then((result) => result.pdfPrivateUrl || result.url);
             });
         });
     };
@@ -264,7 +264,7 @@ let IdCardsService = class IdCardsService {
                             .then((buffer) => this.uploadService.uploadBuffer(buffer, 'id-cards/staff', `school-staff-${schoolId}-${Date.now()}`))
                             .then((result) => ({
                             totalCards: users.length,
-                            pdfUrl: result.url,
+                            pdfUrl: result.pdfPrivateUrl || result.url,
                             label: school.name,
                         }));
                     });

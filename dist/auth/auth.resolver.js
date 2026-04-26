@@ -17,6 +17,8 @@ const graphql_1 = require("@nestjs/graphql");
 const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./auth.service");
 const register_input_1 = require("./dto/register.input");
+const forgot_password_input_1 = require("./dto/forgot-password.input");
+const reset_password_input_1 = require("./dto/reset-password.input");
 const login_input_1 = require("./dto/login.input");
 const auth_response_type_1 = require("./dto/auth-response.type");
 const guards_1 = require("../common/guards");
@@ -45,11 +47,11 @@ let AuthResolver = class AuthResolver {
     updateExpoPushToken(user, token) {
         return this.authService.updateExpoPushToken(user.sub, token);
     }
-    forgotPassword(email) {
-        return this.authService.forgotPassword(email);
+    forgotPassword(input) {
+        return this.authService.forgotPassword(input.email);
     }
-    resetPassword(token, newPassword) {
-        return this.authService.resetPassword(token, newPassword);
+    resetPassword(input) {
+        return this.authService.resetPassword(input.token, input.newPassword);
     }
     extractSubFromRefreshToken = (token) => {
         const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
@@ -97,17 +99,16 @@ __decorate([
 ], AuthResolver.prototype, "updateExpoPushToken", null);
 __decorate([
     (0, graphql_1.Mutation)(() => Boolean),
-    __param(0, (0, graphql_1.Args)('email')),
+    __param(0, (0, graphql_1.Args)('input')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [forgot_password_input_1.ForgotPasswordInput]),
     __metadata("design:returntype", void 0)
 ], AuthResolver.prototype, "forgotPassword", null);
 __decorate([
     (0, graphql_1.Mutation)(() => Boolean),
-    __param(0, (0, graphql_1.Args)('token')),
-    __param(1, (0, graphql_1.Args)('newPassword')),
+    __param(0, (0, graphql_1.Args)('input')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [reset_password_input_1.ResetPasswordInput]),
     __metadata("design:returntype", void 0)
 ], AuthResolver.prototype, "resetPassword", null);
 exports.AuthResolver = AuthResolver = __decorate([

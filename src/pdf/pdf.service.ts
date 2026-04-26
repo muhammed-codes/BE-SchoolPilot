@@ -204,7 +204,7 @@ export class PdfService {
           );
         });
       })
-      .then((uploadResult) => uploadResult.url);
+      .then((uploadResult) => uploadResult.pdfPrivateUrl || uploadResult.url);
   };
 
   generateBulkReportCards = (resultSheetId: string): Promise<BulkPDFResult> => {

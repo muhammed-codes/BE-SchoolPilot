@@ -2,6 +2,8 @@ import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards, ForbiddenException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterInput } from './dto/register.input';
+import { ForgotPasswordInput } from './dto/forgot-password.input';
+import { ResetPasswordInput } from './dto/reset-password.input';
 import { LoginInput } from './dto/login.input';
 import { AuthResponse } from './dto/auth-response.type';
 import { JwtAuthGuard, RolesGuard } from '../common/guards';
@@ -53,16 +55,13 @@ export class AuthResolver {
   }
 
   @Mutation(() => Boolean)
-  forgotPassword(@Args('email') email: string) {
-    return this.authService.forgotPassword(email);
+  forgotPassword(@Args('input') input: ForgotPasswordInput) {
+    return this.authService.forgotPassword(input.email);
   }
 
   @Mutation(() => Boolean)
-  resetPassword(
-    @Args('token') token: string,
-    @Args('newPassword') newPassword: string,
-  ) {
-    return this.authService.resetPassword(token, newPassword);
+  resetPassword(@Args('input') input: ResetPasswordInput) {
+    return this.authService.resetPassword(input.token, input.newPassword);
   }
 
   private extractSubFromRefreshToken = (token: string): string => {

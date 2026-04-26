@@ -9,32 +9,20 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UploadResult = void 0;
+exports.ForgotPasswordInput = void 0;
 const graphql_1 = require("@nestjs/graphql");
-let UploadResult = class UploadResult {
-    url;
-    pdfPrivateUrl;
-    expiresAt;
-    publicId;
+const class_validator_1 = require("class-validator");
+let ForgotPasswordInput = class ForgotPasswordInput {
+    email;
 };
-exports.UploadResult = UploadResult;
+exports.ForgotPasswordInput = ForgotPasswordInput;
 __decorate([
     (0, graphql_1.Field)(),
+    (0, class_validator_1.IsEmail)(),
+    (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
-], UploadResult.prototype, "url", void 0);
-__decorate([
-    (0, graphql_1.Field)({ nullable: true }),
-    __metadata("design:type", String)
-], UploadResult.prototype, "pdfPrivateUrl", void 0);
-__decorate([
-    (0, graphql_1.Field)({ nullable: true }),
-    __metadata("design:type", Number)
-], UploadResult.prototype, "expiresAt", void 0);
-__decorate([
-    (0, graphql_1.Field)(),
-    __metadata("design:type", String)
-], UploadResult.prototype, "publicId", void 0);
-exports.UploadResult = UploadResult = __decorate([
-    (0, graphql_1.ObjectType)()
-], UploadResult);
-//# sourceMappingURL=upload-result.type.js.map
+], ForgotPasswordInput.prototype, "email", void 0);
+exports.ForgotPasswordInput = ForgotPasswordInput = __decorate([
+    (0, graphql_1.InputType)()
+], ForgotPasswordInput);
+//# sourceMappingURL=forgot-password.input.js.map

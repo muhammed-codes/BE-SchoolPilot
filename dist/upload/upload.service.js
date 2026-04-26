@@ -21,25 +21,27 @@ let UploadService = UploadService_1 = class UploadService {
     pdfUrlDurationSeconds = 60 * 60 * 24 * 7;
     getCloudinaryErrorMessage = (rawMessage) => {
         const message = rawMessage || 'Unknown Cloudinary error';
+        this.logger.error(`Cloudinary raw error: ${message}`);
         const normalized = message.toLowerCase();
         if (normalized.includes('invalid cloud_name') ||
             normalized.includes('cloud_name mismatch')) {
             return 'Cloudinary configuration mismatch: CLOUDINARY_CLOUD_NAME must match the same Cloudinary product environment as CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET';
         }
-        return message;
+        return 'Cloudinary provider error';
     };
     getDeliveryUrl = (result) => {
         const format = (result?.format || '').toLowerCase();
-        if (format !== 'pdf') {
-            return result?.secure_url || '';
-        }
+        const base = { url: result?.secure_url || '' };
+        if (format !== 'pdf')
+            return base;
         const expiresAt = Math.floor(Date.now() / 1000) + this.pdfUrlDurationSeconds;
-        return cloudinary_1.v2.utils.private_download_url(result.public_id, format, {
+        const pdfPrivateUrl = cloudinary_1.v2.utils.private_download_url(result.public_id, format, {
             resource_type: result.resource_type || 'image',
             type: result.type || 'upload',
             expires_at: expiresAt,
             attachment: true,
         });
+        return { ...base, pdfPrivateUrl, expiresAt };
     };
     constructor(configService) {
         this.configService = configService;
@@ -59,7 +61,9 @@ let UploadService = UploadService_1 = class UploadService {
             cloud_name: this.configService
                 .getOrThrow('CLOUDINARY_CLOUD_NAME')
                 .trim(),
-            api_key: this.configService.getOrThrow('CLOUDINARY_API_KEY').trim(),
+            api_key: this.configService
+                .getOrThrow('CLOUDINARY_API_KEY')
+                .trim(),
             api_secret: this.configService
                 .getOrThrow('CLOUDINARY_API_SECRET')
                 .trim(),
@@ -86,7 +90,7 @@ let UploadService = UploadService_1 = class UploadService {
                         return reject(new common_1.HttpException(`File upload failed: ${cloudinaryError}`, common_1.HttpStatus.BAD_REQUEST));
                     }
                     resolve({
-                        url: this.getDeliveryUrl(result),
+                        ...this.getDeliveryUrl(result),
                         publicId: result.public_id,
                     });
                 });
@@ -126,7 +130,7 @@ let UploadService = UploadService_1 = class UploadService {
                     return reject(new common_1.HttpException(`Buffer upload failed: ${cloudinaryError}`, common_1.HttpStatus.BAD_REQUEST));
                 }
                 resolve({
-                    url: this.getDeliveryUrl(result),
+                    ...this.getDeliveryUrl(result),
                     publicId: result.public_id,
                 });
             });

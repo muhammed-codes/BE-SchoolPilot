@@ -7,15 +7,9 @@ export const classicTemplate = (
   data: StudentCardData | StaffCardData,
 ): string => {
   const isStudent = 'admissionNumber' in data;
-  const name = isStudent
-    ? (data as StudentCardData).studentName
-    : (data as StaffCardData).staffName;
-  const idNumber = isStudent
-    ? (data as StudentCardData).admissionNumber
-    : (data as StaffCardData).staffId;
-  const subtitle = isStudent
-    ? (data as StudentCardData).className
-    : (data as StaffCardData).role.replace(/_/g, ' ');
+  const name = isStudent ? data.studentName : data.staffName;
+  const idNumber = isStudent ? data.admissionNumber : data.staffId;
+  const subtitle = isStudent ? data.className : data.role.replace(/_/g, ' ');
   const photo = data.photoBase64;
   const logo = data.schoolLogoBase64;
   const schoolName = data.schoolName;

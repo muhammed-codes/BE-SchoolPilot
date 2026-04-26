@@ -154,8 +154,11 @@ let AuthService = class AuthService {
             if (!user) {
                 return true;
             }
-            const token = crypto.randomBytes(32).toString("hex");
-            const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+            const token = crypto.randomBytes(32).toString('hex');
+            const hashedToken = crypto
+                .createHash('sha256')
+                .update(token)
+                .digest('hex');
             const expires = new Date();
             expires.setHours(expires.getHours() + 1);
             return this.usersService
@@ -186,7 +189,6 @@ let AuthService = class AuthService {
                     resetPasswordExpires: null,
                 })
                     .then(() => true);
-                then(() => true);
             });
         });
     };

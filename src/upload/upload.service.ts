@@ -17,6 +17,7 @@ export class UploadService implements OnModuleInit {
   private readonly pdfUrlDurationSeconds = 60 * 60 * 24 * 7;
   private readonly getCloudinaryErrorMessage = (rawMessage?: string) => {
     const message = rawMessage || 'Unknown Cloudinary error';
+    this.logger.error(`Cloudinary raw error: ${message}`);
     const normalized = message.toLowerCase();
     if (
       normalized.includes('invalid cloud_name') ||
@@ -24,21 +25,26 @@ export class UploadService implements OnModuleInit {
     ) {
       return 'Cloudinary configuration mismatch: CLOUDINARY_CLOUD_NAME must match the same Cloudinary product environment as CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET';
     }
-    return message;
+    return 'Cloudinary provider error';
   };
-  private readonly getDeliveryUrl = (result) => {
+  private readonly getDeliveryUrl = (result: any) => {
     const format = (result?.format || '').toLowerCase();
-    if (format !== 'pdf') {
-      return result?.secure_url || '';
-    }
+    const base = { url: result?.secure_url || '' };
+    if (format !== 'pdf') return base;
+
     const expiresAt =
       Math.floor(Date.now() / 1000) + this.pdfUrlDurationSeconds;
-    return cloudinary.utils.private_download_url(result.public_id, format, {
-      resource_type: result.resource_type || 'image',
-      type: result.type || 'upload',
-      expires_at: expiresAt,
-      attachment: true,
-    });
+    const pdfPrivateUrl = cloudinary.utils.private_download_url(
+      result.public_id,
+      format,
+      {
+        resource_type: result.resource_type || 'image',
+        type: result.type || 'upload',
+        expires_at: expiresAt,
+        attachment: true,
+      },
+    );
+    return { ...base, pdfPrivateUrl, expiresAt };
   };
 
   constructor(private readonly configService: ConfigService) {}
@@ -59,7 +65,9 @@ export class UploadService implements OnModuleInit {
       cloud_name: this.configService
         .getOrThrow<string>('CLOUDINARY_CLOUD_NAME')
         .trim(),
-      api_key: this.configService.getOrThrow<string>('CLOUDINARY_API_KEY').trim(),
+      api_key: this.configService
+        .getOrThrow<string>('CLOUDINARY_API_KEY')
+        .trim(),
       api_secret: this.configService
         .getOrThrow<string>('CLOUDINARY_API_SECRET')
         .trim(),
@@ -92,7 +100,9 @@ export class UploadService implements OnModuleInit {
                 const cloudinaryError = this.getCloudinaryErrorMessage(
                   error.message,
                 );
-                this.logger.error(`Cloudinary upload failed: ${cloudinaryError}`);
+                this.logger.error(
+                  `Cloudinary upload failed: ${cloudinaryError}`,
+                );
                 return reject(
                   new HttpException(
                     `File upload failed: ${cloudinaryError}`,
@@ -101,7 +111,7 @@ export class UploadService implements OnModuleInit {
                 );
               }
               resolve({
-                url: this.getDeliveryUrl(result),
+                ...this.getDeliveryUrl(result),
                 publicId: result!.public_id,
               });
             },
@@ -168,7 +178,7 @@ export class UploadService implements OnModuleInit {
             );
           }
           resolve({
-            url: this.getDeliveryUrl(result),
+            ...this.getDeliveryUrl(result),
             publicId: result!.public_id,
           });
         },

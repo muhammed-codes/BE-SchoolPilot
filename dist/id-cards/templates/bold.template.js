@@ -16,15 +16,9 @@ const getAccentColor = (data) => {
 };
 const boldTemplate = (data) => {
     const isStudent = 'admissionNumber' in data;
-    const name = isStudent
-        ? data.studentName
-        : data.staffName;
-    const idNumber = isStudent
-        ? data.admissionNumber
-        : data.staffId;
-    const subtitle = isStudent
-        ? data.className
-        : data.role.replace(/_/g, ' ');
+    const name = isStudent ? data.studentName : data.staffName;
+    const idNumber = isStudent ? data.admissionNumber : data.staffId;
+    const subtitle = isStudent ? data.className : data.role.replace(/_/g, ' ');
     const photo = data.photoBase64;
     const logo = data.schoolLogoBase64;
     const schoolName = data.schoolName;

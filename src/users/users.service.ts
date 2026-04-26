@@ -47,7 +47,7 @@ export class UsersService {
   };
 
   findByResetToken = (token: string) => {
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     return this.usersRepository.findOne({
       where: { resetPasswordToken: hashedToken },
     });
@@ -63,15 +63,14 @@ export class UsersService {
   };
 
   private formatRoleLabel = (role: UserRole) => {
-    return role
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (m) => m.toUpperCase());
+    return role.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
   };
 
   private ensureUniqueLeadershipRolePerSchool = (
     schoolId?: string,
     role?: UserRole,
     excludeUserId?: string,
+    isActive?: boolean,
   ) => {
     if (!schoolId || !role || !this.singleLeadershipRoles.includes(role)) {
       return Promise.resolve();
@@ -82,7 +81,7 @@ export class UsersService {
         where: {
           schoolId,
           role,
-          isActive: true,
+          isActive: isActive ?? true,
         },
       })
       .then((existing) => {
@@ -139,18 +138,20 @@ export class UsersService {
             schoolId: adminSchoolId,
             passwordHash,
             staffId,
-          }).then((user) => {
-            if (user.expoPushToken) {
-              this.notificationsService.sendPushNotification(
-                user.expoPushToken,
-                'Welcome to SchoolPilot',
-                `Your account has been created. Login with your email: ${user.email}`,
-              );
-            }
-            return user;
-          }).catch((err) =>
-            this.mapLeadershipRoleDbConstraintError(err, input.role),
-          ),
+          })
+            .then(async (user) => {
+              if (user.expoPushToken) {
+                void this.notificationsService.sendPushNotification(
+                  user.expoPushToken,
+                  'Welcome to SchoolPilot',
+                  `Your account has been created. Login with your email: ${user.email}`,
+                );
+              }
+              return user;
+            })
+            .catch((err) =>
+              this.mapLeadershipRoleDbConstraintError(err, input.role),
+            ),
         ),
       );
   };
@@ -188,8 +189,8 @@ export class UsersService {
 
       const isSelfUpdate = requesterId === id;
       const isAdmin =
-        requesterRole === UserRole.SUPER_ADMIN ||
-        requesterRole === UserRole.SCHOOL_ADMIN;
+        (requesterRole as UserRole) === UserRole.SUPER_ADMIN ||
+        (requesterRole as UserRole) === UserRole.SCHOOL_ADMIN;
 
       if (!isSelfUpdate && !isAdmin) {
         throw new ForbiddenException('You can only update your own profile');
@@ -201,7 +202,7 @@ export class UsersService {
 
       if (
         input.role === UserRole.SUPER_ADMIN &&
-        requesterRole !== UserRole.SUPER_ADMIN
+        (requesterRole as UserRole) !== UserRole.SUPER_ADMIN
       ) {
         throw new ForbiddenException(
           'Only super admins can assign the super admin role',
@@ -300,7 +301,7 @@ export class UsersService {
       if (!user) throw new NotFoundException('User not found');
 
       if (
-        requesterRole === UserRole.SCHOOL_ADMIN &&
+        (requesterRole as UserRole) === UserRole.SCHOOL_ADMIN &&
         user.schoolId !== requesterSchoolId
       ) {
         throw new ForbiddenException(

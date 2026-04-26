@@ -36,14 +36,18 @@ let TermsService = class TermsService {
     calculateWeekdays(startDate, endDate) {
         const start = new Date(startDate);
         const end = new Date(endDate);
+        if (start > end) {
+            throw new common_1.BadRequestException('Start date cannot be after end date');
+        }
         let count = 0;
-        const current = new Date(start);
-        while (current <= end) {
-            const dayOfWeek = current.getDay();
+        const current = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+        const utcEnd = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+        while (current <= utcEnd) {
+            const dayOfWeek = current.getUTCDay();
             if (dayOfWeek !== 0 && dayOfWeek !== 6) {
                 count++;
             }
-            current.setDate(current.getDate() + 1);
+            current.setUTCDate(current.getUTCDate() + 1);
         }
         return count;
     }

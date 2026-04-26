@@ -194,7 +194,7 @@ let PdfService = PdfService_1 = class PdfService {
                 return this.uploadService.uploadBuffer(pdfBuffer, 'report-cards', filename);
             });
         })
-            .then((uploadResult) => uploadResult.url);
+            .then((uploadResult) => uploadResult.pdfPrivateUrl || uploadResult.url);
     };
     generateBulkReportCards = (resultSheetId) => {
         return this.resultSheetRepo

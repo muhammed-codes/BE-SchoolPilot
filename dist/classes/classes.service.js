@@ -44,18 +44,16 @@ let ClassesService = class ClassesService {
             const existingSubjectIds = existingAssignments.map((cs) => cs.subjectId);
             const toRemove = existingAssignments.filter((cs) => !subjectIds.includes(cs.subjectId));
             const toAddIds = subjectIds.filter((id) => !existingSubjectIds.includes(id));
-            return this.classSubjectsRepository.manager.transaction((manager) => {
+            return this.classSubjectsRepository.manager.transaction(async (manager) => {
                 const transactionalRepo = manager.withRepository(this.classSubjectsRepository);
-                const removalPromise = toRemove.length > 0
-                    ? transactionalRepo.remove(toRemove)
-                    : Promise.resolve();
-                return removalPromise.then(() => {
-                    if (toAddIds.length > 0) {
-                        const newSubjects = toAddIds.map((subjectId) => transactionalRepo.create({ classId, subjectId }));
-                        return transactionalRepo.save(newSubjects);
-                    }
-                    return Promise.resolve();
-                });
+                if (toRemove.length > 0) {
+                    await transactionalRepo.remove(toRemove);
+                }
+                if (toAddIds.length > 0) {
+                    const newSubjects = toAddIds.map((subjectId) => transactionalRepo.create({ classId, subjectId }));
+                    return transactionalRepo.save(newSubjects);
+                }
+                return Promise.resolve();
             });
         })
             .then(() => this.getClassById(classId, schoolId));

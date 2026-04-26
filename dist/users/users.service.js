@@ -83,7 +83,7 @@ let UsersService = class UsersService {
         return this.usersRepository.findOne({ where: { id } });
     };
     findByResetToken = (token) => {
-        const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
         return this.usersRepository.findOne({
             where: { resetPasswordToken: hashedToken },
         });
@@ -96,11 +96,9 @@ let UsersService = class UsersService {
         return this.usersRepository.update(id, data).then(() => this.findById(id));
     };
     formatRoleLabel = (role) => {
-        return role
-            .replace(/_/g, ' ')
-            .replace(/\b\w/g, (m) => m.toUpperCase());
+        return role.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
     };
-    ensureUniqueLeadershipRolePerSchool = (schoolId, role, excludeUserId) => {
+    ensureUniqueLeadershipRolePerSchool = (schoolId, role, excludeUserId, isActive) => {
         if (!schoolId || !role || !this.singleLeadershipRoles.includes(role)) {
             return Promise.resolve();
         }
@@ -109,7 +107,7 @@ let UsersService = class UsersService {
             where: {
                 schoolId,
                 role,
-                isActive: true,
+                isActive: isActive ?? true,
             },
         })
             .then((existing) => {
@@ -146,12 +144,14 @@ let UsersService = class UsersService {
             schoolId: adminSchoolId,
             passwordHash,
             staffId,
-        }).then((user) => {
+        })
+            .then(async (user) => {
             if (user.expoPushToken) {
-                this.notificationsService.sendPushNotification(user.expoPushToken, 'Welcome to SchoolPilot', `Your account has been created. Login with your email: ${user.email}`);
+                void this.notificationsService.sendPushNotification(user.expoPushToken, 'Welcome to SchoolPilot', `Your account has been created. Login with your email: ${user.email}`);
             }
             return user;
-        }).catch((err) => this.mapLeadershipRoleDbConstraintError(err, input.role))));
+        })
+            .catch((err) => this.mapLeadershipRoleDbConstraintError(err, input.role))));
     };
     findBySchool = (schoolId, role, pagination) => {
         const page = pagination?.page || 1;

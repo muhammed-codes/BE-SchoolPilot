@@ -5,7 +5,7 @@ class AddResetPasswordFields1776996113137 {
     name = 'AddResetPasswordFields1776996113137';
     async up(queryRunner) {
         await queryRunner.query(`ALTER TABLE "users" ADD "resetPasswordToken" character varying`);
-        await queryRunner.query(`ALTER TABLE "users" ADD "resetPasswordExpires" TIMESTAMP`);
+        await queryRunner.query(`ALTER TABLE "users" ADD "resetPasswordExpires" TIMESTAMPTZ`);
     }
     async down(queryRunner) {
         await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "resetPasswordExpires"`);

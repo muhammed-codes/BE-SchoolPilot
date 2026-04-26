@@ -15,6 +15,7 @@ import { PromotionResult } from './dto/promotion-result.type';
 import { UsersService } from '../users/users.service';
 import { UploadService } from '../upload/upload.service';
 import { UserRole } from '../common/enums';
+import { ClassesService } from '../classes/classes.service';
 
 @Injectable()
 export class StudentsService {
@@ -26,9 +27,10 @@ export class StudentsService {
     private readonly usersService: UsersService,
     private readonly uploadService: UploadService,
     private readonly dataSource: DataSource,
+    private readonly classesService: ClassesService,
   ) {}
 
-  createStudent = (input: CreateStudentInput, schoolId: string) => {
+  createStudent(input: CreateStudentInput, schoolId: string) {
     const student = this.studentsRepository.create({
       firstName: input.firstName,
       lastName: input.lastName,
@@ -41,20 +43,27 @@ export class StudentsService {
       schoolId,
     });
     return this.studentsRepository.save(student);
-  };
+  }
 
-  updateStudent = (id: string, input: any, schoolId: string) => {
+  updateStudent(id: string, input: any, schoolId: string) {
     return this.getStudentById(id, schoolId).then((student) => {
       const updateData: any = { ...input };
-      if (input.classId) {
-        updateData.currentClassId = input.classId;
-        delete updateData.classId;
-      }
-      return this.studentsRepository
-        .update(id, updateData)
+
+      const validateClass = input.classId
+        ? this.classesService
+            .getClassById(input.classId, schoolId)
+            .then((cls) => {
+              if (!cls) throw new NotFoundException('Class not found');
+              updateData.currentClassId = input.classId;
+              delete updateData.classId;
+            })
+        : Promise.resolve();
+
+      return validateClass
+        .then(() => this.studentsRepository.update(id, updateData))
         .then(() => this.getStudentById(id, schoolId));
     });
-  };
+  }
 
   bulkImportStudents = (
     students: CreateStudentInput[],
@@ -75,19 +84,15 @@ export class StudentsService {
         failed.push({ row: index + 1, reason: 'admissionNumber is required' });
         return;
       }
-      if (!input.classId) {
-        failed.push({ row: index + 1, reason: 'classId is required' });
-        return;
-      }
-      if (!input.gender) {
-        failed.push({ row: index + 1, reason: 'gender is required' });
+      if (!input.dateOfBirth) {
+        failed.push({ row: index + 1, reason: 'dateOfBirth is required' });
         return;
       }
       validStudents.push({
         firstName: input.firstName,
         lastName: input.lastName,
         admissionNumber: input.admissionNumber,
-        dateOfBirth: input.dateOfBirth || undefined,
+        dateOfBirth: new Date(input.dateOfBirth),
         gender: input.gender,
         currentClassId: input.classId,
         address: input.address,
@@ -164,15 +169,15 @@ export class StudentsService {
     });
   };
 
-  getStudentsByClass = (classId: string, schoolId: string) => {
+  getStudentsByClass(classId: string, schoolId: string) {
     return this.studentsRepository.find({
       where: { currentClassId: classId, schoolId, isArchived: false },
       relations: ['currentClass'],
       order: { firstName: 'ASC' },
     });
-  };
+  }
 
-  getStudentById = (id: string, schoolId: string) => {
+  getStudentById(id: string, schoolId: string) {
     return this.studentsRepository
       .findOne({
         where: { id, schoolId },
@@ -182,16 +187,16 @@ export class StudentsService {
         if (!student) throw new NotFoundException('Student not found');
         return student;
       });
-  };
+  }
 
-  getStudentsByParent = (parentUserId: string) => {
+  getStudentsByParent(parentUserId: string) {
     return this.studentParentsRepository
       .find({
         where: { parentId: parentUserId },
         relations: ['student', 'student.currentClass'],
       })
       .then((records) => records.map((r) => r.student));
-  };
+  }
 
   searchStudents = (query: string, schoolId: string) => {
     return this.studentsRepository.find({

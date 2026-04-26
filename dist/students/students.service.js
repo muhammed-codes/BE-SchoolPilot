@@ -21,20 +21,23 @@ const student_parent_entity_1 = require("./entities/student-parent.entity");
 const users_service_1 = require("../users/users.service");
 const upload_service_1 = require("../upload/upload.service");
 const enums_1 = require("../common/enums");
+const classes_service_1 = require("../classes/classes.service");
 let StudentsService = class StudentsService {
     studentsRepository;
     studentParentsRepository;
     usersService;
     uploadService;
     dataSource;
-    constructor(studentsRepository, studentParentsRepository, usersService, uploadService, dataSource) {
+    classesService;
+    constructor(studentsRepository, studentParentsRepository, usersService, uploadService, dataSource, classesService) {
         this.studentsRepository = studentsRepository;
         this.studentParentsRepository = studentParentsRepository;
         this.usersService = usersService;
         this.uploadService = uploadService;
         this.dataSource = dataSource;
+        this.classesService = classesService;
     }
-    createStudent = (input, schoolId) => {
+    createStudent(input, schoolId) {
         const student = this.studentsRepository.create({
             firstName: input.firstName,
             lastName: input.lastName,
@@ -47,19 +50,25 @@ let StudentsService = class StudentsService {
             schoolId,
         });
         return this.studentsRepository.save(student);
-    };
-    updateStudent = (id, input, schoolId) => {
+    }
+    updateStudent(id, input, schoolId) {
         return this.getStudentById(id, schoolId).then((student) => {
             const updateData = { ...input };
-            if (input.classId) {
-                updateData.currentClassId = input.classId;
-                delete updateData.classId;
-            }
-            return this.studentsRepository
-                .update(id, updateData)
+            const validateClass = input.classId
+                ? this.classesService
+                    .getClassById(input.classId, schoolId)
+                    .then((cls) => {
+                    if (!cls)
+                        throw new common_1.NotFoundException('Class not found');
+                    updateData.currentClassId = input.classId;
+                    delete updateData.classId;
+                })
+                : Promise.resolve();
+            return validateClass
+                .then(() => this.studentsRepository.update(id, updateData))
                 .then(() => this.getStudentById(id, schoolId));
         });
-    };
+    }
     bulkImportStudents = (students, schoolId) => {
         const failed = [];
         const validStudents = [];
@@ -75,19 +84,15 @@ let StudentsService = class StudentsService {
                 failed.push({ row: index + 1, reason: 'admissionNumber is required' });
                 return;
             }
-            if (!input.classId) {
-                failed.push({ row: index + 1, reason: 'classId is required' });
-                return;
-            }
-            if (!input.gender) {
-                failed.push({ row: index + 1, reason: 'gender is required' });
+            if (!input.dateOfBirth) {
+                failed.push({ row: index + 1, reason: 'dateOfBirth is required' });
                 return;
             }
             validStudents.push({
                 firstName: input.firstName,
                 lastName: input.lastName,
                 admissionNumber: input.admissionNumber,
-                dateOfBirth: input.dateOfBirth || undefined,
+                dateOfBirth: new Date(input.dateOfBirth),
                 gender: input.gender,
                 currentClassId: input.classId,
                 address: input.address,
@@ -147,14 +152,14 @@ let StudentsService = class StudentsService {
                 .then(() => this.getStudentById(studentId, schoolId)));
         });
     };
-    getStudentsByClass = (classId, schoolId) => {
+    getStudentsByClass(classId, schoolId) {
         return this.studentsRepository.find({
             where: { currentClassId: classId, schoolId, isArchived: false },
             relations: ['currentClass'],
             order: { firstName: 'ASC' },
         });
-    };
-    getStudentById = (id, schoolId) => {
+    }
+    getStudentById(id, schoolId) {
         return this.studentsRepository
             .findOne({
             where: { id, schoolId },
@@ -165,15 +170,15 @@ let StudentsService = class StudentsService {
                 throw new common_1.NotFoundException('Student not found');
             return student;
         });
-    };
-    getStudentsByParent = (parentUserId) => {
+    }
+    getStudentsByParent(parentUserId) {
         return this.studentParentsRepository
             .find({
             where: { parentId: parentUserId },
             relations: ['student', 'student.currentClass'],
         })
             .then((records) => records.map((r) => r.student));
-    };
+    }
     searchStudents = (query, schoolId) => {
         return this.studentsRepository.find({
             where: [
@@ -224,6 +229,7 @@ exports.StudentsService = StudentsService = __decorate([
         typeorm_2.Repository,
         users_service_1.UsersService,
         upload_service_1.UploadService,
-        typeorm_2.DataSource])
+        typeorm_2.DataSource,
+        classes_service_1.ClassesService])
 ], StudentsService);
 //# sourceMappingURL=students.service.js.map

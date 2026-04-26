@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
 import { Session } from './entities/session.entity';
@@ -30,15 +34,26 @@ export class TermsService {
   ): number {
     const start = new Date(startDate);
     const end = new Date(endDate);
+
+    if (start > end) {
+      throw new BadRequestException('Start date cannot be after end date');
+    }
+
     let count = 0;
-    const current = new Date(start);
-    while (current <= end) {
-      const dayOfWeek = current.getDay();
+    const current = new Date(
+      Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()),
+    );
+    const utcEnd = new Date(
+      Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()),
+    );
+
+    while (current <= utcEnd) {
+      const dayOfWeek = current.getUTCDay();
       if (dayOfWeek !== 0 && dayOfWeek !== 6) {
         // 0 = Sunday, 6 = Saturday
         count++;
       }
-      current.setDate(current.getDate() + 1);
+      current.setUTCDate(current.getUTCDate() + 1);
     }
     return count;
   }

@@ -149,7 +149,7 @@ export class IdCardsService {
               `student-${studentId}-${Date.now()}`,
             ),
           )
-          .then((result) => result.url);
+          .then((result) => result.pdfPrivateUrl || result.url);
       });
     });
   };
@@ -207,7 +207,7 @@ export class IdCardsService {
                 )
                 .then((result) => ({
                   totalCards: students.length,
-                  pdfUrl: result.url,
+                  pdfUrl: result.pdfPrivateUrl || result.url,
                   label: className,
                 }));
             });
@@ -234,7 +234,7 @@ export class IdCardsService {
               `staff-${userId}-${Date.now()}`,
             ),
           )
-          .then((result) => result.url);
+          .then((result) => result.pdfPrivateUrl || result.url);
       });
     });
   };
@@ -288,7 +288,7 @@ export class IdCardsService {
                 )
                 .then((result) => ({
                   totalCards: users.length,
-                  pdfUrl: result.url,
+                  pdfUrl: result.pdfPrivateUrl || result.url,
                   label: school.name,
                 }));
             });

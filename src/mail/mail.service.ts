@@ -8,14 +8,22 @@ export class MailService {
   private readonly logger = new Logger(MailService.name);
 
   constructor(private configService: ConfigService) {
-    this.resend = new Resend(this.configService.get<string>('RESEND_API_KEY'));
+    this.resend = new Resend(
+      this.configService.getOrThrow<string>('RESEND_API_KEY'),
+    );
   }
 
-  async sendPasswordResetEmail(email: string, token: string) {
-    const resetUrl = `${this.configService.get<string>('FRONTEND_URL')}/reset-password?token=${token}`;
-    
-    try {
-      await this.resend.emails.send({
+  private maskEmail = (email: string) => {
+    const [local, domain] = email.split('@');
+    return `${local[0]}***@${domain}`;
+  };
+
+  sendPasswordResetEmail = (email: string, token: string) => {
+    const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
+    const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+
+    return this.resend.emails
+      .send({
         from: 'SchoolPilot <noreply@schoolpilot.app>',
         to: email,
         subject: 'Reset Your Password',
@@ -26,10 +34,19 @@ export class MailService {
           <p>If you did not request this, please ignore this email.</p>
           <p>This link will expire in 1 hour.</p>
         `,
+      })
+      .then(() => {
+        this.logger.log(
+          `Password reset email sent to ${this.maskEmail(email)}`,
+        );
+        return true;
+      })
+      .catch((error) => {
+        this.logger.error(
+          `Failed to send password reset email to ${this.maskEmail(email)}`,
+          error.stack,
+        );
+        throw error;
       });
-      this.logger.log(`Password reset email sent to ${email}`);
-    } catch (error) {
-      this.logger.error(`Failed to send password reset email to ${email}`, error.stack);
-    }
-  }
+  };
 }

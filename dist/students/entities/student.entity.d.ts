@@ -5,7 +5,7 @@ export declare class Student extends BaseEntity {
     firstName: string;
     lastName: string;
     admissionNumber: string;
-    dateOfBirth: string;
+    dateOfBirth: Date;
     gender: Gender;
     passportPhotoUrl: string;
     passportPhotoPublicId: string;
