@@ -5,6 +5,7 @@ import { ClassEntity } from './entities/class.entity';
 import { ClassSubject } from './entities/class-subject.entity';
 import { CreateClassInput } from './dto/create-class.input';
 import { PaginationArgs } from '../common/pagination';
+import { Student } from '../students/entities/student.entity';
 
 @Injectable()
 export class ClassesService {
@@ -13,6 +14,8 @@ export class ClassesService {
     private readonly classesRepository: Repository<ClassEntity>,
     @InjectRepository(ClassSubject)
     private readonly classSubjectsRepository: Repository<ClassSubject>,
+    @InjectRepository(Student)
+    private readonly studentsRepository: Repository<Student>,
   ) {}
 
   createClass = (input: CreateClassInput, schoolId: string) => {
@@ -130,12 +133,44 @@ export class ClassesService {
         take: limit,
         order: { name: 'ASC' },
       })
-      .then(([items, total]) => ({
-        items,
-        total,
-        page,
-        totalPages: Math.ceil(total / limit),
-      }));
+      .then(([items, total]) => {
+        const classIds = items.map((item) => item.id);
+
+        if (classIds.length === 0) {
+          return {
+            items,
+            total,
+            page,
+            totalPages: Math.ceil(total / limit),
+          };
+        }
+
+        return this.studentsRepository
+          .createQueryBuilder('student')
+          .select('student.currentClassId', 'classId')
+          .addSelect('COUNT(student.id)', 'totalNoOfStudents')
+          .where('student.schoolId = :schoolId', { schoolId })
+          .andWhere('student.isArchived = :isArchived', { isArchived: false })
+          .andWhere('student.currentClassId IN (:...classIds)', { classIds })
+          .groupBy('student.currentClassId')
+          .getRawMany()
+          .then((rawCounts) => {
+            const countsMap = new Map(
+              rawCounts.map((row) => [row.classId, Number(row.totalNoOfStudents)]),
+            );
+
+            items.forEach((item) => {
+              item.totalNoOfStudents = countsMap.get(item.id) || 0;
+            });
+
+            return {
+              items,
+              total,
+              page,
+              totalPages: Math.ceil(total / limit),
+            };
+          });
+      });
   };
 
   getClassById = (id: string, schoolId: string) => {
