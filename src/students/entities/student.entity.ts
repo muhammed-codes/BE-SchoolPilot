@@ -21,7 +21,13 @@ export class Student extends BaseEntity {
   admissionNumber: string;
 
   @Field()
-  @Column({ type: 'date' })
+  @Column({
+    type: 'date',
+    transformer: {
+      to: (val: Date | string) => val,
+      from: (val: string) => (val ? new Date(val) : null),
+    },
+  })
   dateOfBirth: Date;
 
   @Field(() => Gender)
