@@ -4,11 +4,13 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, ILike } from 'typeorm';
+import { Repository, DataSource, ILike, EntityManager } from 'typeorm';
 import { Upload } from 'graphql-upload-ts';
 import { Student } from './entities/student.entity';
 import { StudentParent } from './entities/student-parent.entity';
+import { AdmissionSequence } from './entities/admission-sequence.entity';
 import { CreateStudentInput } from './dto/create-student.input';
+import { UpdateStudentInput } from './dto/update-student.input';
 import { PromoteStudentsInput } from './dto/promote-students.input';
 import { BulkImportResult, FailedRow } from './dto/bulk-import-result.type';
 import { PromotionResult } from './dto/promotion-result.type';
@@ -16,6 +18,7 @@ import { UsersService } from '../users/users.service';
 import { UploadService } from '../upload/upload.service';
 import { UserRole } from '../common/enums';
 import { ClassesService } from '../classes/classes.service';
+import { SchoolsService } from '../schools/schools.service';
 
 @Injectable()
 export class StudentsService {
@@ -24,30 +27,121 @@ export class StudentsService {
     private readonly studentsRepository: Repository<Student>,
     @InjectRepository(StudentParent)
     private readonly studentParentsRepository: Repository<StudentParent>,
+    @InjectRepository(AdmissionSequence)
+    private readonly admissionSequenceRepository: Repository<AdmissionSequence>,
     private readonly usersService: UsersService,
     private readonly uploadService: UploadService,
     private readonly dataSource: DataSource,
     private readonly classesService: ClassesService,
+    private readonly schoolsService: SchoolsService,
   ) {}
 
-  createStudent(input: CreateStudentInput, schoolId: string) {
-    const student = this.studentsRepository.create({
-      firstName: input.firstName,
-      lastName: input.lastName,
-      admissionNumber: input.admissionNumber,
-      dateOfBirth: input.dateOfBirth,
-      gender: input.gender,
-      currentClassId: input.classId,
-      address: input.address,
-      stateOfOrigin: input.stateOfOrigin,
-      schoolId,
-    });
-    return this.studentsRepository.save(student);
-  }
+  private getAdmissionPrefix = (schoolCode: string, year: number) =>
+    `STD-${String(year).slice(-2)}-${schoolCode}`;
 
-  updateStudent(id: string, input: any, schoolId: string) {
-    return this.getStudentById(id, schoolId).then((student) => {
-      const updateData: any = { ...input };
+  private getAdmissionNumber = (prefix: string, sequence: number) =>
+    `${prefix}-${String(sequence).padStart(3, '0')}`;
+
+  private getAdmissionContext = (schoolId: string, year: number) => {
+    return this.schoolsService.findById(schoolId).then((school) => {
+      const schoolCode = school.schoolCode?.trim().toUpperCase();
+
+      if (!schoolCode) {
+        throw new BadRequestException(
+          'School code is not set. Update school settings to continue.',
+        );
+      }
+
+      return {
+        prefix: this.getAdmissionPrefix(schoolCode, year),
+        lockKey: `student-admission:${schoolId}:${year}`,
+      };
+    });
+  };
+
+  private getNextAdmissionSequence = (
+    manager: EntityManager,
+    schoolId: string,
+    year: number,
+    lockKey: string,
+    count: number = 1,
+  ) => {
+    return manager
+      .query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [lockKey])
+      .then(() =>
+        manager.findOne(AdmissionSequence, {
+          where: { schoolId, year },
+        }),
+      )
+      .then((sequence) => {
+        if (!sequence) {
+          const newSequence = manager.create(AdmissionSequence, {
+            schoolId,
+            year,
+            lastSequence: count,
+          });
+          return manager.save(AdmissionSequence, newSequence).then(() => 1);
+        }
+        const start = sequence.lastSequence + 1;
+        sequence.lastSequence += count;
+        return manager.save(AdmissionSequence, sequence).then(() => start);
+      });
+  };
+
+  createStudent = (input: CreateStudentInput, schoolId: string) => {
+    const admissionYear = new Date().getFullYear();
+
+    return this.classesService.getClassById(input.classId, schoolId).then(() =>
+      this.getAdmissionContext(schoolId, admissionYear).then(
+        ({ prefix, lockKey }) =>
+          this.dataSource.transaction((manager) =>
+            this.getNextAdmissionSequence(
+              manager,
+              schoolId,
+              admissionYear,
+              lockKey,
+            ).then((sequence) => {
+              const student = manager.create(Student, {
+                firstName: input.firstName,
+                lastName: input.lastName,
+                admissionNumber: this.getAdmissionNumber(prefix, sequence),
+                dateOfBirth: input.dateOfBirth,
+                gender: input.gender,
+                currentClassId: input.classId,
+                address: input.address,
+                stateOfOrigin: input.stateOfOrigin,
+                schoolId,
+              });
+
+              return manager.save(Student, student);
+            }),
+          ),
+      ),
+    );
+  };
+
+  updateStudent(id: string, input: UpdateStudentInput, schoolId: string) {
+    return this.getStudentById(id, schoolId).then(() => {
+      const updateData: Partial<Student> = {};
+
+      if (input.firstName !== undefined) {
+        updateData.firstName = input.firstName;
+      }
+      if (input.lastName !== undefined) {
+        updateData.lastName = input.lastName;
+      }
+      if (input.dateOfBirth !== undefined) {
+        updateData.dateOfBirth = new Date(input.dateOfBirth);
+      }
+      if (input.gender !== undefined) {
+        updateData.gender = input.gender;
+      }
+      if (input.address !== undefined) {
+        updateData.address = input.address;
+      }
+      if (input.stateOfOrigin !== undefined) {
+        updateData.stateOfOrigin = input.stateOfOrigin;
+      }
 
       const validateClass = input.classId
         ? this.classesService
@@ -55,7 +149,6 @@ export class StudentsService {
             .then((cls) => {
               if (!cls) throw new NotFoundException('Class not found');
               updateData.currentClassId = input.classId;
-              delete updateData.classId;
             })
         : Promise.resolve();
 
@@ -69,6 +162,7 @@ export class StudentsService {
     students: CreateStudentInput[],
     schoolId: string,
   ): Promise<BulkImportResult> => {
+    const admissionYear = new Date().getFullYear();
     const failed: FailedRow[] = [];
     const validStudents: Partial<Student>[] = [];
 
@@ -80,10 +174,6 @@ export class StudentsService {
         });
         return;
       }
-      if (!input.admissionNumber) {
-        failed.push({ row: index + 1, reason: 'admissionNumber is required' });
-        return;
-      }
       if (!input.dateOfBirth) {
         failed.push({ row: index + 1, reason: 'dateOfBirth is required' });
         return;
@@ -91,7 +181,6 @@ export class StudentsService {
       validStudents.push({
         firstName: input.firstName,
         lastName: input.lastName,
-        admissionNumber: input.admissionNumber,
         dateOfBirth: new Date(input.dateOfBirth),
         gender: input.gender,
         currentClassId: input.classId,
@@ -101,13 +190,30 @@ export class StudentsService {
       });
     });
 
-    return this.dataSource
-      .transaction((manager) => {
-        const studentEntities = validStudents.map((s) =>
-          manager.create(Student, s),
-        );
-        return manager.save(Student, studentEntities);
-      })
+    return this.getAdmissionContext(schoolId, admissionYear)
+      .then(({ prefix, lockKey }) =>
+        this.dataSource.transaction((manager) =>
+          this.getNextAdmissionSequence(
+            manager,
+            schoolId,
+            admissionYear,
+            lockKey,
+            validStudents.length,
+          ).then((sequenceStart) => {
+            const studentEntities = validStudents.map((student, index) =>
+              manager.create(Student, {
+                ...student,
+                admissionNumber: this.getAdmissionNumber(
+                  prefix,
+                  sequenceStart + index,
+                ),
+              }),
+            );
+
+            return manager.save(Student, studentEntities);
+          }),
+        ),
+      )
       .then((savedStudents) => ({
         imported: savedStudents.length,
         failed,
@@ -199,11 +305,31 @@ export class StudentsService {
   }
 
   searchStudents = (query: string, schoolId: string) => {
+    const normalizedQuery = query.trim();
+    const wildcardQuery = normalizedQuery.replace(/[^a-zA-Z0-9]+/g, '%');
+    const admissionQueries = [normalizedQuery, wildcardQuery]
+      .filter(
+        (value, index, values) => value && values.indexOf(value) === index,
+      )
+      .map((value) => ({
+        admissionNumber: ILike(`%${value}%`),
+        schoolId,
+        isArchived: false,
+      }));
+
     return this.studentsRepository.find({
       where: [
-        { firstName: ILike(`%${query}%`), schoolId, isArchived: false },
-        { lastName: ILike(`%${query}%`), schoolId, isArchived: false },
-        { admissionNumber: ILike(`%${query}%`), schoolId, isArchived: false },
+        {
+          firstName: ILike(`%${normalizedQuery}%`),
+          schoolId,
+          isArchived: false,
+        },
+        {
+          lastName: ILike(`%${normalizedQuery}%`),
+          schoolId,
+          isArchived: false,
+        },
+        ...admissionQueries,
       ],
       relations: ['currentClass'],
       order: { firstName: 'ASC' },

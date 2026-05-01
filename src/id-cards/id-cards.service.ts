@@ -1,10 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, In } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import * as QRCode from 'qrcode';
 import { Student } from '../students/entities/student.entity';
 import { User } from '../users/entities/user.entity';
-import { School } from '../schools/entities/school.entity';
 import {
   StudentCardData,
   StaffCardData,

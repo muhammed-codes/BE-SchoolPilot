@@ -76,7 +76,7 @@ export class AuthService {
 
   logout = (userId: string) => {
     return this.usersService
-      .update(userId, { refreshToken: null } as any)
+      .update(userId, { refreshToken: null })
       .then(() => true);
   };
 

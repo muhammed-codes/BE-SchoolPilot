@@ -54,7 +54,7 @@ export class SchoolsResolver {
   updateSchool(
     @Args('id') id: string,
     @Args('input') input: UpdateSchoolInput,
-    @CurrentUser() user: { role: string; schoolId: string },
+    @CurrentUser() user: { role: UserRole; schoolId: string },
   ) {
     if (user.role === UserRole.SCHOOL_ADMIN && user.schoolId !== id) {
       throw new ForbiddenException('You can only update your own school');
@@ -68,7 +68,7 @@ export class SchoolsResolver {
   uploadSchoolLogo(
     @Args('schoolId') schoolId: string,
     @Args({ name: 'file', type: () => GraphQLUpload }) file: Upload,
-    @CurrentUser() user: { role: string; schoolId: string },
+    @CurrentUser() user: { role: UserRole; schoolId: string },
   ) {
     if (user.role === UserRole.SCHOOL_ADMIN && user.schoolId !== schoolId) {
       throw new ForbiddenException(
@@ -84,7 +84,7 @@ export class SchoolsResolver {
   uploadSchoolStamp(
     @Args('schoolId') schoolId: string,
     @Args({ name: 'file', type: () => GraphQLUpload }) file: Upload,
-    @CurrentUser() user: { role: string; schoolId: string },
+    @CurrentUser() user: { role: UserRole; schoolId: string },
   ) {
     if (user.role === UserRole.SCHOOL_ADMIN && user.schoolId !== schoolId) {
       throw new ForbiddenException(

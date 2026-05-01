@@ -15,4 +15,4 @@ const bootstrap = async () => {
   await app.listen(port);
 };
 
-bootstrap();
+void bootstrap();

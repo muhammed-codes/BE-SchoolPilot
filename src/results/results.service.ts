@@ -499,7 +499,7 @@ export class ResultsService {
   };
 
   getSchoolResultSheets = (schoolId: string, status?: ResultStatus) => {
-    const where: any = { schoolId };
+    const where: { schoolId: string; status?: ResultStatus } = { schoolId };
     if (status) where.status = status;
     return this.resultSheetRepo.find({
       where,

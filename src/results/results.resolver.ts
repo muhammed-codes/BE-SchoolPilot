@@ -9,7 +9,7 @@ import { SaveSubjectScoresInput } from './dto/save-subject-scores.input';
 import { JwtAuthGuard, RolesGuard } from '../common/guards';
 import { CurrentUser } from '../common/decorators';
 import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../common/enums';
+import { UserRole, ResultStatus } from '../common/enums';
 
 @Resolver()
 export class ResultsResolver {
@@ -51,8 +51,9 @@ export class ResultsResolver {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PRINCIPAL, UserRole.SCHOOL_ADMIN)
   schoolResultSheets(
-    @Args('status', { type: () => String, nullable: true }) status: any,
     @CurrentUser() user: { schoolId: string },
+    @Args('status', { type: () => ResultStatus, nullable: true })
+    status?: ResultStatus,
   ) {
     return this.resultsService.getSchoolResultSheets(user.schoolId, status);
   }

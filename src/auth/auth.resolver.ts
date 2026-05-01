@@ -6,10 +6,8 @@ import { ForgotPasswordInput } from './dto/forgot-password.input';
 import { ResetPasswordInput } from './dto/reset-password.input';
 import { LoginInput } from './dto/login.input';
 import { AuthResponse } from './dto/auth-response.type';
-import { JwtAuthGuard, RolesGuard } from '../common/guards';
+import { JwtAuthGuard } from '../common/guards';
 import { CurrentUser } from '../common/decorators';
-import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../common/enums';
 
 @Resolver()
 export class AuthResolver {
@@ -67,7 +65,12 @@ export class AuthResolver {
   private extractSubFromRefreshToken = (token: string): string => {
     const payload = JSON.parse(
       Buffer.from(token.split('.')[1], 'base64').toString(),
-    );
+    ) as { sub?: string };
+
+    if (!payload.sub) {
+      throw new ForbiddenException('Invalid refresh token');
+    }
+
     return payload.sub;
   };
 }

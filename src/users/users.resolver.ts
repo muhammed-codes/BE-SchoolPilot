@@ -53,7 +53,7 @@ export class UsersResolver {
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   createUser(
     @Args('input') input: CreateUserInput,
-    @CurrentUser() user: { sub: string; role: string; schoolId: string },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
   ) {
     if (user.role === UserRole.SCHOOL_ADMIN) {
       const allowedRoles = [
@@ -100,7 +100,7 @@ export class UsersResolver {
   updateUser(
     @Args('id') id: string,
     @Args('input') input: UpdateUserInput,
-    @CurrentUser() user: { sub: string; role: string },
+    @CurrentUser() user: { sub: string; role: UserRole },
   ) {
     return this.usersService.updateUser(id, input, user.sub, user.role);
   }
@@ -129,7 +129,7 @@ export class UsersResolver {
   @Roles(UserRole.SCHOOL_ADMIN)
   deactivateUser(
     @Args('id') id: string,
-    @CurrentUser() user: { sub: string; role: string; schoolId: string },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
   ) {
     return this.usersService.deactivateUser(
       id,

@@ -94,12 +94,19 @@ export class UsersService {
   };
 
   private mapLeadershipRoleDbConstraintError = (
-    err: any,
+    err: unknown,
     role?: UserRole,
   ): never => {
+    const errorCode =
+      typeof err === 'object' && err && 'code' in err ? err.code : undefined;
+    const errorConstraint =
+      typeof err === 'object' && err && 'constraint' in err
+        ? err.constraint
+        : undefined;
+
     if (
-      err?.code === '23505' &&
-      err?.constraint === this.singleLeadershipRoleUniqueConstraint
+      errorCode === '23505' &&
+      errorConstraint === this.singleLeadershipRoleUniqueConstraint
     ) {
       if (role) {
         throw new ForbiddenException(
@@ -139,7 +146,7 @@ export class UsersService {
             passwordHash,
             staffId,
           })
-            .then(async (user) => {
+            .then((user) => {
               if (user.expoPushToken) {
                 void this.notificationsService.sendPushNotification(
                   user.expoPushToken,
@@ -165,7 +172,7 @@ export class UsersService {
     const limit = pagination?.limit || 20;
     const skip = (page - 1) * limit;
 
-    const where: any = { schoolId };
+    const where: { schoolId: string; role?: UserRole } = { schoolId };
     if (role) where.role = role;
 
     return this.usersRepository
@@ -182,15 +189,15 @@ export class UsersService {
     id: string,
     input: UpdateUserInput,
     requesterId: string,
-    requesterRole: string,
+    requesterRole: UserRole,
   ) => {
     return this.findById(id).then((user) => {
       if (!user) throw new NotFoundException('User not found');
 
       const isSelfUpdate = requesterId === id;
       const isAdmin =
-        (requesterRole as UserRole) === UserRole.SUPER_ADMIN ||
-        (requesterRole as UserRole) === UserRole.SCHOOL_ADMIN;
+        requesterRole === UserRole.SUPER_ADMIN ||
+        requesterRole === UserRole.SCHOOL_ADMIN;
 
       if (!isSelfUpdate && !isAdmin) {
         throw new ForbiddenException('You can only update your own profile');
@@ -202,7 +209,7 @@ export class UsersService {
 
       if (
         input.role === UserRole.SUPER_ADMIN &&
-        (requesterRole as UserRole) !== UserRole.SUPER_ADMIN
+        requesterRole !== UserRole.SUPER_ADMIN
       ) {
         throw new ForbiddenException(
           'Only super admins can assign the super admin role',
@@ -215,7 +222,7 @@ export class UsersService {
         user.id,
       ).then(() =>
         this.usersRepository
-          .update(id, input as any)
+          .update(id, input)
           .catch((err) =>
             this.mapLeadershipRoleDbConstraintError(err, input.role),
           )

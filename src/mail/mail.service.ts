@@ -42,9 +42,11 @@ export class MailService {
         return true;
       })
       .catch((error) => {
+        const errorStack =
+          error instanceof Error ? error.stack : 'Unknown error';
         this.logger.error(
           `Failed to send password reset email to ${this.maskEmail(email)}`,
-          error.stack,
+          errorStack,
         );
         throw error;
       });

@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Session } from './entities/session.entity';
 import { Term } from './entities/term.entity';
 import { CreateSessionInput } from './dto/create-session.input';

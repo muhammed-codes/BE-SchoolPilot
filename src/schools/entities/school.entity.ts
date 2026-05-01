@@ -41,6 +41,10 @@ export class School extends BaseEntity {
 
   @Field({ nullable: true })
   @Column({ nullable: true })
+  schoolCode: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true })
   defaultReportTemplate: string;
 
   @Field({ nullable: true })

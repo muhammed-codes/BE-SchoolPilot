@@ -6,15 +6,22 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { v2 as cloudinary } from 'cloudinary';
+import {
+  v2 as cloudinary,
+  UploadApiErrorResponse,
+  UploadApiResponse,
+} from 'cloudinary';
 import { Readable } from 'stream';
-import { Upload } from 'graphql-upload-ts';
+import { FileUpload, Upload } from 'graphql-upload-ts';
 import { UploadResult } from './dto/upload-result.type';
 
 @Injectable()
 export class UploadService implements OnModuleInit {
   private readonly logger = new Logger(UploadService.name);
   private readonly pdfUrlDurationSeconds = 60 * 60 * 24 * 7;
+  private readonly getErrorMessage = (error: unknown) => {
+    return error instanceof Error ? error.message : 'Unknown error';
+  };
   private readonly getCloudinaryErrorMessage = (rawMessage?: string) => {
     const message = rawMessage || 'Unknown Cloudinary error';
     this.logger.error(`Cloudinary raw error: ${message}`);
@@ -27,7 +34,7 @@ export class UploadService implements OnModuleInit {
     }
     return 'Cloudinary provider error';
   };
-  private readonly getDeliveryUrl = (result: any) => {
+  private readonly getDeliveryUrl = (result: UploadApiResponse) => {
     const format = (result?.format || '').toLowerCase();
     const base = { url: result?.secure_url || '' };
     if (format !== 'pdf') return base;
@@ -46,18 +53,16 @@ export class UploadService implements OnModuleInit {
     );
     return { ...base, pdfPrivateUrl, expiresAt };
   };
+  private readonly resolveFileUpload = (
+    file: Upload | Promise<FileUpload>,
+  ): Promise<FileUpload> => {
+    return file instanceof Upload ? file.promise : file;
+  };
 
   constructor(private readonly configService: ConfigService) {}
 
   private readonly validateCloudinaryConnection = (): Promise<void> => {
-    return new Promise<void>((resolve, reject) => {
-      cloudinary.api.ping((error) => {
-        if (error) {
-          return reject(error);
-        }
-        resolve();
-      });
-    });
+    return cloudinary.api.ping().then(() => undefined);
   };
 
   onModuleInit = (): Promise<void> => {
@@ -77,7 +82,9 @@ export class UploadService implements OnModuleInit {
         this.logger.log('Cloudinary startup validation passed');
       })
       .catch((error) => {
-        const cloudinaryError = this.getCloudinaryErrorMessage(error.message);
+        const cloudinaryError = this.getCloudinaryErrorMessage(
+          this.getErrorMessage(error),
+        );
         this.logger.error(
           `Cloudinary startup validation failed: ${cloudinaryError}`,
         );
@@ -88,14 +95,17 @@ export class UploadService implements OnModuleInit {
       });
   };
 
-  uploadFile = (file: Upload, folder: string): Promise<UploadResult> => {
-    return (file as any)
+  uploadFile = (
+    file: Upload | Promise<FileUpload>,
+    folder: string,
+  ): Promise<UploadResult> => {
+    return this.resolveFileUpload(file)
       .then(({ createReadStream }: { createReadStream: () => Readable }) => {
         return new Promise<UploadResult>((resolve, reject) => {
           const stream = createReadStream();
           const uploadStream = cloudinary.uploader.upload_stream(
             { folder, resource_type: 'auto' },
-            (error, result) => {
+            (error: UploadApiErrorResponse | undefined, result) => {
               if (error) {
                 const cloudinaryError = this.getCloudinaryErrorMessage(
                   error.message,
@@ -110,18 +120,28 @@ export class UploadService implements OnModuleInit {
                   ),
                 );
               }
+              if (!result) {
+                return reject(
+                  new HttpException(
+                    'File upload failed: empty provider response',
+                    HttpStatus.BAD_REQUEST,
+                  ),
+                );
+              }
               resolve({
                 ...this.getDeliveryUrl(result),
-                publicId: result!.public_id,
+                publicId: result.public_id,
               });
             },
           );
           stream.pipe(uploadStream);
         });
       })
-      .catch((error: any) => {
+      .catch((error: unknown) => {
         if (error instanceof HttpException) throw error;
-        this.logger.error(`Upload processing failed: ${error.message}`);
+        this.logger.error(
+          `Upload processing failed: ${this.getErrorMessage(error)}`,
+        );
         throw new HttpException(
           'File upload processing failed',
           HttpStatus.INTERNAL_SERVER_ERROR,
@@ -130,28 +150,19 @@ export class UploadService implements OnModuleInit {
   };
 
   deleteFile = (publicId: string): Promise<void> => {
-    return new Promise<void>((resolve, reject) => {
-      cloudinary.uploader.destroy(publicId, (error) => {
-        if (error) {
-          const cloudinaryError = this.getCloudinaryErrorMessage(error.message);
-          this.logger.error(`Cloudinary delete failed: ${cloudinaryError}`);
-          return reject(
-            new HttpException(
-              `File deletion failed: ${cloudinaryError}`,
-              HttpStatus.BAD_REQUEST,
-            ),
-          );
-        }
-        resolve();
+    return cloudinary.uploader
+      .destroy(publicId)
+      .then(() => undefined)
+      .catch((error: unknown) => {
+        const cloudinaryError = this.getCloudinaryErrorMessage(
+          this.getErrorMessage(error),
+        );
+        this.logger.error(`Cloudinary delete failed: ${cloudinaryError}`);
+        throw new HttpException(
+          `File deletion failed: ${cloudinaryError}`,
+          HttpStatus.BAD_REQUEST,
+        );
       });
-    }).catch((error) => {
-      if (error instanceof HttpException) throw error;
-      this.logger.error(`Delete processing failed: ${error.message}`);
-      throw new HttpException(
-        'File deletion processing failed',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    });
   };
 
   uploadBuffer = (
@@ -162,7 +173,7 @@ export class UploadService implements OnModuleInit {
     return new Promise<UploadResult>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         { folder, resource_type: 'auto', public_id: filename },
-        (error, result) => {
+        (error: UploadApiErrorResponse | undefined, result) => {
           if (error) {
             const cloudinaryError = this.getCloudinaryErrorMessage(
               error.message,
@@ -177,9 +188,17 @@ export class UploadService implements OnModuleInit {
               ),
             );
           }
+          if (!result) {
+            return reject(
+              new HttpException(
+                'Buffer upload failed: empty provider response',
+                HttpStatus.BAD_REQUEST,
+              ),
+            );
+          }
           resolve({
             ...this.getDeliveryUrl(result),
-            publicId: result!.public_id,
+            publicId: result.public_id,
           });
         },
       );
@@ -188,9 +207,11 @@ export class UploadService implements OnModuleInit {
       readable.push(buffer);
       readable.push(null);
       readable.pipe(uploadStream);
-    }).catch((error) => {
+    }).catch((error: unknown) => {
       if (error instanceof HttpException) throw error;
-      this.logger.error(`Buffer upload processing failed: ${error.message}`);
+      this.logger.error(
+        `Buffer upload processing failed: ${this.getErrorMessage(error)}`,
+      );
       throw new HttpException(
         'Buffer upload processing failed',
         HttpStatus.INTERNAL_SERVER_ERROR,

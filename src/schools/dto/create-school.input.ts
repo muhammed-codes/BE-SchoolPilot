@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsNotEmpty, IsOptional, IsEmail } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsEmail, Matches } from 'class-validator';
 
 @InputType()
 export class CreateSchoolInput {
@@ -23,4 +23,11 @@ export class CreateSchoolInput {
   @Field({ nullable: true, defaultValue: 'basic' })
   @IsOptional()
   schoolType?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @Matches(/^[A-Za-z0-9]{2,10}$/, {
+    message: 'schoolCode must be 2-10 alphanumeric characters',
+  })
+  schoolCode?: string;
 }
