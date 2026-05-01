@@ -316,6 +316,7 @@ input ResetPasswordInput {
 }
 
 type ResultSheet {
+  classEntity: ClassEntity
   classId: String!
   createdAt: DateTime!
   gradingSystem: GradingSystem!
@@ -489,6 +490,7 @@ type SubjectScore {
   scores: [ComponentScore!]
   studentResult: StudentResult!
   studentResultId: String!
+  subject: Subject
   subjectId: String!
   submittedAt: DateTime
   teacherRemark: String

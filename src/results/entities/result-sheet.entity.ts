@@ -1,9 +1,10 @@
 import { ObjectType, Field } from '@nestjs/graphql';
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { GradingSystem, ResultStatus } from '../../common/enums';
 import { ScoreComponentConfig } from '../dto/score-component-config.type';
 import { StudentResult } from './student-result.entity';
+import { ClassEntity } from '../../classes/entities/class.entity';
 
 @ObjectType()
 @Entity('result_sheets')
@@ -11,6 +12,11 @@ export class ResultSheet extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
   classId: string;
+
+  @Field(() => ClassEntity, { nullable: true })
+  @ManyToOne(() => ClassEntity, { nullable: true, eager: false })
+  @JoinColumn({ name: 'classId' })
+  classEntity: ClassEntity;
 
   @Field()
   @Column({ type: 'uuid' })

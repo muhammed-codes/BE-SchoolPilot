@@ -168,9 +168,13 @@ export class ResultsService {
       });
   };
 
-  saveAdminScores = (input: SaveSubjectScoresInput, adminId: string) => {
+  saveAdminScores = (
+    input: SaveSubjectScoresInput,
+    adminId: string,
+    schoolId: string,
+  ) => {
     return this.resultSheetRepo
-      .findOne({ where: { id: input.resultSheetId } })
+      .findOne({ where: { id: input.resultSheetId, schoolId } })
       .then((sheet) => {
         if (!sheet) throw new NotFoundException('Result sheet not found');
         return this.processScores(input, sheet, adminId);
@@ -182,106 +186,116 @@ export class ResultsService {
     sheet: ResultSheet,
     userId: string,
   ) => {
-    const maxScoreMap = new Map(
-      sheet.scoreComponents.map((sc) => [sc.component, sc.maxScore]),
-    );
+    return this.validateSubmitPayload(input, sheet).then(() => {
+      const maxScoreMap = new Map(
+        sheet.scoreComponents.map((sc) => [sc.component, sc.maxScore]),
+      );
 
-    input.scores.forEach((studentScore) => {
-      studentScore.componentScores.forEach((cs) => {
-        const maxScore = maxScoreMap.get(cs.component);
-        if (maxScore === undefined)
-          throw new BadRequestException(
-            `Score component ${cs.component} is not configured on this sheet`,
-          );
-        if (cs.score > maxScore)
-          throw new BadRequestException(
-            `Score ${cs.score} exceeds max ${maxScore} for component ${cs.component}`,
-          );
+      input.scores.forEach((studentScore) => {
+        studentScore.componentScores.forEach((cs) => {
+          const maxScore = maxScoreMap.get(cs.component);
+          if (maxScore === undefined)
+            throw new BadRequestException(
+              `Score component ${cs.component} is not configured on this sheet`,
+            );
+          if (cs.score > maxScore)
+            throw new BadRequestException(
+              `Score ${cs.score} exceeds max ${maxScore} for component ${cs.component}`,
+            );
+        });
       });
-    });
 
-    const totalMaxScore = sheet.scoreComponents.reduce(
-      (sum, sc) => sum + sc.maxScore,
-      0,
-    );
+      const totalMaxScore = sheet.scoreComponents.reduce(
+        (sum, sc) => sum + sc.maxScore,
+        0,
+      );
 
-    return Promise.all(
-      input.scores.map((studentScore) =>
-        this.subjectScoreRepo
-          .findOne({
-            where: {
-              resultSheetId: sheet.id,
-              subjectId: input.subjectId,
-              studentResultId: this.dataSource
-                .createQueryBuilder()
-                .subQuery()
-                .select('sr.id')
-                .from(StudentResult, 'sr')
-                .where('sr.resultSheetId = :sheetId', { sheetId: sheet.id })
-                .andWhere('sr.studentId = :studentId', {
-                  studentId: studentScore.studentId,
-                })
-                .getQuery() as any,
-            },
-          })
-          .then((existing) => {
-            if (!existing) {
-              return this.studentResultRepo
-                .findOne({
-                  where: {
-                    resultSheetId: sheet.id,
-                    studentId: studentScore.studentId,
-                  },
-                })
-                .then((sr) => {
-                  if (!sr)
-                    throw new NotFoundException(
-                      `Student result not found for student ${studentScore.studentId}`,
-                    );
-                  return this.subjectScoreRepo.findOne({
-                    where: {
-                      resultSheetId: sheet.id,
-                      subjectId: input.subjectId,
-                      studentResultId: sr.id,
-                    },
-                  });
-                });
-            }
-            return existing;
-          })
-          .then((subjectScore) => {
-            if (!subjectScore)
-              throw new NotFoundException(
-                `Subject score entry not found for student ${studentScore.studentId}`,
+      return Promise.all(
+        input.scores.map((studentScore) =>
+          this.studentResultRepo
+            .findOne({
+              where: {
+                resultSheetId: sheet.id,
+                studentId: studentScore.studentId,
+              },
+            })
+            .then((studentResult) => {
+              if (!studentResult)
+                throw new NotFoundException(
+                  `Student result not found for student ${studentScore.studentId}`,
+                );
+              return this.subjectScoreRepo.findOne({
+                where: {
+                  resultSheetId: sheet.id,
+                  subjectId: input.subjectId,
+                  studentResultId: studentResult.id,
+                },
+              });
+            })
+            .then((subjectScore) => {
+              if (!subjectScore)
+                throw new NotFoundException(
+                  `Subject score entry not found for student ${studentScore.studentId}`,
+                );
+
+              const totalScore = studentScore.componentScores.reduce(
+                (sum, cs) => sum + cs.score,
+                0,
               );
 
-            const totalScore = studentScore.componentScores.reduce(
-              (sum, cs) => sum + cs.score,
-              0,
-            );
+              subjectScore.scores = studentScore.componentScores;
+              subjectScore.totalScore = totalScore;
+              subjectScore.grade = calculateGrade(
+                totalScore,
+                totalMaxScore,
+                sheet.gradingSystem,
+              );
+              subjectScore.enteredByUserId = userId;
 
-            subjectScore.scores = studentScore.componentScores;
-            subjectScore.totalScore = totalScore;
-            subjectScore.grade = calculateGrade(
-              totalScore,
-              totalMaxScore,
-              sheet.gradingSystem,
-            );
-            subjectScore.enteredByUserId = userId;
+              if (input.submit) {
+                subjectScore.isSubmitted = true;
+                subjectScore.submittedAt = new Date();
+              }
 
-            if (input.submit) {
-              subjectScore.isSubmitted = true;
-              subjectScore.submittedAt = new Date();
-            }
+              return this.subjectScoreRepo.save(subjectScore);
+            }),
+        ),
+      ).then((savedScores) =>
+        input.submit
+          ? this.checkAndAdvanceStatus(sheet.id).then(() => savedScores)
+          : savedScores,
+      );
+    });
+  };
 
-            return this.subjectScoreRepo.save(subjectScore);
-          }),
-      ),
-    ).then((savedScores) =>
-      input.submit
-        ? this.checkAndAdvanceStatus(sheet.id).then(() => savedScores)
-        : savedScores,
+  private validateSubmitPayload = (
+    input: SaveSubjectScoresInput,
+    sheet: ResultSheet,
+  ) => {
+    if (!input.submit) return Promise.resolve();
+
+    const scoredStudentIds = new Set(
+      input.scores
+        .filter(
+          (studentScore) => (studentScore.componentScores || []).length > 0,
+        )
+        .map((studentScore) => studentScore.studentId),
     );
+
+    return this.studentResultRepo
+      .count({ where: { resultSheetId: sheet.id } })
+      .then((totalStudents) => {
+        const unscoredStudents = Math.max(
+          totalStudents - scoredStudentIds.size,
+          0,
+        );
+        if (unscoredStudents > 0) {
+          const suffix = unscoredStudents === 1 ? '' : 's';
+          throw new BadRequestException(
+            `Cannot submit scores yet. ${unscoredStudents} student${suffix} still need at least one score.`,
+          );
+        }
+      });
   };
 
   checkAndAdvanceStatus = (resultSheetId: string) => {
@@ -290,15 +304,22 @@ export class ResultsService {
       this.subjectScoreRepo.count({
         where: { resultSheetId, isSubmitted: true },
       }),
-    ]).then(([total, submitted]) => {
-      if (total > 0 && total === submitted) {
+      this.resultSheetRepo.findOne({ where: { id: resultSheetId } }),
+    ]).then(([total, submitted, sheet]) => {
+      if (!sheet) throw new NotFoundException('Result sheet not found');
+
+      const canAdvanceToScoresEntered =
+        sheet.status === ResultStatus.DRAFT ||
+        sheet.status === ResultStatus.RETURNED;
+
+      if (total > 0 && total === submitted && canAdvanceToScoresEntered) {
         return this.resultSheetRepo
           .update(resultSheetId, { status: ResultStatus.SCORES_ENTERED })
           .then(() =>
             this.resultSheetRepo.findOne({ where: { id: resultSheetId } }),
           );
       }
-      return this.resultSheetRepo.findOne({ where: { id: resultSheetId } });
+      return sheet;
     });
   };
 
@@ -472,7 +493,14 @@ export class ResultsService {
     return this.resultSheetRepo
       .findOne({
         where: { id, schoolId },
-        relations: ['studentResults', 'studentResults.subjectScores'],
+        relations: [
+          'classEntity',
+          'classEntity.classSubjects',
+          'classEntity.classSubjects.subject',
+          'studentResults',
+          'studentResults.subjectScores',
+          'studentResults.subjectScores.subject',
+        ],
       })
       .then((sheet) => {
         if (!sheet) throw new NotFoundException('Result sheet not found');

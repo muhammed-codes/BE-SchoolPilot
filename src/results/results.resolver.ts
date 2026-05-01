@@ -94,16 +94,23 @@ export class ResultsResolver {
 
   @Mutation(() => [SubjectScore])
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUBJECT_TEACHER, UserRole.CLASS_TEACHER)
+  @Roles(
+    UserRole.SUBJECT_TEACHER,
+    UserRole.CLASS_TEACHER,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL,
+  )
   saveSubjectScores(
     @Args('input') input: SaveSubjectScoresInput,
-    @CurrentUser() user: { sub: string; schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
-    return this.resultsService.saveSubjectScores(
-      input,
-      user.sub,
-      user.schoolId,
-    );
+    if (
+      user.role === UserRole.SCHOOL_ADMIN ||
+      user.role === UserRole.PRINCIPAL
+    ) {
+      return this.resultsService.saveAdminScores(input, user.sub, user.schoolId);
+    }
+    return this.resultsService.saveSubjectScores(input, user.sub, user.schoolId);
   }
 
   @Mutation(() => ResultSheet)
