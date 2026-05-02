@@ -46,6 +46,7 @@ type ClassEntity {
   id: ID!
   name: String!
   schoolId: String!
+  totalNoOfStudents: Int
   updatedAt: DateTime!
 }
 
