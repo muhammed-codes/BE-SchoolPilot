@@ -2,6 +2,7 @@ import { ObjectType, Field } from '@nestjs/graphql';
 import { Entity, Column } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { UserRole } from '../../common/enums';
+import { getPermissionsByRole } from '../../common/access';
 
 @ObjectType()
 @Entity('users')
@@ -55,6 +56,10 @@ export class User extends BaseEntity {
   @Column({ nullable: true, unique: true })
   staffId: string;
 
+  @Field(() => [String], { nullable: true })
+  @Column({ type: 'text', array: true, nullable: true })
+  customPermissions: string[] | null;
+
   @Column({ type: 'varchar', nullable: true })
   resetPasswordToken: string | null;
 
@@ -64,5 +69,13 @@ export class User extends BaseEntity {
   @Field()
   get fullName(): string {
     return `${this.firstName} ${this.lastName}`;
+  }
+
+  @Field(() => [String])
+  get permissions(): string[] {
+    if (this.customPermissions !== null && this.customPermissions !== undefined) {
+      return this.customPermissions;
+    }
+    return getPermissionsByRole(this.role);
   }
 }

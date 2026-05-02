@@ -5,11 +5,12 @@ import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
-import { JwtAuthGuard, RolesGuard } from '../common/guards';
-import { CurrentUser } from '../common/decorators';
+import { JwtAuthGuard, RolesGuard, PermissionsGuard } from '../common/guards';
+import { CurrentUser, Permissions } from '../common/decorators';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums';
 import { PaginationArgs, createPaginatedType } from '../common/pagination';
+import { PERMISSIONS } from '../common/access';
 
 const PaginatedUser = createPaginatedType(User);
 
@@ -24,15 +25,17 @@ export class UsersResolver {
   }
 
   @Query(() => User)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @Permissions(PERMISSIONS.USERS_VIEW)
   user(@Args('id') id: string) {
     return this.usersService.findById(id);
   }
 
   @Query(() => PaginatedUser)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.SCHOOL_ADMIN)
+  @Permissions(PERMISSIONS.USERS_VIEW)
   schoolUsers(
     @Args('role', { type: () => UserRole, nullable: true }) role: UserRole,
     @Args() pagination: PaginationArgs,
@@ -42,15 +45,25 @@ export class UsersResolver {
   }
 
   @Query(() => [User])
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.SCHOOL_ADMIN)
+  @Permissions(PERMISSIONS.STAFF_VIEW)
   schoolTeachers(@CurrentUser() user: { schoolId: string }) {
     return this.usersService.findTeachersBySchool(user.schoolId);
   }
 
-  @Mutation(() => User)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Query(() => [String])
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @Permissions(PERMISSIONS.USERS_MANAGE)
+  availablePermissions() {
+    return Object.values(PERMISSIONS);
+  }
+
+  @Mutation(() => User)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @Permissions(PERMISSIONS.USERS_MANAGE)
   createUser(
     @Args('input') input: CreateUserInput,
     @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
@@ -100,9 +113,19 @@ export class UsersResolver {
   updateUser(
     @Args('id') id: string,
     @Args('input') input: UpdateUserInput,
-    @CurrentUser() user: { sub: string; role: UserRole },
+    @CurrentUser() user: {
+      sub: string;
+      role: UserRole;
+      permissions?: string[];
+    },
   ) {
-    return this.usersService.updateUser(id, input, user.sub, user.role);
+    return this.usersService.updateUser(
+      id,
+      input,
+      user.sub,
+      user.role,
+      user.permissions,
+    );
   }
 
   @Mutation(() => Boolean)
@@ -125,8 +148,9 @@ export class UsersResolver {
   }
 
   @Mutation(() => User)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.SCHOOL_ADMIN)
+  @Permissions(PERMISSIONS.USERS_MANAGE)
   deactivateUser(
     @Args('id') id: string,
     @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },

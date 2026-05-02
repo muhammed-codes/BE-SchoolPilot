@@ -6,18 +6,31 @@ import { StudentResult } from './entities/student-result.entity';
 import { SubjectScore } from './entities/subject-score.entity';
 import { CreateResultSheetInput } from './dto/create-result-sheet.input';
 import { SaveSubjectScoresInput } from './dto/save-subject-scores.input';
-import { JwtAuthGuard, RolesGuard } from '../common/guards';
-import { CurrentUser } from '../common/decorators';
+import {
+  JwtAuthGuard,
+  RolesGuard,
+  PermissionsGuard,
+} from '../common/guards';
+import { CurrentUser, Permissions } from '../common/decorators';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole, ResultStatus } from '../common/enums';
+import { PERMISSIONS } from '../common/access';
 
 @Resolver()
 export class ResultsResolver {
   constructor(private readonly resultsService: ResultsService) {}
 
   @Query(() => ResultSheet)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL, UserRole.CLASS_TEACHER)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL,
+    UserRole.VICE_PRINCIPAL,
+    UserRole.HEAD_TEACHER,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
+  @Permissions(PERMISSIONS.RESULTS_VIEW)
   resultSheet(
     @Args('id') id: string,
     @CurrentUser() user: { schoolId: string },
@@ -26,8 +39,16 @@ export class ResultsResolver {
   }
 
   @Query(() => [ResultSheet])
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL, UserRole.CLASS_TEACHER)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL,
+    UserRole.VICE_PRINCIPAL,
+    UserRole.HEAD_TEACHER,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
+  @Permissions(PERMISSIONS.RESULTS_VIEW)
   resultSheetsByClass(
     @Args('classId') classId: string,
     @Args('termId') termId: string,
@@ -41,15 +62,22 @@ export class ResultsResolver {
   }
 
   @Query(() => [ResultSheet])
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PRINCIPAL)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.PRINCIPAL, UserRole.VICE_PRINCIPAL, UserRole.HEAD_TEACHER)
+  @Permissions(PERMISSIONS.RESULTS_APPROVE)
   pendingPrincipalApprovals(@CurrentUser() user: { schoolId: string }) {
     return this.resultsService.getPendingApprovals(user.schoolId);
   }
 
   @Query(() => [ResultSheet])
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PRINCIPAL, UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(
+    UserRole.PRINCIPAL,
+    UserRole.VICE_PRINCIPAL,
+    UserRole.HEAD_TEACHER,
+    UserRole.SCHOOL_ADMIN,
+  )
+  @Permissions(PERMISSIONS.RESULTS_VIEW)
   schoolResultSheets(
     @CurrentUser() user: { schoolId: string },
     @Args('status', { type: () => ResultStatus, nullable: true })
@@ -59,8 +87,15 @@ export class ResultsResolver {
   }
 
   @Query(() => StudentResult, { nullable: true })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PARENT, UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(
+    UserRole.PARENT,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL,
+    UserRole.VICE_PRINCIPAL,
+    UserRole.HEAD_TEACHER,
+  )
+  @Permissions(PERMISSIONS.RESULTS_VIEW)
   studentResult(
     @Args('studentId') studentId: string,
     @Args('termId') termId: string,
@@ -69,8 +104,9 @@ export class ResultsResolver {
   }
 
   @Query(() => [SubjectScore])
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.SUBJECT_TEACHER, UserRole.CLASS_TEACHER)
+  @Permissions(PERMISSIONS.RESULTS_SCORE_ASSIGNED)
   mySubjectScores(
     @Args('resultSheetId') resultSheetId: string,
     @CurrentUser() user: { sub: string },
@@ -79,8 +115,9 @@ export class ResultsResolver {
   }
 
   @Mutation(() => ResultSheet)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.SCHOOL_ADMIN, UserRole.CLASS_TEACHER)
+  @Permissions(PERMISSIONS.RESULTS_CREATE)
   createResultSheet(
     @Args('input') input: CreateResultSheetInput,
     @CurrentUser() user: { sub: string; schoolId: string },
@@ -93,20 +130,25 @@ export class ResultsResolver {
   }
 
   @Mutation(() => [SubjectScore])
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(
     UserRole.SUBJECT_TEACHER,
     UserRole.CLASS_TEACHER,
     UserRole.SCHOOL_ADMIN,
     UserRole.PRINCIPAL,
+    UserRole.VICE_PRINCIPAL,
+    UserRole.HEAD_TEACHER,
   )
+  @Permissions(PERMISSIONS.RESULTS_SCORE_ASSIGNED)
   saveSubjectScores(
     @Args('input') input: SaveSubjectScoresInput,
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
     if (
       user.role === UserRole.SCHOOL_ADMIN ||
-      user.role === UserRole.PRINCIPAL
+      user.role === UserRole.PRINCIPAL ||
+      user.role === UserRole.VICE_PRINCIPAL ||
+      user.role === UserRole.HEAD_TEACHER
     ) {
       return this.resultsService.saveAdminScores(input, user.sub, user.schoolId);
     }
@@ -114,8 +156,9 @@ export class ResultsResolver {
   }
 
   @Mutation(() => ResultSheet)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.SCHOOL_ADMIN)
+  @Permissions(PERMISSIONS.RESULTS_SUBMIT_ADMIN_REVIEW)
   submitForAdminReview(
     @Args('resultSheetId') resultSheetId: string,
     @CurrentUser() user: { sub: string; schoolId: string },
@@ -128,8 +171,9 @@ export class ResultsResolver {
   }
 
   @Mutation(() => ResultSheet)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.SCHOOL_ADMIN)
+  @Permissions(PERMISSIONS.RESULTS_SUBMIT_PRINCIPAL_APPROVAL)
   submitForPrincipalApproval(
     @Args('resultSheetId') resultSheetId: string,
     @CurrentUser() user: { sub: string; schoolId: string },
@@ -142,8 +186,9 @@ export class ResultsResolver {
   }
 
   @Mutation(() => ResultSheet)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PRINCIPAL)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.PRINCIPAL, UserRole.VICE_PRINCIPAL, UserRole.HEAD_TEACHER)
+  @Permissions(PERMISSIONS.RESULTS_APPROVE)
   approveResult(
     @Args('resultSheetId') resultSheetId: string,
     @CurrentUser() user: { sub: string; schoolId: string },
@@ -156,8 +201,14 @@ export class ResultsResolver {
   }
 
   @Mutation(() => ResultSheet)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL,
+    UserRole.VICE_PRINCIPAL,
+    UserRole.HEAD_TEACHER,
+  )
+  @Permissions(PERMISSIONS.RESULTS_RETURN)
   returnResult(
     @Args('resultSheetId') resultSheetId: string,
     @Args('reason') reason: string,
@@ -172,8 +223,9 @@ export class ResultsResolver {
   }
 
   @Mutation(() => SubjectScore)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.SUBJECT_TEACHER)
+  @Permissions(PERMISSIONS.RESULTS_SCORE_ASSIGNED)
   saveTeacherRemark(
     @Args('subjectScoreId') subjectScoreId: string,
     @Args('remark') remark: string,
@@ -182,8 +234,9 @@ export class ResultsResolver {
   }
 
   @Mutation(() => StudentResult)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PRINCIPAL)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.PRINCIPAL, UserRole.VICE_PRINCIPAL, UserRole.HEAD_TEACHER)
+  @Permissions(PERMISSIONS.RESULTS_APPROVE)
   savePrincipalRemark(
     @Args('studentResultId') studentResultId: string,
     @Args('remark') remark: string,
@@ -192,8 +245,9 @@ export class ResultsResolver {
   }
 
   @Mutation(() => StudentResult)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.CLASS_TEACHER)
+  @Permissions(PERMISSIONS.RESULTS_SCORE_ASSIGNED)
   saveClassTeacherRemark(
     @Args('studentResultId') studentResultId: string,
     @Args('remark') remark: string,

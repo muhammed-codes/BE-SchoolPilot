@@ -46,6 +46,7 @@ type ClassEntity {
   id: ID!
   name: String!
   schoolId: String!
+  totalNoOfStudents: Int
   updatedAt: DateTime!
 }
 
@@ -119,6 +120,7 @@ input CreateUserInput {
   firstName: String!
   lastName: String!
   password: String!
+  permissions: [String!]
   phone: String
   role: UserRole!
   schoolId: String
@@ -263,6 +265,7 @@ type PromotionResult {
 
 type Query {
   activeTerm: Term!
+  availablePermissions: [String!]!
   classAttendance(classId: String!, date: String!): [StudentAttendance!]!
   classById(id: String!): ClassEntity!
   me: User!
@@ -544,6 +547,7 @@ input UpdateUserInput {
   email: String
   firstName: String
   lastName: String
+  permissions: [String!]
   phone: String
   role: UserRole
 }
@@ -561,6 +565,7 @@ type UploadResult {
 type User {
   avatarUrl: String
   createdAt: DateTime!
+  customPermissions: [String!]
   email: String
   expoPushToken: String
   firstName: String!
@@ -568,6 +573,7 @@ type User {
   id: ID!
   isActive: Boolean!
   lastName: String!
+  permissions: [String!]!
   phone: String
   role: UserRole!
   schoolId: String

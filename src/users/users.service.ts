@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -18,6 +19,7 @@ import { IdCardsService } from '../id-cards/id-cards.service';
 import { SchoolsService } from '../schools/schools.service';
 import { UserRole } from '../common/enums';
 import { PaginationArgs } from '../common/pagination';
+import { PERMISSIONS, getPermissionsByRole } from '../common/access';
 
 @Injectable()
 export class UsersService {
@@ -28,6 +30,7 @@ export class UsersService {
   ];
   private readonly singleLeadershipRoleUniqueConstraint =
     'UQ_users_single_active_leadership_role_per_school';
+  private readonly allPermissions: string[] = Object.values(PERMISSIONS);
 
   constructor(
     @InjectRepository(User)
@@ -120,9 +123,28 @@ export class UsersService {
     throw err;
   };
 
+  private sanitizePermissions = (
+    permissions?: string[] | null,
+  ): string[] | null | undefined => {
+    if (permissions === undefined) return undefined;
+    if (permissions === null) return null;
+
+    const uniquePermissions = [...new Set(permissions)];
+    const hasInvalidPermission = uniquePermissions.some(
+      (permission) => !this.allPermissions.includes(permission),
+    );
+
+    if (hasInvalidPermission) {
+      throw new BadRequestException('Invalid permission provided');
+    }
+
+    return uniquePermissions;
+  };
+
   createUser = (input: CreateUserInput, adminSchoolId: string) => {
     const isStaffRole =
       input.role !== UserRole.PARENT && input.role !== UserRole.SUPER_ADMIN;
+    const customPermissions = this.sanitizePermissions(input.permissions);
 
     const staffIdPromise = isStaffRole
       ? this.schoolsService
@@ -145,6 +167,8 @@ export class UsersService {
             schoolId: adminSchoolId,
             passwordHash,
             staffId,
+            customPermissions:
+              customPermissions === undefined ? null : customPermissions,
           })
             .then((user) => {
               if (user.expoPushToken) {
@@ -190,6 +214,7 @@ export class UsersService {
     input: UpdateUserInput,
     requesterId: string,
     requesterRole: UserRole,
+    requesterPermissions?: string[],
   ) => {
     return this.findById(id).then((user) => {
       if (!user) throw new NotFoundException('User not found');
@@ -198,13 +223,38 @@ export class UsersService {
       const isAdmin =
         requesterRole === UserRole.SUPER_ADMIN ||
         requesterRole === UserRole.SCHOOL_ADMIN;
+      const effectivePermissions =
+        requesterPermissions && requesterPermissions.length > 0
+          ? requesterPermissions
+          : getPermissionsByRole(requesterRole);
+      const canManageUsers =
+        requesterRole === UserRole.SUPER_ADMIN ||
+        effectivePermissions.includes(PERMISSIONS.USERS_MANAGE);
 
       if (!isSelfUpdate && !isAdmin) {
         throw new ForbiddenException('You can only update your own profile');
       }
 
+      if (!isSelfUpdate && !canManageUsers) {
+        throw new ForbiddenException(
+          'You do not have permission to manage users',
+        );
+      }
+
       if (input.role && !isAdmin) {
         throw new ForbiddenException('Only admins can update user roles');
+      }
+
+      if (input.permissions !== undefined && !isAdmin) {
+        throw new ForbiddenException(
+          'Only admins can update user permissions',
+        );
+      }
+
+      if (input.permissions !== undefined && !canManageUsers) {
+        throw new ForbiddenException(
+          'You do not have permission to update user permissions',
+        );
       }
 
       if (
@@ -216,13 +266,27 @@ export class UsersService {
         );
       }
 
+      const normalizedPermissions = this.sanitizePermissions(input.permissions);
+
+      const updateData: Partial<User> = {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phone: input.phone,
+        email: input.email,
+        role: input.role,
+      };
+
+      if (input.permissions !== undefined) {
+        updateData.customPermissions = normalizedPermissions;
+      }
+
       return this.ensureUniqueLeadershipRolePerSchool(
         user.schoolId,
         input.role,
         user.id,
       ).then(() =>
         this.usersRepository
-          .update(id, input)
+          .update(id, updateData)
           .catch((err) =>
             this.mapLeadershipRoleDbConstraintError(err, input.role),
           )

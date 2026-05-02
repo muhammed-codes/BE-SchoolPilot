@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsEmail, IsEnum, IsOptional } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsArray, IsString } from 'class-validator';
 import { UserRole } from '../../common/enums';
 
 @InputType()
@@ -25,4 +25,10 @@ export class UpdateUserInput {
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  permissions?: string[];
 }

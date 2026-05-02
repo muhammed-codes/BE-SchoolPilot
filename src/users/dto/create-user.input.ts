@@ -5,6 +5,8 @@ import {
   MinLength,
   IsEnum,
   IsOptional,
+  IsArray,
+  IsString,
 } from 'class-validator';
 import { UserRole } from '../../common/enums';
 
@@ -38,4 +40,10 @@ export class CreateUserInput {
   @Field({ nullable: true })
   @IsOptional()
   schoolId?: string;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  permissions?: string[];
 }

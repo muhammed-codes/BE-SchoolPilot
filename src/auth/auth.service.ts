@@ -108,6 +108,7 @@ export class AuthService {
       email: user.email,
       role: user.role,
       schoolId: user.schoolId,
+      permissions: user.permissions,
     };
 
     const accessToken = this.jwtService.sign(
