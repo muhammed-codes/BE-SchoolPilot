@@ -220,24 +220,46 @@ export class ResultsService {
               },
             })
             .then((studentResult) => {
-              if (!studentResult)
-                throw new NotFoundException(
-                  `Student result not found for student ${studentScore.studentId}`,
-                );
-              return this.subjectScoreRepo.findOne({
-                where: {
+              if (!studentResult) {
+                const newStudentResult = this.studentResultRepo.create({
                   resultSheetId: sheet.id,
-                  subjectId: input.subjectId,
-                  studentResultId: studentResult.id,
-                },
-              });
+                  studentId: studentScore.studentId,
+                  schoolId: sheet.schoolId,
+                });
+                return this.studentResultRepo
+                  .save(newStudentResult)
+                  .then((savedSr) => {
+                    return this.subjectScoreRepo.create({
+                      resultSheetId: sheet.id,
+                      subjectId: input.subjectId,
+                      studentResultId: savedSr.id,
+                      enteredByUserId: userId,
+                      isSubmitted: false,
+                    });
+                  });
+              }
+              return this.subjectScoreRepo
+                .findOne({
+                  where: {
+                    resultSheetId: sheet.id,
+                    subjectId: input.subjectId,
+                    studentResultId: studentResult.id,
+                  },
+                })
+                .then((subjectScore) => {
+                  if (!subjectScore) {
+                    return this.subjectScoreRepo.create({
+                      resultSheetId: sheet.id,
+                      subjectId: input.subjectId,
+                      studentResultId: studentResult.id,
+                      enteredByUserId: userId,
+                      isSubmitted: false,
+                    });
+                  }
+                  return subjectScore;
+                });
             })
             .then((subjectScore) => {
-              if (!subjectScore)
-                throw new NotFoundException(
-                  `Subject score entry not found for student ${studentScore.studentId}`,
-                );
-
               const totalScore = studentScore.componentScores.reduce(
                 (sum, cs) => sum + cs.score,
                 0,
