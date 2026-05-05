@@ -30,7 +30,11 @@ export class AccessResolver {
   updateRolePermission(
     @Args('input') input: UpdatePermissionInput,
   ) {
-    const { id, ...updates } = input;
-    return this.accessService.updateRolePermission(id, updates);
+    const updates: Partial<RolePermission> = {};
+    if (input.canCreate !== undefined) updates.canCreate = input.canCreate;
+    if (input.canRead !== undefined) updates.canRead = input.canRead;
+    if (input.canUpdate !== undefined) updates.canUpdate = input.canUpdate;
+    if (input.canDelete !== undefined) updates.canDelete = input.canDelete;
+    return this.accessService.updateRolePermission(input.id, updates);
   }
 }
