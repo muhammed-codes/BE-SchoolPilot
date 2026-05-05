@@ -50,6 +50,7 @@ import { AccessModule } from './access/access.module';
         autoSchemaFile: 'schema.gql',
         sortSchema: true,
         playground: config.get<string>('NODE_ENV') !== 'production',
+        csrfPrevention: false,
         context: ({ req }: { req: Request }) => ({ req }),
       }),
     }),
