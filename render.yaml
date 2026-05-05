@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: schoolpilot-be
+    runtime: docker
+    plan: free # Change to paid if you need more resources
+    region: frankfurt # Or your preferred region
+    dockerContext: .
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+      - fromGroup: schoolpilot-secrets # Define these in Render dashboard
