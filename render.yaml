@@ -11,4 +11,18 @@ services:
         value: 3000
       - key: NODE_ENV
         value: production
-      - fromGroup: schoolpilot-secrets # Define these in Render dashboard
+      - fromGroup: schoolpilot-secrets
+
+envVarGroups:
+  - name: schoolpilot-secrets
+    envVars:
+      - key: SUPABASE_DB_HOST
+      - key: SUPABASE_DB_PORT
+      - key: SUPABASE_DB_NAME
+      - key: SUPABASE_DB_USER
+      - key: SUPABASE_DB_PASSWORD
+      - key: JWT_ACCESS_SECRET
+      - key: JWT_REFRESH_SECRET
+      - key: CLOUDINARY_CLOUD_NAME
+      - key: CLOUDINARY_API_KEY
+      - key: CLOUDINARY_API_SECRET
