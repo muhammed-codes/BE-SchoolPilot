@@ -2,6 +2,17 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+enum AppResource {
+  ATTENDANCE
+  CLASSES
+  ID_CARDS
+  RESULTS
+  SETTINGS
+  STUDENTS
+  SUBJECTS
+  USERS
+}
+
 enum AttendanceStatus {
   ABSENT
   LATE
@@ -219,6 +230,7 @@ type Mutation {
   unlinkParent(parentUserId: String!, studentId: String!): Boolean!
   unlockTerm(termId: String!): Term!
   updateExpoPushToken(token: String!): Boolean!
+  updateRolePermission(input: UpdatePermissionInput!): RolePermission!
   updateSchool(id: String!, input: UpdateSchoolInput!): School!
   updateStudent(id: String!, input: UpdateStudentInput!): Student!
   updateTotalSchoolDays(days: Int!, termId: String!): Term!
@@ -264,11 +276,13 @@ type PromotionResult {
 
 type Query {
   activeTerm: Term!
+  allRolePermissions: [RolePermission!]!
   classAttendance(classId: String!, date: String!): [StudentAttendance!]!
   classById(id: String!): ClassEntity!
   me: User!
   myChildren: [Student!]!
   myClasses: [ClassEntity!]!
+  myPermissions: [RolePermission!]!
   mySchool: School!
   mySubjectScores(resultSheetId: String!): [SubjectScore!]!
   pendingPrincipalApprovals: [ResultSheet!]!
@@ -338,6 +352,18 @@ enum ResultStatus {
   PUBLISHED
   RETURNED
   SCORES_ENTERED
+}
+
+type RolePermission {
+  canCreate: Boolean!
+  canDelete: Boolean!
+  canRead: Boolean!
+  canUpdate: Boolean!
+  createdAt: DateTime!
+  id: ID!
+  resource: AppResource!
+  role: UserRole!
+  updatedAt: DateTime!
 }
 
 input SaveSubjectScoresInput {
@@ -518,6 +544,14 @@ type Term {
 enum TermStatus {
   ACTIVE
   CLOSED
+}
+
+input UpdatePermissionInput {
+  canCreate: Boolean
+  canDelete: Boolean
+  canRead: Boolean
+  canUpdate: Boolean
+  id: ID!
 }
 
 input UpdateSchoolInput {
