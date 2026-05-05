@@ -2,8 +2,8 @@ services:
   - type: web
     name: schoolpilot-be
     runtime: docker
-    plan: free # Change to paid if you need more resources
-    region: frankfurt # Or your preferred region
+    plan: free
+    region: frankfurt
     dockerContext: .
     dockerfilePath: Dockerfile
     envVars:
@@ -12,17 +12,3 @@ services:
       - key: NODE_ENV
         value: production
       - fromGroup: schoolpilot-secrets
-
-envVarGroups:
-  - name: schoolpilot-secrets
-    envVars:
-      - key: SUPABASE_DB_HOST
-      - key: SUPABASE_DB_PORT
-      - key: SUPABASE_DB_NAME
-      - key: SUPABASE_DB_USER
-      - key: SUPABASE_DB_PASSWORD
-      - key: JWT_ACCESS_SECRET
-      - key: JWT_REFRESH_SECRET
-      - key: CLOUDINARY_CLOUD_NAME
-      - key: CLOUDINARY_API_KEY
-      - key: CLOUDINARY_API_SECRET
