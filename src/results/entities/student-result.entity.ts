@@ -4,6 +4,7 @@ import { BaseEntity } from '../../common/entities/base.entity';
 import { ResultSheet } from './result-sheet.entity';
 import { SubjectScore } from './subject-score.entity';
 import { ComponentScore } from '../dto/component-score.type';
+import { Student } from '../../students/entities/student.entity';
 
 @ObjectType()
 @Entity('student_results')
@@ -48,6 +49,11 @@ export class StudentResult extends BaseEntity {
   @ManyToOne(() => ResultSheet, (rs) => rs.studentResults)
   @JoinColumn({ name: 'resultSheetId' })
   resultSheet: ResultSheet;
+
+  @Field(() => Student, { nullable: true })
+  @ManyToOne(() => Student, { nullable: true, eager: false })
+  @JoinColumn({ name: 'studentId' })
+  student: Student;
 
   @Field(() => [SubjectScore], { nullable: true })
   @OneToMany(() => SubjectScore, (ss) => ss.studentResult, { eager: false })

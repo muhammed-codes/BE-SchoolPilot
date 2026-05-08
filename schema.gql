@@ -488,6 +488,7 @@ type StudentResult {
   resultSheetId: String!
   schoolId: String!
   scores: [ComponentScore!]
+  student: Student
   studentId: String!
   subjectScores: [SubjectScore!]
   totalScore: Float

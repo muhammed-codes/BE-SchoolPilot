@@ -121,6 +121,7 @@ export class ResultsService {
                               relations: [
                                 'studentResults',
                                 'studentResults.subjectScores',
+                                'studentResults.student',
                               ],
                             })
                             .then((sheet) => {
@@ -284,8 +285,10 @@ export class ResultsService {
         ),
       ).then((savedScores) =>
         input.submit
-          ? this.checkAndAdvanceStatus(sheet.id).then(() => savedScores)
-          : savedScores,
+          ? this.checkAndAdvanceStatus(sheet.id)
+              .then(() => this.recalculateStudentTotals(sheet.id))
+              .then(() => savedScores)
+          : this.recalculateStudentTotals(sheet.id).then(() => savedScores),
       );
     });
   };
@@ -320,6 +323,42 @@ export class ResultsService {
       });
   };
 
+  private recalculateStudentTotals = (resultSheetId: string) => {
+    return Promise.all([
+      this.resultSheetRepo.findOne({ where: { id: resultSheetId } }),
+      this.studentResultRepo.find({
+        where: { resultSheetId },
+        relations: ['subjectScores'],
+      }),
+    ]).then(([sheet, studentResults]) => {
+      if (!sheet) throw new NotFoundException('Result sheet not found');
+
+      const totalMaxScore = sheet.scoreComponents.reduce(
+        (sum, sc) => sum + sc.maxScore,
+        0,
+      );
+
+      const updates = studentResults.map((sr) => {
+        const subjectTotal = sr.subjectScores.reduce(
+          (sum, ss) => sum + (ss.totalScore || 0),
+          0,
+        );
+        sr.totalScore = subjectTotal;
+
+        const subjectCount = sr.subjectScores.length || 1;
+        const overallMaxScore = totalMaxScore * subjectCount;
+        sr.grade = calculateGrade(
+          subjectTotal,
+          overallMaxScore,
+          sheet.gradingSystem,
+        );
+        return sr;
+      });
+
+      return this.studentResultRepo.save(updates);
+    });
+  };
+
   checkAndAdvanceStatus = (resultSheetId: string) => {
     return Promise.all([
       this.subjectScoreRepo.count({ where: { resultSheetId } }),
@@ -337,6 +376,7 @@ export class ResultsService {
       if (total > 0 && total === submitted && canAdvanceToScoresEntered) {
         return this.resultSheetRepo
           .update(resultSheetId, { status: ResultStatus.SCORES_ENTERED })
+          .then(() => this.calculatePositions(resultSheetId))
           .then(() =>
             this.resultSheetRepo.findOne({ where: { id: resultSheetId } }),
           );
