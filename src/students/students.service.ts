@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, ILike, EntityManager } from 'typeorm';
+import { Repository, DataSource, ILike, EntityManager, In } from 'typeorm';
 import { Upload } from 'graphql-upload-ts';
 import { Student } from './entities/student.entity';
 import { StudentParent } from './entities/student-parent.entity';
@@ -304,7 +304,10 @@ export class StudentsService {
       .then((records) => records.map((r) => r.student));
   }
 
-  searchStudents = (query: string, schoolId: string) => {
+  searchStudents = (query: string, schoolId: string, classIds?: string[]) => {
+    if (classIds && classIds.length === 0) return Promise.resolve([]);
+
+    const classFilter = classIds ? { currentClassId: In(classIds) } : {};
     const normalizedQuery = query.trim();
     const wildcardQuery = normalizedQuery.replace(/[^a-zA-Z0-9]+/g, '%');
     const admissionQueries = [normalizedQuery, wildcardQuery]
@@ -315,6 +318,7 @@ export class StudentsService {
         admissionNumber: ILike(`%${value}%`),
         schoolId,
         isArchived: false,
+        ...classFilter,
       }));
 
     return this.studentsRepository.find({
@@ -323,11 +327,13 @@ export class StudentsService {
           firstName: ILike(`%${normalizedQuery}%`),
           schoolId,
           isArchived: false,
+          ...classFilter,
         },
         {
           lastName: ILike(`%${normalizedQuery}%`),
           schoolId,
           isArchived: false,
+          ...classFilter,
         },
         ...admissionQueries,
       ],
@@ -335,6 +341,11 @@ export class StudentsService {
       order: { firstName: 'ASC' },
     });
   };
+
+  searchStudentsForTeacher = (query: string, teacherId: string, schoolId: string) =>
+    this.classesService
+      .getTeacherClassIds(teacherId, schoolId)
+      .then((classIds) => this.searchStudents(query, schoolId, classIds));
 
   promoteStudents = (
     input: PromoteStudentsInput,

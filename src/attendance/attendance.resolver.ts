@@ -30,7 +30,12 @@ export class AttendanceResolver {
 
   @Query(() => [StudentAttendance])
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PARENT, UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL)
+  @Roles(
+    UserRole.PARENT,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL,
+    UserRole.CLASS_TEACHER,
+  )
   studentAttendance(
     @Args('studentId') studentId: string,
     @Args('termId') termId: string,
@@ -40,7 +45,12 @@ export class AttendanceResolver {
 
   @Query(() => AttendanceSummary)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PARENT, UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL)
+  @Roles(
+    UserRole.PARENT,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL,
+    UserRole.CLASS_TEACHER,
+  )
   studentAttendanceSummary(
     @Args('studentId') studentId: string,
     @Args('termId') termId: string,

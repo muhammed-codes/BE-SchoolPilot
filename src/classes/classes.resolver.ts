@@ -8,6 +8,7 @@ import { JwtAuthGuard, RolesGuard } from '../common/guards';
 import { CurrentUser } from '../common/decorators';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums';
+import { TEACHER_ROLES } from '../common/constants/roles.constant';
 import { PaginationArgs, createPaginatedType } from '../common/pagination';
 
 const PaginatedClass = createPaginatedType(ClassEntity);
@@ -28,11 +29,24 @@ export class ClassesResolver {
 
   @Query(() => PaginatedClass)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL)
+  @Roles(
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL,
+    UserRole.VICE_PRINCIPAL,
+    UserRole.HEAD_TEACHER,
+    ...TEACHER_ROLES,
+  )
   schoolClasses(
     @Args() pagination: PaginationArgs,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
+    if (TEACHER_ROLES.includes(user.role)) {
+      return this.classesService.getClassesForTeacherPaginated(
+        user.sub,
+        user.schoolId,
+        pagination,
+      );
+    }
     return this.classesService.getClassesBySchool(user.schoolId, pagination);
   }
 

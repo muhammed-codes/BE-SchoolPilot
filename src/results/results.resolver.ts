@@ -17,7 +17,12 @@ export class ResultsResolver {
 
   @Query(() => ResultSheet)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL, UserRole.CLASS_TEACHER)
+  @Roles(
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
   resultSheet(
     @Args('id') id: string,
     @CurrentUser() user: { schoolId: string },
@@ -27,7 +32,12 @@ export class ResultsResolver {
 
   @Query(() => [ResultSheet])
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL, UserRole.CLASS_TEACHER)
+  @Roles(
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
   resultSheetsByClass(
     @Args('classId') classId: string,
     @Args('termId') termId: string,
@@ -60,7 +70,12 @@ export class ResultsResolver {
 
   @Query(() => StudentResult, { nullable: true })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PARENT, UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL)
+  @Roles(
+    UserRole.PARENT,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL,
+    UserRole.CLASS_TEACHER,
+  )
   studentResult(
     @Args('studentId') studentId: string,
     @Args('termId') termId: string,

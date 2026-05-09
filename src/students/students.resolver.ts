@@ -12,6 +12,7 @@ import { JwtAuthGuard, RolesGuard } from '../common/guards';
 import { CurrentUser } from '../common/decorators';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums';
+import { TEACHER_ROLES } from '../common/constants/roles.constant';
 
 @Resolver(() => Student)
 export class StudentsResolver {
@@ -47,11 +48,24 @@ export class StudentsResolver {
 
   @Query(() => [Student])
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @Roles(
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL,
+    UserRole.VICE_PRINCIPAL,
+    UserRole.HEAD_TEACHER,
+    ...TEACHER_ROLES,
+  )
   searchStudents(
     @Args('query') query: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
+    if (TEACHER_ROLES.includes(user.role)) {
+      return this.studentsService.searchStudentsForTeacher(
+        query,
+        user.sub,
+        user.schoolId,
+      );
+    }
     return this.studentsService.searchStudents(query, user.schoolId);
   }
 

@@ -9,6 +9,7 @@ import { JwtAuthGuard, RolesGuard } from '../common/guards';
 import { CurrentUser } from '../common/decorators';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums';
+import { SCHOOL_STAFF_ROLES } from '../common/constants/roles.constant';
 import { PaginationArgs, createPaginatedType } from '../common/pagination';
 
 const PaginatedSchool = createPaginatedType(School);
@@ -33,7 +34,7 @@ export class SchoolsResolver {
 
   @Query(() => School)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL)
+  @Roles(...SCHOOL_STAFF_ROLES)
   mySchool(@CurrentUser() user: { sub: string; schoolId: string }) {
     if (!user.schoolId) {
       throw new ForbiddenException('No school assigned to your account');
