@@ -7,7 +7,6 @@ import { ClassSubject } from './entities/class-subject.entity';
 import { CreateClassInput } from './dto/create-class.input';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission } from '../common/decorators';
-import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums';
 import { TEACHER_ROLES } from '../common/constants/roles.constant';
 import { PaginationArgs, createPaginatedType } from '../common/pagination';
@@ -21,7 +20,6 @@ export class ClassesResolver {
   @Mutation(() => ClassEntity)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.CLASSES, 'canCreate')
-  @Roles(UserRole.SCHOOL_ADMIN)
   createClass(
     @Args('input') input: CreateClassInput,
     @CurrentUser() user: { schoolId: string },
@@ -32,13 +30,6 @@ export class ClassesResolver {
   @Query(() => PaginatedClass)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.CLASSES, 'canRead')
-  @Roles(
-    UserRole.SCHOOL_ADMIN,
-    UserRole.PRINCIPAL,
-    UserRole.VICE_PRINCIPAL,
-    UserRole.HEAD_TEACHER,
-    ...TEACHER_ROLES,
-  )
   schoolClasses(
     @Args() pagination: PaginationArgs,
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
@@ -56,7 +47,6 @@ export class ClassesResolver {
   @Query(() => [ClassEntity])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.CLASSES, 'canRead')
-  @Roles(UserRole.CLASS_TEACHER, UserRole.SUBJECT_TEACHER)
   myClasses(@CurrentUser() user: { sub: string; schoolId: string }) {
     return this.classesService.getClassesForTeacher(user.sub, user.schoolId);
   }
@@ -71,7 +61,6 @@ export class ClassesResolver {
   @Mutation(() => ClassEntity)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.CLASSES, 'canUpdate')
-  @Roles(UserRole.SCHOOL_ADMIN)
   assignClassTeacher(
     @Args('classId') classId: string,
     @Args('teacherId') teacherId: string,
@@ -87,7 +76,6 @@ export class ClassesResolver {
   @Mutation(() => ClassEntity)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.CLASSES, 'canUpdate')
-  @Roles(UserRole.SCHOOL_ADMIN)
   assignSubjectsToClass(
     @Args('classId') classId: string,
     @Args('subjectIds', { type: () => [String] }) subjectIds: string[],
@@ -103,7 +91,6 @@ export class ClassesResolver {
   @Mutation(() => ClassSubject)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.CLASSES, 'canUpdate')
-  @Roles(UserRole.SCHOOL_ADMIN)
   assignSubjectTeacher(
     @Args('classId') classId: string,
     @Args('subjectId') subjectId: string,

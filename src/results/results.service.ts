@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, In } from 'typeorm';
 import { ResultSheet } from './entities/result-sheet.entity';
 import { StudentResult } from './entities/student-result.entity';
 import { SubjectScore } from './entities/subject-score.entity';
@@ -18,7 +18,7 @@ import { User } from '../users/entities/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateResultSheetInput } from './dto/create-result-sheet.input';
 import { SaveSubjectScoresInput } from './dto/save-subject-scores.input';
-import { ResultStatus } from '../common/enums';
+import { UserRole, ResultStatus } from '../common/enums';
 import { calculateGrade } from './utils/grading.util';
 
 @Injectable()
@@ -551,23 +551,57 @@ export class ResultsService {
       });
   };
 
-  getResultSheet = (id: string, schoolId: string) => {
-    return this.resultSheetRepo
-      .findOne({
-        where: { id, schoolId },
-        relations: [
-          'classEntity',
-          'classEntity.classSubjects',
-          'classEntity.classSubjects.subject',
-          'studentResults',
-          'studentResults.subjectScores',
-          'studentResults.subjectScores.subject',
-        ],
-      })
-      .then((sheet) => {
-        if (!sheet) throw new NotFoundException('Result sheet not found');
-        return sheet;
-      });
+  getResultSheet = async (
+    id: string,
+    schoolId: string,
+    userId: string,
+    role: UserRole,
+  ) => {
+    const sheet = await this.resultSheetRepo.findOne({
+      where: { id, schoolId },
+      relations: [
+        'classEntity',
+        'classEntity.classSubjects',
+        'classEntity.classSubjects.subject',
+        'studentResults',
+        'studentResults.subjectScores',
+        'studentResults.subjectScores.subject',
+      ],
+    });
+
+    if (!sheet) throw new NotFoundException('Result sheet not found');
+
+    const isLeadership = [
+      UserRole.SUPER_ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.PRINCIPAL,
+      UserRole.VICE_PRINCIPAL,
+      UserRole.HEAD_TEACHER,
+    ].includes(role);
+
+    if (!isLeadership) {
+      const isClassTeacher = sheet.classEntity.classTeacherId === userId;
+
+      if (!isClassTeacher && role === UserRole.SUBJECT_TEACHER) {
+        // Filter classSubjects
+        sheet.classEntity.classSubjects = sheet.classEntity.classSubjects.filter(
+          (cs) => cs.subjectTeacherId === userId,
+        );
+
+        // Filter subjectScores
+        const allowedSubjectIds = sheet.classEntity.classSubjects.map(
+          (cs) => cs.subjectId,
+        );
+
+        sheet.studentResults.forEach((sr) => {
+          sr.subjectScores = sr.subjectScores.filter((ss) =>
+            allowedSubjectIds.includes(ss.subjectId),
+          );
+        });
+      }
+    }
+
+    return sheet;
   };
 
   getResultSheetsByClass = (
@@ -588,9 +622,50 @@ export class ResultsService {
     });
   };
 
-  getSchoolResultSheets = (schoolId: string, status?: ResultStatus) => {
-    const where: { schoolId: string; status?: ResultStatus } = { schoolId };
+  getSchoolResultSheets = async (
+    schoolId: string,
+    userId: string,
+    role: UserRole,
+    status?: ResultStatus,
+  ) => {
+    const isLeadership = [
+      UserRole.SUPER_ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.PRINCIPAL,
+      UserRole.VICE_PRINCIPAL,
+      UserRole.HEAD_TEACHER,
+    ].includes(role);
+
+    if (isLeadership) {
+      const where: { schoolId: string; status?: ResultStatus } = { schoolId };
+      if (status) where.status = status;
+      return this.resultSheetRepo.find({
+        where,
+        order: { createdAt: 'DESC' },
+      });
+    }
+
+    const myClasses = await this.classRepo.find({
+      where: [{ classTeacherId: userId, schoolId }],
+    });
+
+    const mySubjectClasses = await this.classSubjectRepo.find({
+      where: { subjectTeacherId: userId },
+    });
+
+    const classIds = new Set([
+      ...myClasses.map((c) => c.id),
+      ...mySubjectClasses.map((c) => c.classId),
+    ]);
+
+    if (classIds.size === 0) {
+      return [];
+    }
+
+    const where: any = { schoolId };
     if (status) where.status = status;
+    where.classId = In(Array.from(classIds));
+
     return this.resultSheetRepo.find({
       where,
       order: { createdAt: 'DESC' },

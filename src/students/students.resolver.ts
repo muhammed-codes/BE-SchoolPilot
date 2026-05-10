@@ -11,7 +11,6 @@ import { BulkImportResult } from './dto/bulk-import-result.type';
 import { PromotionResult } from './dto/promotion-result.type';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission } from '../common/decorators';
-import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums';
 import { TEACHER_ROLES } from '../common/constants/roles.constant';
 
@@ -22,12 +21,6 @@ export class StudentsResolver {
   @Query(() => [Student])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.STUDENTS, 'canRead')
-  @Roles(
-    UserRole.CLASS_TEACHER,
-    UserRole.SUBJECT_TEACHER,
-    UserRole.SCHOOL_ADMIN,
-    UserRole.PRINCIPAL,
-  )
   studentsByClass(
     @Args('classId') classId: string,
     @CurrentUser() user: { schoolId: string },
@@ -45,7 +38,6 @@ export class StudentsResolver {
   @Query(() => [Student])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.STUDENTS, 'canRead')
-  @Roles(UserRole.PARENT)
   myChildren(@CurrentUser() user: { sub: string }) {
     return this.studentsService.getStudentsByParent(user.sub);
   }
@@ -53,13 +45,6 @@ export class StudentsResolver {
   @Query(() => [Student])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.STUDENTS, 'canRead')
-  @Roles(
-    UserRole.SCHOOL_ADMIN,
-    UserRole.PRINCIPAL,
-    UserRole.VICE_PRINCIPAL,
-    UserRole.HEAD_TEACHER,
-    ...TEACHER_ROLES,
-  )
   searchStudents(
     @Args('query') query: string,
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
@@ -77,7 +62,6 @@ export class StudentsResolver {
   @Mutation(() => Student)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.STUDENTS, 'canCreate')
-  @Roles(UserRole.SCHOOL_ADMIN)
   createStudent(
     @Args('input') input: CreateStudentInput,
     @CurrentUser() user: { schoolId: string },
@@ -88,7 +72,6 @@ export class StudentsResolver {
   @Mutation(() => Student)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.STUDENTS, 'canUpdate')
-  @Roles(UserRole.SCHOOL_ADMIN)
   updateStudent(
     @Args('id') id: string,
     @Args('input') input: UpdateStudentInput,
@@ -100,7 +83,6 @@ export class StudentsResolver {
   @Mutation(() => BulkImportResult)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.STUDENTS, 'canCreate')
-  @Roles(UserRole.SCHOOL_ADMIN)
   bulkImportStudents(
     @Args('students', { type: () => [CreateStudentInput] })
     students: CreateStudentInput[],
@@ -112,7 +94,6 @@ export class StudentsResolver {
   @Mutation(() => Student)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.STUDENTS, 'canUpdate')
-  @Roles(UserRole.SCHOOL_ADMIN)
   linkParent(
     @Args('studentId') studentId: string,
     @Args('parentUserId') parentUserId: string,
@@ -128,7 +109,6 @@ export class StudentsResolver {
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.STUDENTS, 'canUpdate')
-  @Roles(UserRole.SCHOOL_ADMIN)
   unlinkParent(
     @Args('studentId') studentId: string,
     @Args('parentUserId') parentUserId: string,
@@ -144,7 +124,6 @@ export class StudentsResolver {
   @Mutation(() => Student)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.STUDENTS, 'canCreate')
-  @Roles(UserRole.SCHOOL_ADMIN)
   uploadPassportPhoto(
     @Args('studentId') studentId: string,
     @Args('file', { type: () => GraphQLUpload }) file: Upload,
@@ -160,7 +139,6 @@ export class StudentsResolver {
   @Mutation(() => PromotionResult)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.STUDENTS, 'canUpdate')
-  @Roles(UserRole.SCHOOL_ADMIN)
   promoteStudents(
     @Args('input') input: PromoteStudentsInput,
     @CurrentUser() user: { schoolId: string },

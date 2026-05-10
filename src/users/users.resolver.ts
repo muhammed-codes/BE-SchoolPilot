@@ -8,7 +8,6 @@ import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission } from '../common/decorators';
-import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums';
 import { SCHOOL_STAFF_ROLES } from '../common/constants/roles.constant';
 import { PaginationArgs, createPaginatedType } from '../common/pagination';
@@ -29,7 +28,6 @@ export class UsersResolver {
   @Query(() => User)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.USERS, 'canRead')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   user(@Args('id') id: string) {
     return this.usersService.findById(id);
   }
@@ -37,7 +35,6 @@ export class UsersResolver {
   @Query(() => PaginatedUser)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.USERS, 'canRead')
-  @Roles(UserRole.SCHOOL_ADMIN)
   schoolUsers(
     @Args('role', { type: () => UserRole, nullable: true }) role: UserRole,
     @Args() pagination: PaginationArgs,
@@ -49,7 +46,6 @@ export class UsersResolver {
   @Query(() => [User])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.USERS, 'canRead')
-  @Roles(...SCHOOL_STAFF_ROLES)
   schoolTeachers(@CurrentUser() user: { schoolId: string }) {
     return this.usersService.findTeachersBySchool(user.schoolId);
   }
@@ -57,7 +53,6 @@ export class UsersResolver {
   @Mutation(() => User)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.USERS, 'canCreate')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   createUser(
     @Args('input') input: CreateUserInput,
     @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
@@ -95,7 +90,6 @@ export class UsersResolver {
   @Mutation(() => User)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.USERS, 'canUpdate')
-  @Roles(UserRole.SUPER_ADMIN)
   assignUserToSchool(
     @Args('userId') userId: string,
     @Args('schoolId') schoolId: string,
@@ -138,7 +132,6 @@ export class UsersResolver {
   @Mutation(() => User)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.USERS, 'canCreate')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   uploadUserAvatar(
     @Args('userId') userId: string,
     @Args({ name: 'file', type: () => GraphQLUpload }) file: Upload,
@@ -155,7 +148,6 @@ export class UsersResolver {
   @Mutation(() => User)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.USERS, 'canUpdate')
-  @Roles(UserRole.SCHOOL_ADMIN)
   deactivateUser(
     @Args('id') id: string,
     @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
