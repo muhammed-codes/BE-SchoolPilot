@@ -106,8 +106,12 @@ export class AttendanceService {
   };
 
   getClassAttendance = (classId: string, date: string) => {
+    const normalizedClassId = String(classId || '').trim();
+    if (!normalizedClassId) {
+      throw new BadRequestException('classId is required');
+    }
     return this.studentAttendanceRepo.find({
-      where: { classId, date },
+      where: { classId: normalizedClassId, date },
       relations: ['student'],
       order: { student: { firstName: 'ASC' } },
     });

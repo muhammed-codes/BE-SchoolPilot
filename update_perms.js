@@ -39,8 +39,16 @@ dataSource.initialize()
       { role: UserRole.SUBJECT_TEACHER, resource: AppResource.ATTENDANCE },
       { canUpdate: true }
     );
+    await repo.update(
+      { role: UserRole.CLASS_TEACHER, resource: AppResource.USERS },
+      { canRead: true }
+    );
+    await repo.update(
+      { role: UserRole.SUBJECT_TEACHER, resource: AppResource.USERS },
+      { canRead: true }
+    );
     
-    console.log('Successfully updated teacher permissions for RESULTS and ATTENDANCE');
+    console.log('Successfully updated teacher permissions for RESULTS, ATTENDANCE, and USERS');
     process.exit(0);
   })
   .catch((err) => {

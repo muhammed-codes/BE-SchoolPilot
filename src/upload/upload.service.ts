@@ -19,20 +19,64 @@ import { UploadResult } from './dto/upload-result.type';
 export class UploadService implements OnModuleInit {
   private readonly logger = new Logger(UploadService.name);
   private readonly pdfUrlDurationSeconds = 60 * 60 * 24 * 7;
+  private readonly maxCloudinaryUploadAttempts = 3;
   private readonly getErrorMessage = (error: unknown) => {
     return error instanceof Error ? error.message : 'Unknown error';
+  };
+  private readonly isRetriableCloudinaryError = (rawMessage?: string) => {
+    const normalized = String(rawMessage || '').toLowerCase();
+    return (
+      normalized.includes('socket hang up') ||
+      normalized.includes('econnreset') ||
+      normalized.includes('etimedout') ||
+      normalized.includes('eai_again') ||
+      normalized.includes('tls') ||
+      normalized.includes('network')
+    );
   };
   private readonly getCloudinaryErrorMessage = (rawMessage?: string) => {
     const message = rawMessage || 'Unknown Cloudinary error';
     this.logger.error(`Cloudinary raw error: ${message}`);
     const normalized = message.toLowerCase();
+    if (this.isRetriableCloudinaryError(message)) {
+      return 'Cloudinary network error. Please retry.';
+    }
     if (
       normalized.includes('invalid cloud_name') ||
       normalized.includes('cloud_name mismatch')
     ) {
       return 'Cloudinary configuration mismatch: CLOUDINARY_CLOUD_NAME must match the same Cloudinary product environment as CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET';
     }
+    if (
+      normalized.includes('invalid image file') ||
+      normalized.includes('invalid file')
+    ) {
+      return 'Invalid image payload sent to Cloudinary';
+    }
     return 'Cloudinary provider error';
+  };
+  private readonly parseBase64Input = (base64: string) => {
+    const rawInput = String(base64 || '').trim();
+    if (!rawInput) {
+      throw new HttpException('Image payload is required', HttpStatus.BAD_REQUEST);
+    }
+    const dataUrlMatch = rawInput.match(
+      /^data:([a-z0-9.+-]+\/[a-z0-9.+-]+);base64,([\s\S]+)$/i,
+    );
+    const mimeType = dataUrlMatch?.[1] || '';
+    const payload = (dataUrlMatch?.[2] || rawInput).replace(/\s+/g, '');
+    if (!payload) {
+      throw new HttpException(
+        'Image payload is empty after normalization',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return { mimeType, payload };
+  };
+  private readonly getMimeFormat = (mimeType?: string) => {
+    const parts = String(mimeType || '').split('/');
+    if (parts.length !== 2) return '';
+    return parts[1].split('+')[0].toLowerCase();
   };
   private readonly getDeliveryUrl = (result: UploadApiResponse) => {
     const format = (result?.format || '').toLowerCase();
@@ -199,45 +243,70 @@ export class UploadService implements OnModuleInit {
     buffer: Buffer,
     folder: string,
     filename: string,
+    options?: {
+      resourceType?: 'auto' | 'image' | 'raw' | 'video';
+      format?: string;
+    },
   ): Promise<UploadResult> => {
-    return new Promise<UploadResult>((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        { folder, resource_type: 'auto', public_id: filename },
-        (error: UploadApiErrorResponse | undefined, result) => {
-          if (error) {
-            const cloudinaryError = this.getCloudinaryErrorMessage(
-              error.message,
-            );
-            this.logger.error(
-              `Cloudinary buffer upload failed: ${cloudinaryError}`,
-            );
-            return reject(
-              new HttpException(
-                `Buffer upload failed: ${cloudinaryError}`,
-                HttpStatus.BAD_REQUEST,
-              ),
-            );
-          }
-          if (!result) {
-            return reject(
-              new HttpException(
-                'Buffer upload failed: empty provider response',
-                HttpStatus.BAD_REQUEST,
-              ),
-            );
-          }
-          resolve({
-            ...this.getDeliveryUrl(result),
-            publicId: result.public_id,
-          });
-        },
-      );
+    const uploadAttempt = (attempt: number): Promise<UploadResult> => {
+      return new Promise<UploadResult>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder,
+            resource_type: options?.resourceType || 'auto',
+            public_id: filename,
+            format: options?.format || undefined,
+          },
+          (error: UploadApiErrorResponse | undefined, result) => {
+            if (error) {
+              if (
+                this.isRetriableCloudinaryError(error.message) &&
+                attempt < this.maxCloudinaryUploadAttempts
+              ) {
+                this.logger.warn(
+                  `Cloudinary buffer upload retry ${attempt + 1}/${this.maxCloudinaryUploadAttempts} for ${filename}`,
+                );
+                uploadAttempt(attempt + 1)
+                  .then(resolve)
+                  .catch(reject);
+                return;
+              }
+              const cloudinaryError = this.getCloudinaryErrorMessage(
+                error.message,
+              );
+              this.logger.error(
+                `Cloudinary buffer upload failed: ${cloudinaryError}`,
+              );
+              return reject(
+                new HttpException(
+                  `Buffer upload failed: ${cloudinaryError}`,
+                  HttpStatus.BAD_REQUEST,
+                ),
+              );
+            }
+            if (!result) {
+              return reject(
+                new HttpException(
+                  'Buffer upload failed: empty provider response',
+                  HttpStatus.BAD_REQUEST,
+                ),
+              );
+            }
+            resolve({
+              ...this.getDeliveryUrl(result),
+              publicId: result.public_id,
+            });
+          },
+        );
 
-      const readable = new Readable();
-      readable.push(buffer);
-      readable.push(null);
-      readable.pipe(uploadStream);
-    }).catch((error: unknown) => {
+        const readable = new Readable();
+        readable.push(buffer);
+        readable.push(null);
+        readable.pipe(uploadStream);
+      });
+    };
+
+    return uploadAttempt(1).catch((error: unknown) => {
       if (error instanceof HttpException) throw error;
       this.logger.error(
         `Buffer upload processing failed: ${this.getErrorMessage(error)}`,
@@ -254,8 +323,17 @@ export class UploadService implements OnModuleInit {
     folder: string,
     filename: string,
   ): Promise<UploadResult> => {
-    const base64Data = base64.replace(/^data:image\/\w+;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
-    return this.uploadBuffer(buffer, folder, filename);
+    const parsed = this.parseBase64Input(base64);
+    const buffer = Buffer.from(parsed.payload, 'base64');
+    if (!buffer.length) {
+      throw new HttpException(
+        'Image payload could not be decoded from base64',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return this.uploadBuffer(buffer, folder, filename, {
+      resourceType: 'image',
+      format: this.getMimeFormat(parsed.mimeType) || undefined,
+    });
   };
 }
