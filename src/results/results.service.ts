@@ -140,33 +140,37 @@ export class ResultsService {
     });
   };
 
-  saveSubjectScores = (
+  saveSubjectScores = async (
     input: SaveSubjectScoresInput,
     teacherId: string,
     schoolId: string,
   ) => {
-    return this.resultSheetRepo
-      .findOne({ where: { id: input.resultSheetId, schoolId } })
-      .then((sheet) => {
-        if (!sheet) throw new NotFoundException('Result sheet not found');
+    const sheet = await this.resultSheetRepo.findOne({
+      where: { id: input.resultSheetId, schoolId },
+      relations: ['classEntity'],
+    });
 
-        return this.classSubjectRepo
-          .findOne({
-            where: {
-              classId: sheet.classId,
-              subjectId: input.subjectId,
-              subjectTeacherId: teacherId,
-            },
-          })
-          .then((classSubject) => {
-            if (!classSubject)
-              throw new ForbiddenException(
-                'You are not assigned to teach this subject in this class',
-              );
+    if (!sheet) throw new NotFoundException('Result sheet not found');
 
-            return this.processScores(input, sheet, teacherId);
-          });
+    const isClassTeacher = sheet.classEntity.classTeacherId === teacherId;
+
+    if (!isClassTeacher) {
+      const classSubject = await this.classSubjectRepo.findOne({
+        where: {
+          classId: sheet.classId,
+          subjectId: input.subjectId,
+          subjectTeacherId: teacherId,
+        },
       });
+
+      if (!classSubject) {
+        throw new ForbiddenException(
+          'You are not assigned to teach this subject in this class',
+        );
+      }
+    }
+
+    return this.processScores(input, sheet, teacherId);
   };
 
   saveAdminScores = (

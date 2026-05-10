@@ -69,6 +69,7 @@ export class AccessService implements OnModuleInit {
                 AppResource.RESULTS,
                 AppResource.CLASSES,
                 AppResource.SUBJECTS,
+                AppResource.USERS,
               ];
               if (teacherResources.includes(resource)) canRead = true;
             }
@@ -81,12 +82,23 @@ export class AccessService implements OnModuleInit {
               if (parentResources.includes(resource)) canRead = true;
             }
 
+            // Determine default update access
+            let canUpdate = isAdmin;
+            if (
+              role === UserRole.CLASS_TEACHER ||
+              role === UserRole.SUBJECT_TEACHER
+            ) {
+              if (resource === AppResource.RESULTS || resource === AppResource.ATTENDANCE) {
+                canUpdate = true;
+              }
+            }
+
             toCreate.push({
               role,
               resource,
               canCreate: isAdmin,
               canRead,
-              canUpdate: isAdmin,
+              canUpdate,
               canDelete: isAdmin,
             });
           }
