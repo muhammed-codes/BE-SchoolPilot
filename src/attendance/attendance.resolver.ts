@@ -1,4 +1,5 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { AppResource } from '../access/enums/resource.enum';
 import { UseGuards } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { StudentAttendance } from './entities/student-attendance.entity';
@@ -9,11 +10,15 @@ import {
   ManualStaffAttendanceInput,
   AttendanceSummary,
 } from './dto/attendance.dto';
-import { JwtAuthGuard, RolesGuard } from '../common/guards';
-import { CurrentUser } from '../common/decorators';
+import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
+import { CurrentUser, RequirePermission } from '../common/decorators';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums';
-import { SCHOOL_STAFF_ROLES, LEADERSHIP_ROLES, TEACHER_ROLES } from '../common/constants/roles.constant';
+import {
+  SCHOOL_STAFF_ROLES,
+  LEADERSHIP_ROLES,
+  TEACHER_ROLES,
+} from '../common/constants/roles.constant';
 import { ForbiddenException } from '@nestjs/common';
 
 @Resolver()
@@ -21,7 +26,8 @@ export class AttendanceResolver {
   constructor(private readonly attendanceService: AttendanceService) {}
 
   @Query(() => [StudentAttendance])
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
   @Roles(UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL, UserRole.CLASS_TEACHER)
   classAttendance(
     @Args('classId') classId: string,
@@ -31,7 +37,8 @@ export class AttendanceResolver {
   }
 
   @Query(() => [StudentAttendance])
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
   @Roles(
     UserRole.PARENT,
     UserRole.SCHOOL_ADMIN,
@@ -46,7 +53,8 @@ export class AttendanceResolver {
   }
 
   @Query(() => AttendanceSummary)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
   @Roles(
     UserRole.PARENT,
     UserRole.SCHOOL_ADMIN,
@@ -64,7 +72,8 @@ export class AttendanceResolver {
   }
 
   @Query(() => [StaffAttendance])
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
   @Roles(UserRole.SCHOOL_ADMIN, ...LEADERSHIP_ROLES)
   staffAttendanceLog(
     @Args('date') date: string,
@@ -74,7 +83,8 @@ export class AttendanceResolver {
   }
 
   @Query(() => [StaffAttendance])
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
   @Roles(...SCHOOL_STAFF_ROLES)
   staffAttendanceHistory(
     @Args('userId') userId: string,
@@ -83,7 +93,9 @@ export class AttendanceResolver {
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
     if (TEACHER_ROLES.includes(user.role) && userId !== user.sub) {
-      throw new ForbiddenException('You can only view your own attendance history');
+      throw new ForbiddenException(
+        'You can only view your own attendance history',
+      );
     }
     return this.attendanceService.getStaffAttendanceHistory(
       userId,
@@ -94,7 +106,8 @@ export class AttendanceResolver {
   }
 
   @Query(() => [ClassEntity])
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
   @Roles(UserRole.SCHOOL_ADMIN)
   unmarkedClasses(
     @Args('date') date: string,
@@ -104,7 +117,8 @@ export class AttendanceResolver {
   }
 
   @Mutation(() => [StudentAttendance])
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.ATTENDANCE, 'canUpdate')
   @Roles(UserRole.CLASS_TEACHER, UserRole.SCHOOL_ADMIN)
   markStudentAttendance(
     @Args('input') input: MarkAttendanceInput,
@@ -118,7 +132,8 @@ export class AttendanceResolver {
   }
 
   @Mutation(() => StaffAttendance)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.ATTENDANCE, 'canUpdate')
   @Roles(...SCHOOL_STAFF_ROLES)
   clockAction(
     @Args('photo') photo: string,
@@ -128,7 +143,8 @@ export class AttendanceResolver {
   }
 
   @Mutation(() => StaffAttendance)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.ATTENDANCE, 'canUpdate')
   @Roles(UserRole.SCHOOL_ADMIN)
   manualStaffAttendance(
     @Args('input') input: ManualStaffAttendanceInput,

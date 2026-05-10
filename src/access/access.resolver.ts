@@ -27,9 +27,7 @@ export class AccessResolver {
 
   @Mutation(() => RolePermission)
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
-  updateRolePermission(
-    @Args('input') input: UpdatePermissionInput,
-  ) {
+  updateRolePermission(@Args('input') input: UpdatePermissionInput) {
     const updates: Partial<RolePermission> = {};
     if (input.canCreate !== undefined) updates.canCreate = input.canCreate;
     if (input.canRead !== undefined) updates.canRead = input.canRead;
