@@ -189,7 +189,7 @@ type Mutation {
   assignUserToSchool(schoolId: String!, userId: String!): User!
   bulkImportStudents(students: [CreateStudentInput!]!): BulkImportResult!
   changePassword(newPassword: String!, oldPassword: String!): Boolean!
-  clockAction(qrCode: String!): StaffAttendance!
+  clockAction(photo: String!): StaffAttendance!
   closeTerm(termId: String!): Term!
   createClass(input: CreateClassInput!): ClassEntity!
   createResultSheet(input: CreateResultSheetInput!): ResultSheet!
@@ -239,6 +239,7 @@ type Mutation {
   uploadPassportPhoto(file: Upload!, studentId: String!): Student!
   uploadSchoolLogo(file: Upload!, schoolId: String!): School!
   uploadSchoolStamp(file: Upload!, schoolId: String!): School!
+  uploadUserAvatar(file: Upload!, userId: String!): User!
 }
 
 type PaginatedClassEntity {
@@ -422,13 +423,15 @@ type Session {
 }
 
 type StaffAttendance {
+  clockInPhotoUrl: String
   clockInTime: DateTime
+  clockOutPhotoUrl: String
   clockOutTime: DateTime
   createdAt: DateTime!
   date: String!
   id: ID!
   isLate: Boolean
-  isManual: Boolean!
+  isManual: Boolean
   schoolId: String!
   updatedAt: DateTime!
   user: User!

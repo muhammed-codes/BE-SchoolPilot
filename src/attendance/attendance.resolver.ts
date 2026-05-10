@@ -13,6 +13,8 @@ import { JwtAuthGuard, RolesGuard } from '../common/guards';
 import { CurrentUser } from '../common/decorators';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums';
+import { SCHOOL_STAFF_ROLES, LEADERSHIP_ROLES, TEACHER_ROLES } from '../common/constants/roles.constant';
+import { ForbiddenException } from '@nestjs/common';
 
 @Resolver()
 export class AttendanceResolver {
@@ -63,7 +65,7 @@ export class AttendanceResolver {
 
   @Query(() => [StaffAttendance])
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @Roles(UserRole.SCHOOL_ADMIN, ...LEADERSHIP_ROLES)
   staffAttendanceLog(
     @Args('date') date: string,
     @CurrentUser() user: { schoolId: string },
@@ -73,13 +75,16 @@ export class AttendanceResolver {
 
   @Query(() => [StaffAttendance])
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @Roles(...SCHOOL_STAFF_ROLES)
   staffAttendanceHistory(
     @Args('userId') userId: string,
     @Args('from') from: string,
     @Args('to') to: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
+    if (TEACHER_ROLES.includes(user.role) && userId !== user.sub) {
+      throw new ForbiddenException('You can only view your own attendance history');
+    }
     return this.attendanceService.getStaffAttendanceHistory(
       userId,
       user.schoolId,
@@ -114,12 +119,12 @@ export class AttendanceResolver {
 
   @Mutation(() => StaffAttendance)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.CLASS_TEACHER, UserRole.SUBJECT_TEACHER)
+  @Roles(...SCHOOL_STAFF_ROLES)
   clockAction(
-    @Args('qrCode') qrCode: string,
+    @Args('photo') photo: string,
     @CurrentUser() user: { sub: string },
   ) {
-    return this.attendanceService.clockAction(qrCode, user.sub);
+    return this.attendanceService.clockAction(photo, user.sub);
   }
 
   @Mutation(() => StaffAttendance)

@@ -9,6 +9,7 @@ import { JwtAuthGuard, RolesGuard } from '../common/guards';
 import { CurrentUser } from '../common/decorators';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums';
+import { SCHOOL_STAFF_ROLES } from '../common/constants/roles.constant';
 import { PaginationArgs, createPaginatedType } from '../common/pagination';
 
 const PaginatedUser = createPaginatedType(User);
@@ -43,7 +44,7 @@ export class UsersResolver {
 
   @Query(() => [User])
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @Roles(...SCHOOL_STAFF_ROLES)
   schoolTeachers(@CurrentUser() user: { schoolId: string }) {
     return this.usersService.findTeachersBySchool(user.schoolId);
   }
@@ -122,6 +123,22 @@ export class UsersResolver {
     @CurrentUser() user: { sub: string },
   ) {
     return this.usersService.updateAvatar(user.sub, file);
+  }
+
+  @Mutation(() => User)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  uploadUserAvatar(
+    @Args('userId') userId: string,
+    @Args({ name: 'file', type: () => GraphQLUpload }) file: Upload,
+    @CurrentUser() user: { role: UserRole; schoolId: string },
+  ) {
+    return this.usersService.updateUserAvatarByAdmin(
+      userId,
+      file,
+      user.role,
+      user.schoolId,
+    );
   }
 
   @Mutation(() => User)

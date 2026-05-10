@@ -31,9 +31,23 @@ export class StaffAttendance extends BaseEntity {
   @Column({ nullable: true })
   isLate: boolean;
 
-  @Field()
+  @Field({ nullable: true })
   @Column({ default: false })
   isManual: boolean;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  clockInPhotoUrl: string;
+
+  @Column({ nullable: true })
+  clockInPhotoPublicId: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  clockOutPhotoUrl: string;
+
+  @Column({ nullable: true })
+  clockOutPhotoPublicId: string;
 
   @Field(() => User)
   @ManyToOne(() => User, { eager: false })

@@ -54,9 +54,39 @@ export class UploadService implements OnModuleInit {
     return { ...base, pdfPrivateUrl, expiresAt };
   };
   private readonly resolveFileUpload = (
-    file: Upload | Promise<FileUpload>,
+    file: Upload | Promise<FileUpload> | FileUpload,
   ): Promise<FileUpload> => {
-    return file instanceof Upload ? file.promise : file;
+    if (!file) {
+      return Promise.reject(
+        new HttpException('No file provided', HttpStatus.BAD_REQUEST),
+      );
+    }
+
+    const uploadWithPromise = file as { promise?: Promise<FileUpload> };
+    if (
+      uploadWithPromise.promise &&
+      typeof (uploadWithPromise.promise as Promise<FileUpload>).then ===
+        'function'
+    ) {
+      return uploadWithPromise.promise;
+    }
+
+    const thenable = file as Promise<FileUpload>;
+    if (typeof thenable.then === 'function') {
+      return thenable;
+    }
+
+    const fileUpload = file as FileUpload;
+    if (typeof fileUpload.createReadStream === 'function') {
+      return Promise.resolve(fileUpload);
+    }
+
+    return Promise.reject(
+      new HttpException(
+        'Invalid file upload payload',
+        HttpStatus.BAD_REQUEST,
+      ),
+    );
   };
 
   constructor(private readonly configService: ConfigService) {}
@@ -96,7 +126,7 @@ export class UploadService implements OnModuleInit {
   };
 
   uploadFile = (
-    file: Upload | Promise<FileUpload>,
+    file: Upload | Promise<FileUpload> | FileUpload,
     folder: string,
   ): Promise<UploadResult> => {
     return this.resolveFileUpload(file)
@@ -217,5 +247,15 @@ export class UploadService implements OnModuleInit {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     });
+  };
+
+  uploadBase64 = (
+    base64: string,
+    folder: string,
+    filename: string,
+  ): Promise<UploadResult> => {
+    const base64Data = base64.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    return this.uploadBuffer(buffer, folder, filename);
   };
 }

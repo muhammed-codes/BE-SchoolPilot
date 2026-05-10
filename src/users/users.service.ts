@@ -298,6 +298,28 @@ export class UsersService {
     });
   };
 
+  updateUserAvatarByAdmin = (
+    userId: string,
+    file: Upload,
+    requesterRole: UserRole,
+    requesterSchoolId: string,
+  ) => {
+    return this.findById(userId).then((user) => {
+      if (!user) throw new NotFoundException('User not found');
+
+      if (
+        requesterRole === UserRole.SCHOOL_ADMIN &&
+        user.schoolId !== requesterSchoolId
+      ) {
+        throw new ForbiddenException(
+          'You can only upload avatar for users in your own school',
+        );
+      }
+
+      return this.updateAvatar(userId, file);
+    });
+  };
+
   deactivateUser = (
     id: string,
     requesterId: string,

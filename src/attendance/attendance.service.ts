@@ -18,6 +18,7 @@ import {
   AttendanceSummary,
 } from './dto/attendance.dto';
 import { AttendanceStatus, UserRole } from '../common/enums';
+import { UploadService } from '../upload/upload.service';
 
 @Injectable()
 export class AttendanceService {
@@ -34,6 +35,7 @@ export class AttendanceService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Term)
     private readonly termRepo: Repository<Term>,
+    private readonly uploadService: UploadService,
   ) {}
 
   markStudentAttendance = (
@@ -137,60 +139,69 @@ export class AttendanceService {
       });
   };
 
-  clockAction = (qrCode: string, userId: string) => {
-    return this.schoolRepo
-      .findOne({ where: { uniqueQrCode: qrCode } })
-      .then((school) => {
-        if (!school) throw new NotFoundException('Invalid QR code');
+  clockAction = (photo: string, userId: string) => {
+    return this.userRepo
+      .findOne({ where: { id: userId } })
+      .then((user) => {
+        if (!user || !user.schoolId) {
+          throw new ForbiddenException('User does not belong to a school');
+        }
 
-        return this.userRepo
-          .findOne({ where: { id: userId, schoolId: school.id } })
-          .then((user) => {
-            if (!user)
-              throw new ForbiddenException(
-                'User does not belong to this school',
-              );
+        return this.schoolRepo
+          .findOne({ where: { id: user.schoolId } })
+          .then((school) => {
+            if (!school) throw new NotFoundException('School not found');
 
-            const today = new Date().toISOString().split('T')[0];
-            const now = new Date();
+            return this.uploadService
+              .uploadBase64(photo, 'attendance-proofs', `proof_${userId}_${Date.now()}`)
+              .then((uploadResult) => {
+                const today = new Date().toISOString().split('T')[0];
+                const now = new Date();
 
-            return this.staffAttendanceRepo
-              .findOne({ where: { userId, date: today } })
-              .then((record) => {
-                if (!record || !record.clockInTime) {
-                  let isLate = false;
-                  if (school.schoolStartTime) {
-                    const [hours, minutes] = school.schoolStartTime
-                      .split(':')
-                      .map(Number);
-                    const startDateTime = new Date();
-                    startDateTime.setHours(hours, minutes, 0, 0);
-                    if (now > startDateTime) {
-                      isLate = true;
+                return this.staffAttendanceRepo
+                  .findOne({ where: { userId, date: today } })
+                  .then((record) => {
+                    if (!record || !record.clockInTime) {
+                      let isLate = false;
+                      if (school.schoolStartTime) {
+                        const [hours, minutes] = school.schoolStartTime
+                          .split(':')
+                          .map(Number);
+                        const startDateTime = new Date();
+                        startDateTime.setHours(hours, minutes, 0, 0);
+                        if (now > startDateTime) {
+                          isLate = true;
+                        }
+                      }
+
+                      if (record) {
+                        record.clockInTime = now;
+                        record.isLate = isLate;
+                        record.clockInPhotoUrl = uploadResult.url;
+                        record.clockInPhotoPublicId = uploadResult.publicId;
+                        return this.staffAttendanceRepo.save(record);
+                      } else {
+                        const newRecord = this.staffAttendanceRepo.create({
+                          userId,
+                          schoolId: school.id,
+                          date: today,
+                          clockInTime: now,
+                          isLate,
+                          isManual: false,
+                          clockInPhotoUrl: uploadResult.url,
+                          clockInPhotoPublicId: uploadResult.publicId,
+                        });
+                        return this.staffAttendanceRepo.save(newRecord);
+                      }
+                    } else if (!record.clockOutTime) {
+                      record.clockOutTime = now;
+                      record.clockOutPhotoUrl = uploadResult.url;
+                      record.clockOutPhotoPublicId = uploadResult.publicId;
+                      return this.staffAttendanceRepo.save(record);
+                    } else {
+                      throw new BadRequestException('Already clocked out today');
                     }
-                  }
-
-                  if (record) {
-                    record.clockInTime = now;
-                    record.isLate = isLate;
-                    return this.staffAttendanceRepo.save(record);
-                  } else {
-                    const newRecord = this.staffAttendanceRepo.create({
-                      userId,
-                      schoolId: school.id,
-                      date: today,
-                      clockInTime: now,
-                      isLate,
-                      isManual: false,
-                    });
-                    return this.staffAttendanceRepo.save(newRecord);
-                  }
-                } else if (!record.clockOutTime) {
-                  record.clockOutTime = now;
-                  return this.staffAttendanceRepo.save(record);
-                } else {
-                  throw new BadRequestException('Already clocked out today');
-                }
+                  });
               });
           });
       });
