@@ -447,6 +447,30 @@ export class ResultsService {
       });
   };
 
+  publishResultSheet = (
+    resultSheetId: string,
+    userId: string,
+    schoolId: string,
+  ) => {
+    return this.resultSheetRepo
+      .findOne({ where: { id: resultSheetId, schoolId } })
+      .then((sheet) => {
+        if (!sheet) throw new NotFoundException('Result sheet not found');
+        if (sheet.status !== ResultStatus.SCORES_ENTERED) {
+          throw new BadRequestException(
+            'Result sheet must have all scores submitted before publishing',
+          );
+        }
+        return this.resultSheetRepo
+          .update(resultSheetId, { status: ResultStatus.PUBLISHED })
+          .then(() => this.calculatePositions(resultSheetId))
+          .then(() => this.sendResultNotifications(sheet))
+          .then(() =>
+            this.resultSheetRepo.findOne({ where: { id: resultSheetId } }),
+          );
+      });
+  };
+
   returnResult = (
     resultSheetId: string,
     returnedById: string,

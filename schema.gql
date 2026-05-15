@@ -215,6 +215,7 @@ type Mutation {
   manualStaffAttendance(input: ManualStaffAttendanceInput!): StaffAttendance!
   markStudentAttendance(input: MarkAttendanceInput!): [StudentAttendance!]!
   promoteStudents(input: PromoteStudentsInput!): PromotionResult!
+  publishResultSheet(resultSheetId: String!): ResultSheet!
   refreshTokens(refreshToken: String!): AuthResponse!
   regenerateQrCode(schoolId: String!): School!
   register(input: RegisterInput!): AuthResponse!

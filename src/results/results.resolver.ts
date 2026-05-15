@@ -166,6 +166,20 @@ export class ResultsResolver {
   @Mutation(() => ResultSheet)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.RESULTS, 'canUpdate')
+  publishResultSheet(
+    @Args('resultSheetId') resultSheetId: string,
+    @CurrentUser() user: { sub: string; schoolId: string },
+  ) {
+    return this.resultsService.publishResultSheet(
+      resultSheetId,
+      user.sub,
+      user.schoolId,
+    );
+  }
+
+  @Mutation(() => ResultSheet)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canUpdate')
   returnResult(
     @Args('resultSheetId') resultSheetId: string,
     @Args('reason') reason: string,

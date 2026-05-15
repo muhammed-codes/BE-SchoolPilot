@@ -66,7 +66,7 @@ RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
 
 USER pptruser
 
-EXPOSE 3000
+EXPOSE 9996
 
 # Start application
 CMD ["pnpm", "run", "start:prod"]
