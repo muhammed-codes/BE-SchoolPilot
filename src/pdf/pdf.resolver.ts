@@ -3,7 +3,7 @@ import { UseGuards } from '@nestjs/common';
 import { PdfService } from './pdf.service';
 import { BulkPDFResult } from './dto/pdf.dto';
 import { JwtAuthGuard, RolesGuard } from '../common/guards';
-import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators';
 import { UserRole } from '../common/enums';
 
 @Resolver()
@@ -12,15 +12,29 @@ export class PdfResolver {
 
   @Mutation(() => String)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL)
-  generateReportCard(@Args('studentResultId') studentResultId: string) {
-    return this.pdfService.generateReportCard(studentResultId);
+  generateReportCard(
+    @Args('studentResultId') studentResultId: string,
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+  ) {
+    return this.pdfService.generateReportCard(
+      studentResultId,
+      user.sub,
+      user.schoolId,
+      user.role,
+    );
   }
 
   @Mutation(() => BulkPDFResult)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL)
-  generateBulkReportCards(@Args('resultSheetId') resultSheetId: string) {
-    return this.pdfService.generateBulkReportCards(resultSheetId);
+  generateBulkReportCards(
+    @Args('resultSheetId') resultSheetId: string,
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+  ) {
+    return this.pdfService.generateBulkReportCards(
+      resultSheetId,
+      user.sub,
+      user.schoolId,
+      user.role,
+    );
   }
 }

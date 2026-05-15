@@ -3,6 +3,7 @@ import {
   Logger,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -17,7 +18,7 @@ import { ClassEntity } from '../classes/entities/class.entity';
 import { UploadService } from '../upload/upload.service';
 import { AttendanceService } from '../attendance/attendance.service';
 import { Subject } from '../subjects/entities/subject.entity';
-import { ResultStatus } from '../common/enums';
+import { UserRole } from '../common/enums';
 import { getReportCardTemplate } from './templates/templates';
 import {
   ReportCardData,
@@ -49,6 +50,32 @@ export class PdfService {
     private readonly uploadService: UploadService,
     private readonly attendanceService: AttendanceService,
   ) {}
+
+  private validateGenerationAccess = (
+    userId: string,
+    schoolId: string,
+    role: UserRole,
+    classId: string,
+  ) => {
+    if (role === UserRole.SUBJECT_TEACHER || role === UserRole.PARENT) {
+      throw new ForbiddenException(
+        'You are not allowed to generate result sheets',
+      );
+    }
+
+    if (role !== UserRole.CLASS_TEACHER) return Promise.resolve();
+
+    return this.classRepo
+      .findOne({ where: { id: classId, schoolId } })
+      .then((classEntity) => {
+        if (!classEntity) throw new NotFoundException('Class not found');
+        if (classEntity.classTeacherId !== userId) {
+          throw new ForbiddenException(
+            'You can only generate results for your assigned class',
+          );
+        }
+      });
+  };
 
   generatePdfFromHtml = (html: string): Promise<Buffer> => {
     let browserInstance: Awaited<ReturnType<typeof puppeteer.launch>>;
@@ -89,35 +116,47 @@ export class PdfService {
       });
   };
 
-  generateReportCard = (studentResultId: string): Promise<string> => {
+  generateReportCard = (
+    studentResultId: string,
+    userId: string,
+    schoolId: string,
+    role: UserRole,
+  ): Promise<string> => {
     return this.studentResultRepo
       .findOne({
-        where: { id: studentResultId },
+        where: { id: studentResultId, schoolId },
         relations: ['resultSheet', 'subjectScores'],
       })
       .then((studentResult) => {
         if (!studentResult)
           throw new NotFoundException('StudentResult not found');
 
-        return Promise.all([
-          Promise.resolve(studentResult),
-          this.studentRepo.findOne({
-            where: { id: studentResult.studentId },
-            relations: ['currentClass', 'currentClass.classTeacher'],
-          }),
-          this.schoolRepo.findOne({ where: { id: studentResult.schoolId } }),
-          this.termRepo.findOne({
-            where: { id: studentResult.resultSheet.termId },
-            relations: ['session'],
-          }),
-          this.attendanceService.getStudentAttendanceSummary(
-            studentResult.studentId,
-            studentResult.resultSheet.termId,
-          ),
-          this.subjectRepo.find({
-            where: { schoolId: studentResult.schoolId },
-          }),
-        ]);
+        return this.validateGenerationAccess(
+          userId,
+          schoolId,
+          role,
+          studentResult.resultSheet.classId,
+        ).then(() =>
+          Promise.all([
+            Promise.resolve(studentResult),
+            this.studentRepo.findOne({
+              where: { id: studentResult.studentId },
+              relations: ['currentClass', 'currentClass.classTeacher'],
+            }),
+            this.schoolRepo.findOne({ where: { id: studentResult.schoolId } }),
+            this.termRepo.findOne({
+              where: { id: studentResult.resultSheet.termId },
+              relations: ['session'],
+            }),
+            this.attendanceService.getStudentAttendanceSummary(
+              studentResult.studentId,
+              studentResult.resultSheet.termId,
+            ),
+            this.subjectRepo.find({
+              where: { schoolId: studentResult.schoolId },
+            }),
+          ]),
+        );
       })
       .then(([studentResult, student, school, term, attendance, subjects]) => {
         if (!student) throw new NotFoundException('Student not found');
@@ -129,7 +168,9 @@ export class PdfService {
 
         const subjectScoresData: SubjectScoreData[] = (
           studentResult.subjectScores || []
-        ).map((score) => {
+        )
+          .filter((score) => score.isSubmitted)
+          .map((score) => {
           let assignments: number | null = null;
           let tests: number | null = null;
           let exam: number | null = null;
@@ -151,7 +192,7 @@ export class PdfService {
             totalScore: score.totalScore,
             grade: score.grade,
           };
-        });
+          });
 
         const reportCardData: ReportCardData = {
           school: {
@@ -207,22 +248,39 @@ export class PdfService {
       .then((uploadResult) => uploadResult.pdfPrivateUrl || uploadResult.url);
   };
 
-  generateBulkReportCards = (resultSheetId: string): Promise<BulkPDFResult> => {
+  generateBulkReportCards = (
+    resultSheetId: string,
+    userId: string,
+    schoolId: string,
+    role: UserRole,
+  ): Promise<BulkPDFResult> => {
     return this.resultSheetRepo
-      .findOne({ where: { id: resultSheetId } })
+      .findOne({ where: { id: resultSheetId, schoolId } })
       .then((resultSheet) => {
         if (!resultSheet) throw new NotFoundException('ResultSheet not found');
-        if (resultSheet.status !== ResultStatus.PUBLISHED) {
+
+        return this.validateGenerationAccess(
+          userId,
+          schoolId,
+          role,
+          resultSheet.classId,
+        ).then(() =>
+          this.studentResultRepo.find({
+            where: { resultSheetId, schoolId },
+            relations: ['subjectScores'],
+          }),
+        );
+      })
+      .then((studentResults) => {
+        const hasSubmittedScores = studentResults.some((result) =>
+          (result.subjectScores || []).some((score) => score.isSubmitted),
+        );
+        if (!hasSubmittedScores) {
           throw new BadRequestException(
-            'Result sheet must be published before generating report cards',
+            'At least one submitted subject score is required to generate results',
           );
         }
 
-        return this.studentResultRepo.find({
-          where: { resultSheetId },
-        });
-      })
-      .then((studentResults) => {
         const studentIds = studentResults.map((sr) => sr.studentId);
         return this.studentRepo
           .find({
@@ -237,7 +295,12 @@ export class PdfService {
               .reduce(
                 (promiseChain, currentResult) =>
                   promiseChain.then(() =>
-                    this.generateReportCard(currentResult.id).then((pdfUrl) => {
+                    this.generateReportCard(
+                      currentResult.id,
+                      userId,
+                      schoolId,
+                      role,
+                    ).then((pdfUrl) => {
                       reportCards.push({
                         studentId: currentResult.studentId,
                         studentName:
