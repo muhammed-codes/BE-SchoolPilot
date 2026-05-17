@@ -6,3 +6,4 @@ export { ResultStatus } from './result-status.enum';
 export { ClockAction } from './clock-action.enum';
 export { TermStatus } from './term-status.enum';
 export { Gender } from './gender.enum';
+export { NamePrefix } from './name-prefix.enum';

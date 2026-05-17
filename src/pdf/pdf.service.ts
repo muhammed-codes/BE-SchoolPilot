@@ -51,6 +51,31 @@ export class PdfService {
     private readonly attendanceService: AttendanceService,
   ) {}
 
+  private computePercentage = (
+    totalScore: number | null | undefined,
+    subjectCount: number,
+    scoreComponents: { maxScore: number }[],
+  ) => {
+    const totalMaxPerSubject = (scoreComponents || []).reduce(
+      (sum, sc) => sum + sc.maxScore,
+      0,
+    );
+    if (!subjectCount || totalMaxPerSubject <= 0) return null;
+    const obtainable = totalMaxPerSubject * subjectCount;
+    const obtained = totalScore || 0;
+    if (obtainable <= 0) return null;
+    return Number(((obtained / obtainable) * 100).toFixed(2));
+  };
+
+  private formatNamePrefix = (prefix: string | null | undefined) => {
+    if (!prefix) return '';
+    const normalized = prefix.toLowerCase();
+    if (normalized === 'mr') return 'Mr.';
+    if (normalized === 'mrs') return 'Mrs.';
+    if (normalized === 'miss') return 'Miss';
+    return '';
+  };
+
   private validateGenerationAccess = (
     userId: string,
     schoolId: string,
@@ -171,28 +196,62 @@ export class PdfService {
         )
           .filter((score) => score.isSubmitted)
           .map((score) => {
-          let assignments: number | null = null;
-          let tests: number | null = null;
-          let exam: number | null = null;
+          let assignments = 0;
+          let tests = 0;
+          let exam = 0;
+          let hasAssignments = false;
+          let hasTests = false;
+          let hasExam = false;
 
           if (score.scores) {
             score.scores.forEach((c) => {
               const nameLower = c.component.toLowerCase();
-              if (nameLower.includes('assignment')) assignments = c.score;
-              else if (nameLower.includes('test')) tests = c.score;
-              else if (nameLower.includes('exam')) exam = c.score;
+              if (nameLower === 'assignment' || nameLower === 'project') {
+                assignments += c.score;
+                hasAssignments = true;
+                return;
+              }
+              if (
+                nameLower === 'ca' ||
+                nameLower === 'ca1' ||
+                nameLower === 'ca2' ||
+                nameLower === 'mid_term'
+              ) {
+                tests += c.score;
+                hasTests = true;
+                return;
+              }
+              if (nameLower === 'exam') {
+                exam += c.score;
+                hasExam = true;
+              }
             });
           }
 
           return {
             name: subjectMap.get(score.subjectId) || 'Unknown Subject',
-            assignments,
-            tests,
-            exam,
+            assignments: hasAssignments ? assignments : null,
+            tests: hasTests ? tests : null,
+            exam: hasExam ? exam : null,
             totalScore: score.totalScore,
             grade: score.grade,
           };
           });
+
+        const sheetScoreComponents = studentResult.resultSheet?.scoreComponents || [];
+        const percentage = this.computePercentage(
+          studentResult.totalScore,
+          (studentResult.subjectScores || []).length,
+          sheetScoreComponents,
+        );
+        const prefix = this.formatNamePrefix(
+          student.currentClass?.classTeacher?.namePrefix,
+        );
+        const rawClassTeacherName = student.currentClass?.classTeacher?.fullName || null;
+        const classTeacherName =
+          rawClassTeacherName && prefix
+            ? `${prefix} ${rawClassTeacherName}`
+            : rawClassTeacherName;
 
         const reportCardData: ReportCardData = {
           school: {
@@ -215,7 +274,7 @@ export class PdfService {
           },
           result: {
             totalScore: studentResult.totalScore,
-            grade: studentResult.grade,
+            percentage,
             position: studentResult.position,
             classTeacherRemark: studentResult.classTeacherRemark,
             principalRemark: studentResult.principalRemark,
@@ -227,8 +286,7 @@ export class PdfService {
             daysLate: attendance.daysLate,
           },
           staff: {
-            classTeacherName:
-              student.currentClass?.classTeacher?.fullName || null,
+            classTeacherName,
             principalName: 'Principal', // Assuming standard principal signing for now
           },
         };

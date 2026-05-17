@@ -1,7 +1,7 @@
 import { ObjectType, Field } from '@nestjs/graphql';
 import { Entity, Column } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
-import { UserRole } from '../../common/enums';
+import { NamePrefix, UserRole } from '../../common/enums';
 
 @ObjectType()
 @Entity('users')
@@ -21,6 +21,10 @@ export class User extends BaseEntity {
   @Field()
   @Column()
   lastName: string;
+
+  @Field(() => NamePrefix, { nullable: true })
+  @Column({ type: 'enum', enum: NamePrefix, nullable: true })
+  namePrefix: NamePrefix | null;
 
   @Column()
   passwordHash: string;

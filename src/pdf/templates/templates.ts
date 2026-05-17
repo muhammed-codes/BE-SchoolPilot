@@ -1,5 +1,16 @@
 import { ReportCardData } from './report-card-data.interface';
 
+const toOrdinal = (n: number) => {
+  const suffixes = ['th', 'st', 'nd', 'rd'];
+  const value = n % 100;
+  return `${n}${suffixes[(value - 20) % 10] || suffixes[value] || suffixes[0]}`;
+};
+
+const getDisplayPosition = (position: number | null) => {
+  if (!position || position > 3) return 'N/A';
+  return toOrdinal(position);
+};
+
 const classicTemplate = (data: ReportCardData): string => `
 <!DOCTYPE html>
 <html lang="en">
@@ -169,13 +180,13 @@ const classicTemplate = (data: ReportCardData): string => `
             <div class="info-row"><span class="info-label">Name:</span> <span>${data.student.fullName}</span></div>
             <div class="info-row"><span class="info-label">Admission No:</span> <span>${data.student.admissionNumber}</span></div>
             <div class="info-row"><span class="info-label">Class:</span> <span>${data.student.currentClass}</span></div>
-            <div class="info-row"><span class="info-label">Position:</span> <span>${data.result.position || 'N/A'}</span></div>
+            <div class="info-row"><span class="info-label">Position:</span> <span>${getDisplayPosition(data.result.position)}</span></div>
         </div>
         <div class="info-group">
             <div class="info-row"><span class="info-label">Session:</span> <span>${data.term.sessionName}</span></div>
             <div class="info-row"><span class="info-label">Term:</span> <span>${data.term.name}</span></div>
             <div class="info-row"><span class="info-label">Total Score:</span> <span>${data.result.totalScore !== null ? data.result.totalScore.toFixed(2) : 'N/A'}</span></div>
-            <div class="info-row"><span class="info-label">Final Grade:</span> <span>${data.result.grade || 'N/A'}</span></div>
+            <div class="info-row"><span class="info-label">Percentage:</span> <span>${data.result.percentage !== null ? `${data.result.percentage.toFixed(2)}%` : 'N/A'}</span></div>
         </div>
         <div>
             ${data.student.passportPhotoUrl ? `<img src="${data.student.passportPhotoUrl}" class="student-photo" alt="Student Photo" />` : '<div class="student-photo" style="background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #999;">No Photo</div>'}
@@ -514,12 +525,12 @@ const modernTemplate = (data: ReportCardData): string => `
                     <div class="stat-value">${data.result.totalScore !== null ? data.result.totalScore.toFixed(2) : '-'}</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Final Grade</div>
-                    <div class="stat-value">${data.result.grade || '-'}</div>
+                    <div class="stat-label">Percentage</div>
+                    <div class="stat-value">${data.result.percentage !== null ? `${data.result.percentage.toFixed(2)}%` : '-'}</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Position</div>
-                    <div class="stat-value">${data.result.position || '-'}</div>
+                    <div class="stat-value">${getDisplayPosition(data.result.position)}</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Attendance</div>

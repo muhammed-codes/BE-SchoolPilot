@@ -130,6 +130,7 @@ input CreateUserInput {
   email: String!
   firstName: String!
   lastName: String!
+  namePrefix: NamePrefix
   password: String!
   phone: String
   role: UserRole!
@@ -241,6 +242,12 @@ type Mutation {
   uploadSchoolLogo(file: Upload!, schoolId: String!): School!
   uploadSchoolStamp(file: Upload!, schoolId: String!): School!
   uploadUserAvatar(file: Upload!, userId: String!): User!
+}
+
+enum NamePrefix {
+  MISS
+  MR
+  MRS
 }
 
 type PaginatedClassEntity {
@@ -486,6 +493,7 @@ type StudentResult {
   createdAt: DateTime!
   grade: String
   id: ID!
+  percentage: Float
   position: Int
   principalRemark: String
   resultSheet: ResultSheet!
@@ -584,6 +592,7 @@ input UpdateUserInput {
   email: String
   firstName: String
   lastName: String
+  namePrefix: NamePrefix
   phone: String
   role: UserRole
 }
@@ -608,6 +617,7 @@ type User {
   id: ID!
   isActive: Boolean!
   lastName: String!
+  namePrefix: NamePrefix
   phone: String
   role: UserRole!
   schoolId: String

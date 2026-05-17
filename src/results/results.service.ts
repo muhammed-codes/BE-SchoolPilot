@@ -46,6 +46,37 @@ export class ResultsService {
     private readonly dataSource: DataSource,
   ) {}
 
+  private computeStudentPercentage = (
+    totalScore: number | null | undefined,
+    subjectCount: number,
+    totalMaxPerSubject: number,
+  ) => {
+    if (!subjectCount || totalMaxPerSubject <= 0) return undefined;
+    const obtained = totalScore || 0;
+    const obtainable = totalMaxPerSubject * subjectCount;
+    if (obtainable <= 0) return undefined;
+    return Number(((obtained / obtainable) * 100).toFixed(2));
+  };
+
+  private applyComputedMetrics = (
+    scoreComponents: { maxScore: number }[],
+    studentResults: StudentResult[],
+  ) => {
+    const totalMaxPerSubject = (scoreComponents || []).reduce(
+      (sum, sc) => sum + sc.maxScore,
+      0,
+    );
+    studentResults.forEach((sr) => {
+      const subjectCount = sr.subjectScores?.length || 0;
+      sr.percentage = this.computeStudentPercentage(
+        sr.totalScore,
+        subjectCount,
+        totalMaxPerSubject,
+      );
+    });
+    return studentResults;
+  };
+
   createResultSheet = (
     input: CreateResultSheetInput,
     userId: string,
@@ -629,6 +660,7 @@ export class ResultsService {
       }
     }
 
+    this.applyComputedMetrics(sheet.scoreComponents || [], sheet.studentResults || []);
     return sheet;
   };
 
@@ -710,7 +742,14 @@ export class ResultsService {
       .getOne()
       .then((result) => {
         if (!result) throw new NotFoundException('Student result not found');
-        return result;
+        return this.resultSheetRepo
+          .findOne({ where: { id: result.resultSheetId } })
+          .then((sheet) => {
+            if (sheet) {
+              this.applyComputedMetrics(sheet.scoreComponents || [], [result]);
+            }
+            return result;
+          });
       });
   };
 

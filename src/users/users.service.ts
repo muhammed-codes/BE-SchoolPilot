@@ -141,6 +141,7 @@ export class UsersService {
             firstName: input.firstName,
             lastName: input.lastName,
             role: input.role,
+            namePrefix: input.namePrefix || null,
             phone: input.phone,
             schoolId: adminSchoolId,
             passwordHash,

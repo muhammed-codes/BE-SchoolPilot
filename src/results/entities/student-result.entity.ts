@@ -29,6 +29,9 @@ export class StudentResult extends BaseEntity {
   @Column({ type: 'float', nullable: true })
   totalScore: number;
 
+  @Field(() => Float, { nullable: true })
+  percentage?: number;
+
   @Field({ nullable: true })
   @Column({ nullable: true })
   grade: string;
