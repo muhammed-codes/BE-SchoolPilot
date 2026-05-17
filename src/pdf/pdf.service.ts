@@ -76,6 +76,48 @@ export class PdfService {
     return '';
   };
 
+  private getScoreBucket = (component: string) => {
+    const normalized = (component || '').toLowerCase().replace(/[\s-]/g, '_');
+    if (!normalized) return 'tests';
+
+    if (
+      normalized.includes('exam') ||
+      normalized.includes('final')
+    ) {
+      return 'exam';
+    }
+
+    if (
+      normalized === 'assignment' ||
+      normalized === 'assignments' ||
+      normalized === 'project' ||
+      normalized === 'projects' ||
+      normalized.includes('homework')
+    ) {
+      return 'assignments';
+    }
+
+    if (
+      normalized === 'ca' ||
+      normalized === 'ca1' ||
+      normalized === 'ca2' ||
+      normalized === 'mid_term' ||
+      normalized === 'midterm' ||
+      normalized.includes('test') ||
+      normalized.includes('quiz')
+    ) {
+      return 'tests';
+    }
+
+    return 'tests';
+  };
+
+  private toSafeNumber = (value: unknown) => {
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) return 0;
+    return parsed;
+  };
+
   private validateGenerationAccess = (
     userId: string,
     schoolId: string,
@@ -150,7 +192,7 @@ export class PdfService {
     return this.studentResultRepo
       .findOne({
         where: { id: studentResultId, schoolId },
-        relations: ['resultSheet', 'subjectScores'],
+        relations: ['resultSheet', 'subjectScores', 'subjectScores.subject'],
       })
       .then((studentResult) => {
         if (!studentResult)
@@ -196,46 +238,45 @@ export class PdfService {
         )
           .filter((score) => score.isSubmitted)
           .map((score) => {
-          let assignments = 0;
-          let tests = 0;
-          let exam = 0;
-          let hasAssignments = false;
-          let hasTests = false;
-          let hasExam = false;
+            let assignments = 0;
+            let tests = 0;
+            let exam = 0;
+            let hasAssignments = false;
+            let hasTests = false;
+            let hasExam = false;
 
-          if (score.scores) {
-            score.scores.forEach((c) => {
-              const nameLower = c.component.toLowerCase();
-              if (nameLower === 'assignment' || nameLower === 'project') {
-                assignments += c.score;
-                hasAssignments = true;
-                return;
-              }
-              if (
-                nameLower === 'ca' ||
-                nameLower === 'ca1' ||
-                nameLower === 'ca2' ||
-                nameLower === 'mid_term'
-              ) {
-                tests += c.score;
-                hasTests = true;
-                return;
-              }
-              if (nameLower === 'exam') {
-                exam += c.score;
-                hasExam = true;
-              }
-            });
-          }
+            if (score.scores) {
+              score.scores.forEach((c) => {
+                const bucket = this.getScoreBucket(c.component);
+                const safeScore = this.toSafeNumber(c.score);
+                if (bucket === 'assignments') {
+                  assignments += safeScore;
+                  hasAssignments = true;
+                  return;
+                }
+                if (bucket === 'tests') {
+                  tests += safeScore;
+                  hasTests = true;
+                  return;
+                }
+                if (bucket === 'exam') {
+                  exam += safeScore;
+                  hasExam = true;
+                }
+              });
+            }
 
-          return {
-            name: subjectMap.get(score.subjectId) || 'Unknown Subject',
-            assignments: hasAssignments ? assignments : null,
-            tests: hasTests ? tests : null,
-            exam: hasExam ? exam : null,
-            totalScore: score.totalScore,
-            grade: score.grade,
-          };
+            return {
+              name:
+                score.subject?.name ||
+                subjectMap.get(score.subjectId) ||
+                'Unknown Subject',
+              assignments: hasAssignments ? assignments : null,
+              tests: hasTests ? tests : null,
+              exam: hasExam ? exam : null,
+              totalScore: score.totalScore,
+              grade: score.grade,
+            };
           });
 
         const sheetScoreComponents = studentResult.resultSheet?.scoreComponents || [];

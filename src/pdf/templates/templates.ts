@@ -135,6 +135,13 @@ const classicTemplate = (data: ReportCardData): string => `
             border-bottom: 1px solid #eee;
             padding-bottom: 5px;
         }
+        .remark-lines {
+            margin-top: 8px;
+        }
+        .remark-line {
+            border-bottom: 1px solid #8b8b8b;
+            height: 22px;
+        }
         .signatures {
             display: flex;
             justify-content: space-around;
@@ -225,11 +232,19 @@ const classicTemplate = (data: ReportCardData): string => `
     <div class="remarks-section">
         <div class="remark-box">
             <div class="remark-title">Class Teacher's Remark</div>
-            <p>${data.result.classTeacherRemark || 'No remark provided.'}</p>
+            <div class="remark-lines">
+                <div class="remark-line"></div>
+                <div class="remark-line"></div>
+                <div class="remark-line"></div>
+            </div>
         </div>
         <div class="remark-box">
             <div class="remark-title">Principal's Remark</div>
-            <p>${data.result.principalRemark || 'No remark provided.'}</p>
+            <div class="remark-lines">
+                <div class="remark-line"></div>
+                <div class="remark-line"></div>
+                <div class="remark-line"></div>
+            </div>
         </div>
     </div>
 
@@ -464,10 +479,13 @@ const modernTemplate = (data: ReportCardData): string => `
             text-transform: uppercase;
         }
         .remark-text {
-            font-style: italic;
-            color: #4a5568;
             margin-bottom: 20px;
             min-height: 40px;
+        }
+        .remark-line {
+            border-bottom: 1px solid #a0aec0;
+            height: 20px;
+            margin-bottom: 10px;
         }
         .sign-area {
             display: flex;
@@ -568,14 +586,22 @@ const modernTemplate = (data: ReportCardData): string => `
             <div class="footer-section">
                 <div class="remark-card">
                     <h4>Teacher's Remarks</h4>
-                    <p class="remark-text">${data.result.classTeacherRemark || 'No remark provided.'}</p>
+                    <div class="remark-text">
+                        <div class="remark-line"></div>
+                        <div class="remark-line"></div>
+                        <div class="remark-line"></div>
+                    </div>
                     <div class="sign-area">
                         <div class="sign-line">${data.staff.classTeacherName || 'Sign'}</div>
                     </div>
                 </div>
                 <div class="remark-card">
                     <h4>Principal's Remarks</h4>
-                    <p class="remark-text">${data.result.principalRemark || 'No remark provided.'}</p>
+                    <div class="remark-text">
+                        <div class="remark-line"></div>
+                        <div class="remark-line"></div>
+                        <div class="remark-line"></div>
+                    </div>
                     <div class="sign-area">
                         <div class="sign-line">${data.staff.principalName || 'Sign'}</div>
                     </div>
