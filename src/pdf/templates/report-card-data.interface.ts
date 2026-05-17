@@ -28,7 +28,7 @@ export interface ReportCardData {
   };
   result: {
     totalScore: number | null;
-    grade: string | null;
+    percentage: number | null;
     position: number | null;
     classTeacherRemark: string | null;
     principalRemark: string | null;

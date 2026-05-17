@@ -141,6 +141,7 @@ export class UsersService {
             firstName: input.firstName,
             lastName: input.lastName,
             role: input.role,
+            namePrefix: input.namePrefix || null,
             phone: input.phone,
             schoolId: adminSchoolId,
             passwordHash,
@@ -295,6 +296,28 @@ export class UsersService {
             })
             .then(() => this.findById(userId)),
         );
+    });
+  };
+
+  updateUserAvatarByAdmin = (
+    userId: string,
+    file: Upload,
+    requesterRole: UserRole,
+    requesterSchoolId: string,
+  ) => {
+    return this.findById(userId).then((user) => {
+      if (!user) throw new NotFoundException('User not found');
+
+      if (
+        requesterRole === UserRole.SCHOOL_ADMIN &&
+        user.schoolId !== requesterSchoolId
+      ) {
+        throw new ForbiddenException(
+          'You can only upload avatar for users in your own school',
+        );
+      }
+
+      return this.updateAvatar(userId, file);
     });
   };
 

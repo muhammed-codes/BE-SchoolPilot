@@ -1,5 +1,16 @@
 import { ReportCardData } from './report-card-data.interface';
 
+const toOrdinal = (n: number) => {
+  const suffixes = ['th', 'st', 'nd', 'rd'];
+  const value = n % 100;
+  return `${n}${suffixes[(value - 20) % 10] || suffixes[value] || suffixes[0]}`;
+};
+
+const getDisplayPosition = (position: number | null) => {
+  if (!position || position > 3) return 'N/A';
+  return toOrdinal(position);
+};
+
 const classicTemplate = (data: ReportCardData): string => `
 <!DOCTYPE html>
 <html lang="en">
@@ -124,6 +135,13 @@ const classicTemplate = (data: ReportCardData): string => `
             border-bottom: 1px solid #eee;
             padding-bottom: 5px;
         }
+        .remark-lines {
+            margin-top: 8px;
+        }
+        .remark-line {
+            border-bottom: 1px solid #8b8b8b;
+            height: 22px;
+        }
         .signatures {
             display: flex;
             justify-content: space-around;
@@ -169,13 +187,13 @@ const classicTemplate = (data: ReportCardData): string => `
             <div class="info-row"><span class="info-label">Name:</span> <span>${data.student.fullName}</span></div>
             <div class="info-row"><span class="info-label">Admission No:</span> <span>${data.student.admissionNumber}</span></div>
             <div class="info-row"><span class="info-label">Class:</span> <span>${data.student.currentClass}</span></div>
-            <div class="info-row"><span class="info-label">Position:</span> <span>${data.result.position || 'N/A'}</span></div>
+            <div class="info-row"><span class="info-label">Position:</span> <span>${getDisplayPosition(data.result.position)}</span></div>
         </div>
         <div class="info-group">
             <div class="info-row"><span class="info-label">Session:</span> <span>${data.term.sessionName}</span></div>
             <div class="info-row"><span class="info-label">Term:</span> <span>${data.term.name}</span></div>
             <div class="info-row"><span class="info-label">Total Score:</span> <span>${data.result.totalScore !== null ? data.result.totalScore.toFixed(2) : 'N/A'}</span></div>
-            <div class="info-row"><span class="info-label">Final Grade:</span> <span>${data.result.grade || 'N/A'}</span></div>
+            <div class="info-row"><span class="info-label">Percentage:</span> <span>${data.result.percentage !== null ? `${data.result.percentage.toFixed(2)}%` : 'N/A'}</span></div>
         </div>
         <div>
             ${data.student.passportPhotoUrl ? `<img src="${data.student.passportPhotoUrl}" class="student-photo" alt="Student Photo" />` : '<div class="student-photo" style="background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #999;">No Photo</div>'}
@@ -214,11 +232,19 @@ const classicTemplate = (data: ReportCardData): string => `
     <div class="remarks-section">
         <div class="remark-box">
             <div class="remark-title">Class Teacher's Remark</div>
-            <p>${data.result.classTeacherRemark || 'No remark provided.'}</p>
+            <div class="remark-lines">
+                <div class="remark-line"></div>
+                <div class="remark-line"></div>
+                <div class="remark-line"></div>
+            </div>
         </div>
         <div class="remark-box">
             <div class="remark-title">Principal's Remark</div>
-            <p>${data.result.principalRemark || 'No remark provided.'}</p>
+            <div class="remark-lines">
+                <div class="remark-line"></div>
+                <div class="remark-line"></div>
+                <div class="remark-line"></div>
+            </div>
         </div>
     </div>
 
@@ -453,10 +479,13 @@ const modernTemplate = (data: ReportCardData): string => `
             text-transform: uppercase;
         }
         .remark-text {
-            font-style: italic;
-            color: #4a5568;
             margin-bottom: 20px;
             min-height: 40px;
+        }
+        .remark-line {
+            border-bottom: 1px solid #a0aec0;
+            height: 20px;
+            margin-bottom: 10px;
         }
         .sign-area {
             display: flex;
@@ -514,12 +543,12 @@ const modernTemplate = (data: ReportCardData): string => `
                     <div class="stat-value">${data.result.totalScore !== null ? data.result.totalScore.toFixed(2) : '-'}</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Final Grade</div>
-                    <div class="stat-value">${data.result.grade || '-'}</div>
+                    <div class="stat-label">Percentage</div>
+                    <div class="stat-value">${data.result.percentage !== null ? `${data.result.percentage.toFixed(2)}%` : '-'}</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Position</div>
-                    <div class="stat-value">${data.result.position || '-'}</div>
+                    <div class="stat-value">${getDisplayPosition(data.result.position)}</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Attendance</div>
@@ -557,14 +586,22 @@ const modernTemplate = (data: ReportCardData): string => `
             <div class="footer-section">
                 <div class="remark-card">
                     <h4>Teacher's Remarks</h4>
-                    <p class="remark-text">${data.result.classTeacherRemark || 'No remark provided.'}</p>
+                    <div class="remark-text">
+                        <div class="remark-line"></div>
+                        <div class="remark-line"></div>
+                        <div class="remark-line"></div>
+                    </div>
                     <div class="sign-area">
                         <div class="sign-line">${data.staff.classTeacherName || 'Sign'}</div>
                     </div>
                 </div>
                 <div class="remark-card">
                     <h4>Principal's Remarks</h4>
-                    <p class="remark-text">${data.result.principalRemark || 'No remark provided.'}</p>
+                    <div class="remark-text">
+                        <div class="remark-line"></div>
+                        <div class="remark-line"></div>
+                        <div class="remark-line"></div>
+                    </div>
                     <div class="sign-area">
                         <div class="sign-line">${data.staff.principalName || 'Sign'}</div>
                     </div>

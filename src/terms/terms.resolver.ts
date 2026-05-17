@@ -21,8 +21,7 @@ export class TermsResolver {
   }
 
   @Query(() => [Session])
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard)
   sessions(@CurrentUser() user: { schoolId: string }) {
     return this.termsService.getSessionsBySchool(user.schoolId);
   }

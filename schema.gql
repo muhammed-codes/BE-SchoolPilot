@@ -2,6 +2,17 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+enum AppResource {
+  ATTENDANCE
+  CLASSES
+  ID_CARDS
+  RESULTS
+  SETTINGS
+  STUDENTS
+  SUBJECTS
+  USERS
+}
+
 enum AttendanceStatus {
   ABSENT
   LATE
@@ -119,6 +130,7 @@ input CreateUserInput {
   email: String!
   firstName: String!
   lastName: String!
+  namePrefix: NamePrefix
   password: String!
   phone: String
   role: UserRole!
@@ -178,7 +190,7 @@ type Mutation {
   assignUserToSchool(schoolId: String!, userId: String!): User!
   bulkImportStudents(students: [CreateStudentInput!]!): BulkImportResult!
   changePassword(newPassword: String!, oldPassword: String!): Boolean!
-  clockAction(qrCode: String!): StaffAttendance!
+  clockAction(photo: String!): StaffAttendance!
   closeTerm(termId: String!): Term!
   createClass(input: CreateClassInput!): ClassEntity!
   createResultSheet(input: CreateResultSheetInput!): ResultSheet!
@@ -204,6 +216,7 @@ type Mutation {
   manualStaffAttendance(input: ManualStaffAttendanceInput!): StaffAttendance!
   markStudentAttendance(input: MarkAttendanceInput!): [StudentAttendance!]!
   promoteStudents(input: PromoteStudentsInput!): PromotionResult!
+  publishResultSheet(resultSheetId: String!): ResultSheet!
   refreshTokens(refreshToken: String!): AuthResponse!
   regenerateQrCode(schoolId: String!): School!
   register(input: RegisterInput!): AuthResponse!
@@ -219,6 +232,7 @@ type Mutation {
   unlinkParent(parentUserId: String!, studentId: String!): Boolean!
   unlockTerm(termId: String!): Term!
   updateExpoPushToken(token: String!): Boolean!
+  updateRolePermission(input: UpdatePermissionInput!): RolePermission!
   updateSchool(id: String!, input: UpdateSchoolInput!): School!
   updateStudent(id: String!, input: UpdateStudentInput!): Student!
   updateTotalSchoolDays(days: Int!, termId: String!): Term!
@@ -227,6 +241,13 @@ type Mutation {
   uploadPassportPhoto(file: Upload!, studentId: String!): Student!
   uploadSchoolLogo(file: Upload!, schoolId: String!): School!
   uploadSchoolStamp(file: Upload!, schoolId: String!): School!
+  uploadUserAvatar(file: Upload!, userId: String!): User!
+}
+
+enum NamePrefix {
+  MISS
+  MR
+  MRS
 }
 
 type PaginatedClassEntity {
@@ -264,11 +285,13 @@ type PromotionResult {
 
 type Query {
   activeTerm: Term!
+  allRolePermissions: [RolePermission!]!
   classAttendance(classId: String!, date: String!): [StudentAttendance!]!
   classById(id: String!): ClassEntity!
   me: User!
   myChildren: [Student!]!
   myClasses: [ClassEntity!]!
+  myPermissions: [RolePermission!]!
   mySchool: School!
   mySubjectScores(resultSheetId: String!): [SubjectScore!]!
   pendingPrincipalApprovals: [ResultSheet!]!
@@ -340,6 +363,18 @@ enum ResultStatus {
   SCORES_ENTERED
 }
 
+type RolePermission {
+  canCreate: Boolean!
+  canDelete: Boolean!
+  canRead: Boolean!
+  canUpdate: Boolean!
+  createdAt: DateTime!
+  id: ID!
+  resource: AppResource!
+  role: UserRole!
+  updatedAt: DateTime!
+}
+
 input SaveSubjectScoresInput {
   resultSheetId: String!
   scores: [StudentScoreInput!]!
@@ -396,13 +431,15 @@ type Session {
 }
 
 type StaffAttendance {
+  clockInPhotoUrl: String
   clockInTime: DateTime
+  clockOutPhotoUrl: String
   clockOutTime: DateTime
   createdAt: DateTime!
   date: String!
   id: ID!
   isLate: Boolean
-  isManual: Boolean!
+  isManual: Boolean
   schoolId: String!
   updatedAt: DateTime!
   user: User!
@@ -456,12 +493,14 @@ type StudentResult {
   createdAt: DateTime!
   grade: String
   id: ID!
+  percentage: Float
   position: Int
   principalRemark: String
   resultSheet: ResultSheet!
   resultSheetId: String!
   schoolId: String!
   scores: [ComponentScore!]
+  student: Student
   studentId: String!
   subjectScores: [SubjectScore!]
   totalScore: Float
@@ -520,6 +559,14 @@ enum TermStatus {
   CLOSED
 }
 
+input UpdatePermissionInput {
+  canCreate: Boolean
+  canDelete: Boolean
+  canRead: Boolean
+  canUpdate: Boolean
+  id: ID!
+}
+
 input UpdateSchoolInput {
   address: String
   email: String
@@ -545,6 +592,7 @@ input UpdateUserInput {
   email: String
   firstName: String
   lastName: String
+  namePrefix: NamePrefix
   phone: String
   role: UserRole
 }
@@ -569,6 +617,7 @@ type User {
   id: ID!
   isActive: Boolean!
   lastName: String!
+  namePrefix: NamePrefix
   phone: String
   role: UserRole!
   schoolId: String

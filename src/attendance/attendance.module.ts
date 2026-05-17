@@ -8,6 +8,7 @@ import { User } from '../users/entities/user.entity';
 import { Term } from '../terms/entities/term.entity';
 import { AttendanceService } from './attendance.service';
 import { AttendanceResolver } from './attendance.resolver';
+import { UploadModule } from '../upload/upload.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AttendanceResolver } from './attendance.resolver';
       User,
       Term,
     ]),
+    UploadModule,
   ],
   providers: [AttendanceService, AttendanceResolver],
   exports: [AttendanceService],

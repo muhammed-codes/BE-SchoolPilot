@@ -18,6 +18,7 @@ import { UploadModule } from './upload/upload.module';
 import { TermsModule } from './terms/terms.module';
 import { IdCardsModule } from './id-cards/id-cards.module';
 import { MailModule } from './mail/mail.module';
+import { AccessModule } from './access/access.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { MailModule } from './mail/mail.module';
         autoSchemaFile: 'schema.gql',
         sortSchema: true,
         playground: config.get<string>('NODE_ENV') !== 'production',
+        csrfPrevention: false,
         context: ({ req }: { req: Request }) => ({ req }),
       }),
     }),
@@ -67,6 +69,7 @@ import { MailModule } from './mail/mail.module';
     TermsModule,
     IdCardsModule,
     MailModule,
+    AccessModule,
   ],
   controllers: [AppController],
 })
