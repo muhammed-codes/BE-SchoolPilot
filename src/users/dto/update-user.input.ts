@@ -1,6 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsEmail, IsEnum, IsOptional } from 'class-validator';
-import { UserRole } from '../../common/enums';
+import { NamePrefix, UserRole } from '../../common/enums';
 
 @InputType()
 export class UpdateUserInput {
@@ -25,4 +25,9 @@ export class UpdateUserInput {
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
+
+  @Field(() => NamePrefix, { nullable: true })
+  @IsOptional()
+  @IsEnum(NamePrefix)
+  namePrefix?: NamePrefix;
 }

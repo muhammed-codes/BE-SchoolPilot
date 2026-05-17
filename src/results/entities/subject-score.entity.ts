@@ -3,6 +3,7 @@ import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { StudentResult } from './student-result.entity';
 import { ComponentScore } from '../dto/component-score.type';
+import { Subject } from '../../subjects/entities/subject.entity';
 
 @ObjectType()
 @Entity('subject_scores')
@@ -14,6 +15,11 @@ export class SubjectScore extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
   subjectId: string;
+
+  @Field(() => Subject, { nullable: true })
+  @ManyToOne(() => Subject, { nullable: true, eager: false })
+  @JoinColumn({ name: 'subjectId' })
+  subject: Subject;
 
   @Field()
   @Column({ type: 'uuid' })

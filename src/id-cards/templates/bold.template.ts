@@ -6,7 +6,7 @@ import { UserRole } from '../../common/enums';
 
 const getAccentColor = (data: StudentCardData | StaffCardData): string => {
   if ('admissionNumber' in data) return '#1A56A8';
-  const role = (data as StaffCardData).role;
+  const role = data.role;
   const colorMap: Record<string, string> = {
     [UserRole.PRINCIPAL]: '#7C3AED',
     [UserRole.CLASS_TEACHER]: '#059669',
@@ -18,15 +18,9 @@ const getAccentColor = (data: StudentCardData | StaffCardData): string => {
 
 export const boldTemplate = (data: StudentCardData | StaffCardData): string => {
   const isStudent = 'admissionNumber' in data;
-  const name = isStudent
-    ? (data as StudentCardData).studentName
-    : (data as StaffCardData).staffName;
-  const idNumber = isStudent
-    ? (data as StudentCardData).admissionNumber
-    : (data as StaffCardData).staffId;
-  const subtitle = isStudent
-    ? (data as StudentCardData).className
-    : (data as StaffCardData).role.replace(/_/g, ' ');
+  const name = isStudent ? data.studentName : data.staffName;
+  const idNumber = isStudent ? data.admissionNumber : data.staffId;
+  const subtitle = isStudent ? data.className : data.role.replace(/_/g, ' ');
   const photo = data.photoBase64;
   const logo = data.schoolLogoBase64;
   const schoolName = data.schoolName;

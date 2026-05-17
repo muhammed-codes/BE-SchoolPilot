@@ -1,4 +1,5 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { AppResource } from '../access/enums/resource.enum';
 import { UseGuards } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { ResultSheet } from './entities/result-sheet.entity';
@@ -6,28 +7,27 @@ import { StudentResult } from './entities/student-result.entity';
 import { SubjectScore } from './entities/subject-score.entity';
 import { CreateResultSheetInput } from './dto/create-result-sheet.input';
 import { SaveSubjectScoresInput } from './dto/save-subject-scores.input';
-import { JwtAuthGuard, RolesGuard } from '../common/guards';
-import { CurrentUser } from '../common/decorators';
-import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../common/enums';
+import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
+import { CurrentUser, RequirePermission } from '../common/decorators';
+import { UserRole, ResultStatus } from '../common/enums';
 
 @Resolver()
 export class ResultsResolver {
   constructor(private readonly resultsService: ResultsService) {}
 
   @Query(() => ResultSheet)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL, UserRole.CLASS_TEACHER)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canRead')
   resultSheet(
     @Args('id') id: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
-    return this.resultsService.getResultSheet(id, user.schoolId);
+    return this.resultsService.getResultSheet(id, user.schoolId, user.sub, user.role);
   }
 
   @Query(() => [ResultSheet])
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL, UserRole.CLASS_TEACHER)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canRead')
   resultSheetsByClass(
     @Args('classId') classId: string,
     @Args('termId') termId: string,
@@ -41,25 +41,31 @@ export class ResultsResolver {
   }
 
   @Query(() => [ResultSheet])
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PRINCIPAL)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canRead')
   pendingPrincipalApprovals(@CurrentUser() user: { schoolId: string }) {
     return this.resultsService.getPendingApprovals(user.schoolId);
   }
 
   @Query(() => [ResultSheet])
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PRINCIPAL, UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canRead')
   schoolResultSheets(
-    @Args('status', { type: () => String, nullable: true }) status: any,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+    @Args('status', { type: () => ResultStatus, nullable: true })
+    status?: ResultStatus,
   ) {
-    return this.resultsService.getSchoolResultSheets(user.schoolId, status);
+    return this.resultsService.getSchoolResultSheets(
+      user.schoolId,
+      user.sub,
+      user.role,
+      status,
+    );
   }
 
   @Query(() => StudentResult, { nullable: true })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PARENT, UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canRead')
   studentResult(
     @Args('studentId') studentId: string,
     @Args('termId') termId: string,
@@ -68,8 +74,8 @@ export class ResultsResolver {
   }
 
   @Query(() => [SubjectScore])
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUBJECT_TEACHER, UserRole.CLASS_TEACHER)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canRead')
   mySubjectScores(
     @Args('resultSheetId') resultSheetId: string,
     @CurrentUser() user: { sub: string },
@@ -78,8 +84,8 @@ export class ResultsResolver {
   }
 
   @Mutation(() => ResultSheet)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN, UserRole.CLASS_TEACHER)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canCreate')
   createResultSheet(
     @Args('input') input: CreateResultSheetInput,
     @CurrentUser() user: { sub: string; schoolId: string },
@@ -92,12 +98,22 @@ export class ResultsResolver {
   }
 
   @Mutation(() => [SubjectScore])
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUBJECT_TEACHER, UserRole.CLASS_TEACHER)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canUpdate')
   saveSubjectScores(
     @Args('input') input: SaveSubjectScoresInput,
-    @CurrentUser() user: { sub: string; schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
+    if (
+      user.role === UserRole.SCHOOL_ADMIN ||
+      user.role === UserRole.PRINCIPAL
+    ) {
+      return this.resultsService.saveAdminScores(
+        input,
+        user.sub,
+        user.schoolId,
+      );
+    }
     return this.resultsService.saveSubjectScores(
       input,
       user.sub,
@@ -106,8 +122,8 @@ export class ResultsResolver {
   }
 
   @Mutation(() => ResultSheet)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canUpdate')
   submitForAdminReview(
     @Args('resultSheetId') resultSheetId: string,
     @CurrentUser() user: { sub: string; schoolId: string },
@@ -120,8 +136,8 @@ export class ResultsResolver {
   }
 
   @Mutation(() => ResultSheet)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canUpdate')
   submitForPrincipalApproval(
     @Args('resultSheetId') resultSheetId: string,
     @CurrentUser() user: { sub: string; schoolId: string },
@@ -134,8 +150,8 @@ export class ResultsResolver {
   }
 
   @Mutation(() => ResultSheet)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PRINCIPAL)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canUpdate')
   approveResult(
     @Args('resultSheetId') resultSheetId: string,
     @CurrentUser() user: { sub: string; schoolId: string },
@@ -148,8 +164,22 @@ export class ResultsResolver {
   }
 
   @Mutation(() => ResultSheet)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canUpdate')
+  publishResultSheet(
+    @Args('resultSheetId') resultSheetId: string,
+    @CurrentUser() user: { sub: string; schoolId: string },
+  ) {
+    return this.resultsService.publishResultSheet(
+      resultSheetId,
+      user.sub,
+      user.schoolId,
+    );
+  }
+
+  @Mutation(() => ResultSheet)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canUpdate')
   returnResult(
     @Args('resultSheetId') resultSheetId: string,
     @Args('reason') reason: string,
@@ -164,8 +194,8 @@ export class ResultsResolver {
   }
 
   @Mutation(() => SubjectScore)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUBJECT_TEACHER)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canUpdate')
   saveTeacherRemark(
     @Args('subjectScoreId') subjectScoreId: string,
     @Args('remark') remark: string,
@@ -174,8 +204,8 @@ export class ResultsResolver {
   }
 
   @Mutation(() => StudentResult)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PRINCIPAL)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canUpdate')
   savePrincipalRemark(
     @Args('studentResultId') studentResultId: string,
     @Args('remark') remark: string,
@@ -184,8 +214,8 @@ export class ResultsResolver {
   }
 
   @Mutation(() => StudentResult)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.CLASS_TEACHER)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canUpdate')
   saveClassTeacherRemark(
     @Args('studentResultId') studentResultId: string,
     @Args('remark') remark: string,

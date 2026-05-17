@@ -17,9 +17,16 @@ export class SchoolsService {
     private readonly uploadService: UploadService,
   ) {}
 
+  private normalizeSchoolCode = (schoolCode?: string) => {
+    const normalized = schoolCode?.trim().toUpperCase();
+    if (!normalized) return undefined;
+    return normalized;
+  };
+
   createSchool = (input: CreateSchoolInput) => {
     const school = this.schoolsRepository.create({
       ...input,
+      schoolCode: this.normalizeSchoolCode(input.schoolCode),
       uniqueQrCode: uuidv4(),
     });
     return this.schoolsRepository.save(school);
@@ -57,8 +64,15 @@ export class SchoolsService {
   };
 
   updateSchool = (id: string, input: UpdateSchoolInput) => {
+    const updatePayload = {
+      ...input,
+      ...(input.schoolCode === undefined
+        ? {}
+        : { schoolCode: this.normalizeSchoolCode(input.schoolCode) }),
+    };
+
     return this.schoolsRepository
-      .update(id, input)
+      .update(id, updatePayload)
       .then(() => this.findById(id));
   };
 

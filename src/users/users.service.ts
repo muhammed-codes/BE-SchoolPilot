@@ -47,7 +47,7 @@ export class UsersService {
   };
 
   findByResetToken = (token: string) => {
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     return this.usersRepository.findOne({
       where: { resetPasswordToken: hashedToken },
     });
@@ -63,15 +63,14 @@ export class UsersService {
   };
 
   private formatRoleLabel = (role: UserRole) => {
-    return role
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (m) => m.toUpperCase());
+    return role.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
   };
 
   private ensureUniqueLeadershipRolePerSchool = (
     schoolId?: string,
     role?: UserRole,
     excludeUserId?: string,
+    isActive?: boolean,
   ) => {
     if (!schoolId || !role || !this.singleLeadershipRoles.includes(role)) {
       return Promise.resolve();
@@ -82,7 +81,7 @@ export class UsersService {
         where: {
           schoolId,
           role,
-          isActive: true,
+          isActive: isActive ?? true,
         },
       })
       .then((existing) => {
@@ -95,12 +94,19 @@ export class UsersService {
   };
 
   private mapLeadershipRoleDbConstraintError = (
-    err: any,
+    err: unknown,
     role?: UserRole,
   ): never => {
+    const errorCode =
+      typeof err === 'object' && err && 'code' in err ? err.code : undefined;
+    const errorConstraint =
+      typeof err === 'object' && err && 'constraint' in err
+        ? err.constraint
+        : undefined;
+
     if (
-      err?.code === '23505' &&
-      err?.constraint === this.singleLeadershipRoleUniqueConstraint
+      errorCode === '23505' &&
+      errorConstraint === this.singleLeadershipRoleUniqueConstraint
     ) {
       if (role) {
         throw new ForbiddenException(
@@ -135,22 +141,25 @@ export class UsersService {
             firstName: input.firstName,
             lastName: input.lastName,
             role: input.role,
+            namePrefix: input.namePrefix || null,
             phone: input.phone,
             schoolId: adminSchoolId,
             passwordHash,
             staffId,
-          }).then((user) => {
-            if (user.expoPushToken) {
-              this.notificationsService.sendPushNotification(
-                user.expoPushToken,
-                'Welcome to SchoolPilot',
-                `Your account has been created. Login with your email: ${user.email}`,
-              );
-            }
-            return user;
-          }).catch((err) =>
-            this.mapLeadershipRoleDbConstraintError(err, input.role),
-          ),
+          })
+            .then((user) => {
+              if (user.expoPushToken) {
+                void this.notificationsService.sendPushNotification(
+                  user.expoPushToken,
+                  'Welcome to SchoolPilot',
+                  `Your account has been created. Login with your email: ${user.email}`,
+                );
+              }
+              return user;
+            })
+            .catch((err) =>
+              this.mapLeadershipRoleDbConstraintError(err, input.role),
+            ),
         ),
       );
   };
@@ -164,7 +173,7 @@ export class UsersService {
     const limit = pagination?.limit || 20;
     const skip = (page - 1) * limit;
 
-    const where: any = { schoolId };
+    const where: { schoolId: string; role?: UserRole } = { schoolId };
     if (role) where.role = role;
 
     return this.usersRepository
@@ -181,7 +190,7 @@ export class UsersService {
     id: string,
     input: UpdateUserInput,
     requesterId: string,
-    requesterRole: string,
+    requesterRole: UserRole,
   ) => {
     return this.findById(id).then((user) => {
       if (!user) throw new NotFoundException('User not found');
@@ -214,7 +223,7 @@ export class UsersService {
         user.id,
       ).then(() =>
         this.usersRepository
-          .update(id, input as any)
+          .update(id, input)
           .catch((err) =>
             this.mapLeadershipRoleDbConstraintError(err, input.role),
           )
@@ -290,6 +299,28 @@ export class UsersService {
     });
   };
 
+  updateUserAvatarByAdmin = (
+    userId: string,
+    file: Upload,
+    requesterRole: UserRole,
+    requesterSchoolId: string,
+  ) => {
+    return this.findById(userId).then((user) => {
+      if (!user) throw new NotFoundException('User not found');
+
+      if (
+        requesterRole === UserRole.SCHOOL_ADMIN &&
+        user.schoolId !== requesterSchoolId
+      ) {
+        throw new ForbiddenException(
+          'You can only upload avatar for users in your own school',
+        );
+      }
+
+      return this.updateAvatar(userId, file);
+    });
+  };
+
   deactivateUser = (
     id: string,
     requesterId: string,
@@ -300,7 +331,7 @@ export class UsersService {
       if (!user) throw new NotFoundException('User not found');
 
       if (
-        requesterRole === UserRole.SCHOOL_ADMIN &&
+        (requesterRole as UserRole) === UserRole.SCHOOL_ADMIN &&
         user.schoolId !== requesterSchoolId
       ) {
         throw new ForbiddenException(

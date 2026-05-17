@@ -65,11 +65,7 @@ export class Term extends BaseEntity {
 
     const today = new Date();
     const todayUtc = new Date(
-      Date.UTC(
-        today.getUTCFullYear(),
-        today.getUTCMonth(),
-        today.getUTCDate(),
-      ),
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
     );
 
     if (todayUtc < start) return 0;

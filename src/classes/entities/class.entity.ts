@@ -1,4 +1,4 @@
-import { ObjectType, Field } from '@nestjs/graphql';
+import { ObjectType, Field, Int } from '@nestjs/graphql';
 import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
@@ -27,4 +27,7 @@ export class ClassEntity extends BaseEntity {
   @Field(() => [ClassSubject], { nullable: true })
   @OneToMany(() => ClassSubject, (cs) => cs.classEntity, { eager: false })
   classSubjects: ClassSubject[];
+
+  @Field(() => Int, { nullable: true })
+  totalNoOfStudents: number;
 }

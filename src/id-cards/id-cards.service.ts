@@ -1,10 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, In } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import * as QRCode from 'qrcode';
 import { Student } from '../students/entities/student.entity';
 import { User } from '../users/entities/user.entity';
-import { School } from '../schools/entities/school.entity';
 import {
   StudentCardData,
   StaffCardData,
@@ -149,7 +148,7 @@ export class IdCardsService {
               `student-${studentId}-${Date.now()}`,
             ),
           )
-          .then((result) => result.url);
+          .then((result) => result.pdfPrivateUrl || result.url);
       });
     });
   };
@@ -207,7 +206,7 @@ export class IdCardsService {
                 )
                 .then((result) => ({
                   totalCards: students.length,
-                  pdfUrl: result.url,
+                  pdfUrl: result.pdfPrivateUrl || result.url,
                   label: className,
                 }));
             });
@@ -234,7 +233,7 @@ export class IdCardsService {
               `staff-${userId}-${Date.now()}`,
             ),
           )
-          .then((result) => result.url);
+          .then((result) => result.pdfPrivateUrl || result.url);
       });
     });
   };
@@ -288,7 +287,7 @@ export class IdCardsService {
                 )
                 .then((result) => ({
                   totalCards: users.length,
-                  pdfUrl: result.url,
+                  pdfUrl: result.pdfPrivateUrl || result.url,
                   label: school.name,
                 }));
             });

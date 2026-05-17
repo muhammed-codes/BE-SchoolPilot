@@ -17,7 +17,6 @@ export class StudentScoreInput {
   @Field(() => [ComponentScoreInput])
   @ValidateNested({ each: true })
   @Type(() => ComponentScoreInput)
-  @ArrayMinSize(1)
   componentScores: ComponentScoreInput[];
 }
 

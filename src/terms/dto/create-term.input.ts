@@ -1,5 +1,5 @@
-import { InputType, Field, Int } from '@nestjs/graphql';
-import { IsNotEmpty, IsUUID, IsInt, Min } from 'class-validator';
+import { InputType, Field } from '@nestjs/graphql';
+import { IsNotEmpty, IsUUID } from 'class-validator';
 
 @InputType()
 export class CreateTermInput {

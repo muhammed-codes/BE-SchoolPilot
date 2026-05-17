@@ -76,7 +76,7 @@ export class AuthService {
 
   logout = (userId: string) => {
     return this.usersService
-      .update(userId, { refreshToken: null } as any)
+      .update(userId, { refreshToken: null })
       .then(() => true);
   };
 
@@ -147,8 +147,11 @@ export class AuthService {
         return true;
       }
 
-      const token = crypto.randomBytes(32).toString("hex");
-      const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+      const token = crypto.randomBytes(32).toString('hex');
+      const hashedToken = crypto
+        .createHash('sha256')
+        .update(token)
+        .digest('hex');
       const expires = new Date();
       expires.setHours(expires.getHours() + 1);
 
@@ -182,7 +185,6 @@ export class AuthService {
             resetPasswordToken: null,
             resetPasswordExpires: null,
           })
-          .then(() => true);
           .then(() => true);
       });
     });

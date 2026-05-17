@@ -1,4 +1,5 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { AppResource } from '../access/enums/resource.enum';
 import { UseGuards } from '@nestjs/common';
 import { GraphQLUpload, Upload } from 'graphql-upload-ts';
 import { StudentsService } from './students.service';
@@ -8,23 +9,18 @@ import { UpdateStudentInput } from './dto/update-student.input';
 import { PromoteStudentsInput } from './dto/promote-students.input';
 import { BulkImportResult } from './dto/bulk-import-result.type';
 import { PromotionResult } from './dto/promotion-result.type';
-import { JwtAuthGuard, RolesGuard } from '../common/guards';
-import { CurrentUser } from '../common/decorators';
-import { Roles } from '../common/decorators/roles.decorator';
+import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
+import { CurrentUser, RequirePermission } from '../common/decorators';
 import { UserRole } from '../common/enums';
+import { TEACHER_ROLES } from '../common/constants/roles.constant';
 
 @Resolver(() => Student)
 export class StudentsResolver {
   constructor(private readonly studentsService: StudentsService) {}
 
   @Query(() => [Student])
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(
-    UserRole.CLASS_TEACHER,
-    UserRole.SUBJECT_TEACHER,
-    UserRole.SCHOOL_ADMIN,
-    UserRole.PRINCIPAL,
-  )
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, 'canRead')
   studentsByClass(
     @Args('classId') classId: string,
     @CurrentUser() user: { schoolId: string },
@@ -33,31 +29,39 @@ export class StudentsResolver {
   }
 
   @Query(() => Student, { nullable: true })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, 'canRead')
   student(@Args('id') id: string, @CurrentUser() user: { schoolId: string }) {
     return this.studentsService.getStudentById(id, user.schoolId);
   }
 
   @Query(() => [Student])
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PARENT)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, 'canRead')
   myChildren(@CurrentUser() user: { sub: string }) {
     return this.studentsService.getStudentsByParent(user.sub);
   }
 
   @Query(() => [Student])
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, 'canRead')
   searchStudents(
     @Args('query') query: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
+    if (TEACHER_ROLES.includes(user.role)) {
+      return this.studentsService.searchStudentsForTeacher(
+        query,
+        user.sub,
+        user.schoolId,
+      );
+    }
     return this.studentsService.searchStudents(query, user.schoolId);
   }
 
   @Mutation(() => Student)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, 'canCreate')
   createStudent(
     @Args('input') input: CreateStudentInput,
     @CurrentUser() user: { schoolId: string },
@@ -66,8 +70,8 @@ export class StudentsResolver {
   }
 
   @Mutation(() => Student)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, 'canUpdate')
   updateStudent(
     @Args('id') id: string,
     @Args('input') input: UpdateStudentInput,
@@ -77,8 +81,8 @@ export class StudentsResolver {
   }
 
   @Mutation(() => BulkImportResult)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, 'canCreate')
   bulkImportStudents(
     @Args('students', { type: () => [CreateStudentInput] })
     students: CreateStudentInput[],
@@ -88,8 +92,8 @@ export class StudentsResolver {
   }
 
   @Mutation(() => Student)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, 'canUpdate')
   linkParent(
     @Args('studentId') studentId: string,
     @Args('parentUserId') parentUserId: string,
@@ -103,8 +107,8 @@ export class StudentsResolver {
   }
 
   @Mutation(() => Boolean)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, 'canUpdate')
   unlinkParent(
     @Args('studentId') studentId: string,
     @Args('parentUserId') parentUserId: string,
@@ -118,8 +122,8 @@ export class StudentsResolver {
   }
 
   @Mutation(() => Student)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, 'canCreate')
   uploadPassportPhoto(
     @Args('studentId') studentId: string,
     @Args('file', { type: () => GraphQLUpload }) file: Upload,
@@ -133,8 +137,8 @@ export class StudentsResolver {
   }
 
   @Mutation(() => PromotionResult)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, 'canUpdate')
   promoteStudents(
     @Args('input') input: PromoteStudentsInput,
     @CurrentUser() user: { schoolId: string },

@@ -6,7 +6,7 @@ import {
   IsEnum,
   IsOptional,
 } from 'class-validator';
-import { UserRole } from '../../common/enums';
+import { NamePrefix, UserRole } from '../../common/enums';
 
 @InputType()
 export class CreateUserInput {
@@ -38,4 +38,9 @@ export class CreateUserInput {
   @Field({ nullable: true })
   @IsOptional()
   schoolId?: string;
+
+  @Field(() => NamePrefix, { nullable: true })
+  @IsOptional()
+  @IsEnum(NamePrefix)
+  namePrefix?: NamePrefix;
 }

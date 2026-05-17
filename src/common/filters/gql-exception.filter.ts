@@ -37,13 +37,21 @@ const getErrorDetails = (exception: unknown) => {
 
   if (exception instanceof BadRequestException) {
     const response = exception.getResponse();
-    const message =
+    const responseMessage =
       typeof response === 'string'
         ? response
-        : (response as any).message || 'Bad request';
+        : typeof response === 'object' &&
+            response &&
+            'message' in response &&
+            (typeof response.message === 'string' ||
+              Array.isArray(response.message))
+          ? response.message
+          : 'Bad request';
 
     return {
-      message: Array.isArray(message) ? message.join(', ') : message,
+      message: Array.isArray(responseMessage)
+        ? responseMessage.join(', ')
+        : responseMessage,
       code: 'BAD_REQUEST',
       statusCode: HttpStatus.BAD_REQUEST,
     };

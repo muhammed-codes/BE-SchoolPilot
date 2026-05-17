@@ -1,14 +1,15 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { AppResource } from '../access/enums/resource.enum';
 import { UseGuards, ForbiddenException } from '@nestjs/common';
 import { GraphQLUpload, Upload } from 'graphql-upload-ts';
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
-import { JwtAuthGuard, RolesGuard } from '../common/guards';
-import { CurrentUser } from '../common/decorators';
-import { Roles } from '../common/decorators/roles.decorator';
+import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
+import { CurrentUser, RequirePermission } from '../common/decorators';
 import { UserRole } from '../common/enums';
+import { SCHOOL_STAFF_ROLES } from '../common/constants/roles.constant';
 import { PaginationArgs, createPaginatedType } from '../common/pagination';
 
 const PaginatedUser = createPaginatedType(User);
@@ -18,21 +19,22 @@ export class UsersResolver {
   constructor(private readonly usersService: UsersService) {}
 
   @Query(() => User)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.USERS, 'canRead')
   me(@CurrentUser() user: { sub: string }) {
     return this.usersService.findById(user.sub);
   }
 
   @Query(() => User)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.USERS, 'canRead')
   user(@Args('id') id: string) {
     return this.usersService.findById(id);
   }
 
   @Query(() => PaginatedUser)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.USERS, 'canRead')
   schoolUsers(
     @Args('role', { type: () => UserRole, nullable: true }) role: UserRole,
     @Args() pagination: PaginationArgs,
@@ -42,18 +44,18 @@ export class UsersResolver {
   }
 
   @Query(() => [User])
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.USERS, 'canRead')
   schoolTeachers(@CurrentUser() user: { schoolId: string }) {
     return this.usersService.findTeachersBySchool(user.schoolId);
   }
 
   @Mutation(() => User)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.USERS, 'canCreate')
   createUser(
     @Args('input') input: CreateUserInput,
-    @CurrentUser() user: { sub: string; role: string; schoolId: string },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
   ) {
     if (user.role === UserRole.SCHOOL_ADMIN) {
       const allowedRoles = [
@@ -86,8 +88,8 @@ export class UsersResolver {
   }
 
   @Mutation(() => User)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.USERS, 'canUpdate')
   assignUserToSchool(
     @Args('userId') userId: string,
     @Args('schoolId') schoolId: string,
@@ -96,17 +98,19 @@ export class UsersResolver {
   }
 
   @Mutation(() => User)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.USERS, 'canUpdate')
   updateUser(
     @Args('id') id: string,
     @Args('input') input: UpdateUserInput,
-    @CurrentUser() user: { sub: string; role: string },
+    @CurrentUser() user: { sub: string; role: UserRole },
   ) {
     return this.usersService.updateUser(id, input, user.sub, user.role);
   }
 
   @Mutation(() => Boolean)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.USERS, 'canUpdate')
   changePassword(
     @Args('oldPassword') oldPassword: string,
     @Args('newPassword') newPassword: string,
@@ -116,7 +120,8 @@ export class UsersResolver {
   }
 
   @Mutation(() => User)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.USERS, 'canCreate')
   uploadAvatar(
     @Args({ name: 'file', type: () => GraphQLUpload }) file: Upload,
     @CurrentUser() user: { sub: string },
@@ -125,11 +130,27 @@ export class UsersResolver {
   }
 
   @Mutation(() => User)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.USERS, 'canCreate')
+  uploadUserAvatar(
+    @Args('userId') userId: string,
+    @Args({ name: 'file', type: () => GraphQLUpload }) file: Upload,
+    @CurrentUser() user: { role: UserRole; schoolId: string },
+  ) {
+    return this.usersService.updateUserAvatarByAdmin(
+      userId,
+      file,
+      user.role,
+      user.schoolId,
+    );
+  }
+
+  @Mutation(() => User)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.USERS, 'canUpdate')
   deactivateUser(
     @Args('id') id: string,
-    @CurrentUser() user: { sub: string; role: string; schoolId: string },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
   ) {
     return this.usersService.deactivateUser(
       id,
