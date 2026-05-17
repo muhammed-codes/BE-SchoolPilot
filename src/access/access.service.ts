@@ -85,10 +85,32 @@ export class AccessService implements OnModuleInit {
             // Determine default update access
             let canUpdate = isAdmin;
             if (
-              role === UserRole.CLASS_TEACHER ||
-              role === UserRole.SUBJECT_TEACHER
+              role === UserRole.PRINCIPAL ||
+              role === UserRole.VICE_PRINCIPAL ||
+              role === UserRole.HEAD_TEACHER
             ) {
-              if (resource === AppResource.RESULTS || resource === AppResource.ATTENDANCE) {
+              if (
+                resource === AppResource.CLASSES ||
+                resource === AppResource.RESULTS ||
+                resource === AppResource.ATTENDANCE
+              ) {
+                canUpdate = true;
+              }
+            }
+            if (role === UserRole.CLASS_TEACHER) {
+              if (
+                resource === AppResource.CLASSES ||
+                resource === AppResource.RESULTS ||
+                resource === AppResource.ATTENDANCE
+              ) {
+                canUpdate = true;
+              }
+            }
+            if (role === UserRole.SUBJECT_TEACHER) {
+              if (
+                resource === AppResource.RESULTS ||
+                resource === AppResource.ATTENDANCE
+              ) {
                 canUpdate = true;
               }
             }

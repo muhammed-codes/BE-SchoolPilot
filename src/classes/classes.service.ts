@@ -237,4 +237,17 @@ export class ClassesService {
     this.getClassesForTeacher(teacherId, schoolId).then((classes) =>
       classes.map((c) => c.id),
     );
+
+  isClassTeacherOfClass = (
+    classId: string,
+    userId: string,
+    schoolId: string,
+  ): Promise<boolean> => {
+    return this.classesRepository
+      .findOne({
+        where: { id: classId, schoolId, classTeacherId: userId },
+        select: { id: true },
+      })
+      .then((classEntity) => Boolean(classEntity));
+  };
 }

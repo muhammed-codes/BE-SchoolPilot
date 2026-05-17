@@ -1,6 +1,6 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
-import { UseGuards } from '@nestjs/common';
+import { UseGuards, ForbiddenException } from '@nestjs/common';
 import { ClassesService } from './classes.service';
 import { ClassEntity } from './entities/class.entity';
 import { ClassSubject } from './entities/class-subject.entity';
@@ -16,6 +16,20 @@ const PaginatedClass = createPaginatedType(ClassEntity);
 @Resolver(() => ClassEntity)
 export class ClassesResolver {
   constructor(private readonly classesService: ClassesService) {}
+
+  private canAssignClassTeacherRole = (role: UserRole) => {
+    return [
+      UserRole.SUPER_ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.PRINCIPAL,
+      UserRole.VICE_PRINCIPAL,
+      UserRole.HEAD_TEACHER,
+    ].includes(role);
+  };
+
+  private canManageClassSubjectsRole = (role: UserRole) => {
+    return role !== UserRole.SUBJECT_TEACHER && role !== UserRole.PARENT;
+  };
 
   @Mutation(() => ClassEntity)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
@@ -64,8 +78,13 @@ export class ClassesResolver {
   assignClassTeacher(
     @Args('classId') classId: string,
     @Args('teacherId') teacherId: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { schoolId: string; role: UserRole },
   ) {
+    if (!this.canAssignClassTeacherRole(user.role)) {
+      throw new ForbiddenException(
+        'You are not allowed to assign class teachers',
+      );
+    }
     return this.classesService.assignClassTeacher(
       classId,
       teacherId,
@@ -79,8 +98,29 @@ export class ClassesResolver {
   assignSubjectsToClass(
     @Args('classId') classId: string,
     @Args('subjectIds', { type: () => [String] }) subjectIds: string[],
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { schoolId: string; role: UserRole; sub: string },
   ) {
+    if (!this.canManageClassSubjectsRole(user.role)) {
+      throw new ForbiddenException(
+        'You are not allowed to assign subjects to class',
+      );
+    }
+    if (user.role === UserRole.CLASS_TEACHER) {
+      return this.classesService
+        .isClassTeacherOfClass(classId, user.sub, user.schoolId)
+        .then((isOwner) => {
+          if (!isOwner) {
+            throw new ForbiddenException(
+              'You can only manage subjects for your assigned class',
+            );
+          }
+          return this.classesService.assignSubjectsToClass(
+            classId,
+            subjectIds,
+            user.schoolId,
+          );
+        });
+    }
     return this.classesService.assignSubjectsToClass(
       classId,
       subjectIds,
@@ -95,8 +135,30 @@ export class ClassesResolver {
     @Args('classId') classId: string,
     @Args('subjectId') subjectId: string,
     @Args('teacherId') teacherId: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { schoolId: string; role: UserRole; sub: string },
   ) {
+    if (!this.canManageClassSubjectsRole(user.role)) {
+      throw new ForbiddenException(
+        'You are not allowed to assign teachers to class subjects',
+      );
+    }
+    if (user.role === UserRole.CLASS_TEACHER) {
+      return this.classesService
+        .isClassTeacherOfClass(classId, user.sub, user.schoolId)
+        .then((isOwner) => {
+          if (!isOwner) {
+            throw new ForbiddenException(
+              'You can only assign teachers in your assigned class',
+            );
+          }
+          return this.classesService.assignSubjectTeacher(
+            classId,
+            subjectId,
+            teacherId,
+            user.schoolId,
+          );
+        });
+    }
     return this.classesService.assignSubjectTeacher(
       classId,
       subjectId,
