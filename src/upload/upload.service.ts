@@ -125,9 +125,22 @@ export class UploadService implements OnModuleInit {
       return Promise.resolve(fileUpload);
     }
 
+    const wrappedFile = file as { file?: FileUpload | Promise<FileUpload> };
+    if (wrappedFile.file) {
+      const innerFile = wrappedFile.file as Promise<FileUpload> | FileUpload;
+      if (typeof (innerFile as Promise<FileUpload>).then === 'function') {
+        return innerFile as Promise<FileUpload>;
+      }
+      if (
+        typeof (innerFile as FileUpload).createReadStream === 'function'
+      ) {
+        return Promise.resolve(innerFile as FileUpload);
+      }
+    }
+
     return Promise.reject(
       new HttpException(
-        'Invalid file upload payload',
+        'Invalid file upload payload: expected a multipart Upload file',
         HttpStatus.BAD_REQUEST,
       ),
     );

@@ -183,7 +183,9 @@ export class ClassesService {
       })
       .then((classEntity) => {
         if (!classEntity) throw new NotFoundException('Class not found');
-        return classEntity;
+        return this.enrichWithStudentCounts([classEntity], schoolId).then(
+          ([enriched]) => enriched,
+        );
       });
   };
 
