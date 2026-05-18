@@ -1,10 +1,16 @@
 export interface SubjectScoreData {
   name: string;
-  assignments: number | null;
-  tests: number | null;
-  exam: number | null;
+  componentScores: {
+    component: string;
+    score: number | null;
+  }[];
   totalScore: number | null;
   grade: string | null;
+}
+
+export interface ScoreComponentData {
+  component: string;
+  maxScore: number;
 }
 
 export interface ReportCardData {
@@ -33,6 +39,7 @@ export interface ReportCardData {
     classTeacherRemark: string | null;
     principalRemark: string | null;
   };
+  scoreComponents: ScoreComponentData[];
   subjectScores: SubjectScoreData[];
   attendance: {
     daysPresent: number;

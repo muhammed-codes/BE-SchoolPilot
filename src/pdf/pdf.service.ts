@@ -22,6 +22,7 @@ import { UserRole } from '../common/enums';
 import { getReportCardTemplate } from './templates/templates';
 import {
   ReportCardData,
+  ScoreComponentData,
   SubjectScoreData,
 } from './templates/report-card-data.interface';
 import { BulkPDFResult } from './dto/pdf.dto';
@@ -76,45 +77,10 @@ export class PdfService {
     return '';
   };
 
-  private getScoreBucket = (component: string) => {
-    const normalized = (component || '').toLowerCase().replace(/[\s-]/g, '_');
-    if (!normalized) return 'tests';
-
-    if (
-      normalized.includes('exam') ||
-      normalized.includes('final')
-    ) {
-      return 'exam';
-    }
-
-    if (
-      normalized === 'assignment' ||
-      normalized === 'assignments' ||
-      normalized === 'project' ||
-      normalized === 'projects' ||
-      normalized.includes('homework')
-    ) {
-      return 'assignments';
-    }
-
-    if (
-      normalized === 'ca' ||
-      normalized === 'ca1' ||
-      normalized === 'ca2' ||
-      normalized === 'mid_term' ||
-      normalized === 'midterm' ||
-      normalized.includes('test') ||
-      normalized.includes('quiz')
-    ) {
-      return 'tests';
-    }
-
-    return 'tests';
-  };
-
-  private toSafeNumber = (value: unknown) => {
+  private toSafeNumber = (value: unknown): number | null => {
+    if (value === null || value === undefined || value === '') return null;
     const parsed = Number(value);
-    if (Number.isNaN(parsed)) return 0;
+    if (Number.isNaN(parsed)) return null;
     return parsed;
   };
 
@@ -232,48 +198,38 @@ export class PdfService {
           throw new NotFoundException('Term or Session not found');
 
         const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
+        const scoreComponents: ScoreComponentData[] = (
+          studentResult.resultSheet?.scoreComponents || []
+        ).map((component) => ({
+          component: component.component,
+          maxScore: component.maxScore,
+        }));
 
         const subjectScoresData: SubjectScoreData[] = (
           studentResult.subjectScores || []
         )
           .filter((score) => score.isSubmitted)
           .map((score) => {
-            let assignments = 0;
-            let tests = 0;
-            let exam = 0;
-            let hasAssignments = false;
-            let hasTests = false;
-            let hasExam = false;
-
-            if (score.scores) {
-              score.scores.forEach((c) => {
-                const bucket = this.getScoreBucket(c.component);
-                const safeScore = this.toSafeNumber(c.score);
-                if (bucket === 'assignments') {
-                  assignments += safeScore;
-                  hasAssignments = true;
-                  return;
-                }
-                if (bucket === 'tests') {
-                  tests += safeScore;
-                  hasTests = true;
-                  return;
-                }
-                if (bucket === 'exam') {
-                  exam += safeScore;
-                  hasExam = true;
-                }
-              });
-            }
+            const componentScores = scoreComponents.map((componentDef) => {
+              const matchingScore = (score.scores || []).find(
+                (componentScore) =>
+                  componentScore.component === componentDef.component,
+              );
+              if (!matchingScore) {
+                return { component: componentDef.component, score: null };
+              }
+              return {
+                component: componentDef.component,
+                score: this.toSafeNumber(matchingScore.score),
+              };
+            });
 
             return {
               name:
                 score.subject?.name ||
                 subjectMap.get(score.subjectId) ||
                 'Unknown Subject',
-              assignments: hasAssignments ? assignments : null,
-              tests: hasTests ? tests : null,
-              exam: hasExam ? exam : null,
+              componentScores,
               totalScore: score.totalScore,
               grade: score.grade,
             };
@@ -320,6 +276,7 @@ export class PdfService {
             classTeacherRemark: studentResult.classTeacherRemark,
             principalRemark: studentResult.principalRemark,
           },
+          scoreComponents,
           subjectScores: subjectScoresData,
           attendance: {
             daysPresent: attendance.daysPresent,
