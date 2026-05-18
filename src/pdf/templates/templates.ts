@@ -11,6 +11,15 @@ const getDisplayPosition = (position: number | null) => {
   return toOrdinal(position);
 };
 
+const formatComponentLabel = (component: string, maxScore: number) => {
+  const normalized = (component || '')
+    .replace(/[_-]/g, ' ')
+    .trim()
+    .toUpperCase();
+  const scoreText = Number.isFinite(maxScore) ? ` /${maxScore}` : '';
+  return `${normalized}${scoreText}`;
+};
+
 const classicTemplate = (data: ReportCardData): string => `
 <!DOCTYPE html>
 <html lang="en">
@@ -204,9 +213,12 @@ const classicTemplate = (data: ReportCardData): string => `
         <thead>
             <tr>
                 <th style="text-align: left;">Subject</th>
-                <th>Assignments</th>
-                <th>Tests</th>
-                <th>Exam</th>
+                ${data.scoreComponents
+                  .map(
+                    (component) =>
+                      `<th>${formatComponentLabel(component.component, component.maxScore)}</th>`,
+                  )
+                  .join('')}
                 <th>Total Score</th>
                 <th>Grade</th>
             </tr>
@@ -217,9 +229,12 @@ const classicTemplate = (data: ReportCardData): string => `
                 (score) => `
                 <tr>
                     <td class="subject-name">${score.name}</td>
-                    <td>${score.assignments !== null ? score.assignments : '-'}</td>
-                    <td>${score.tests !== null ? score.tests : '-'}</td>
-                    <td>${score.exam !== null ? score.exam : '-'}</td>
+                    ${score.componentScores
+                      .map(
+                        (componentScore) =>
+                          `<td>${componentScore.score !== null ? componentScore.score : '-'}</td>`,
+                      )
+                      .join('')}
                     <td style="font-weight: bold;">${score.totalScore !== null ? score.totalScore : '-'}</td>
                     <td style="font-weight: bold; color: #1A56A8;">${score.grade || '-'}</td>
                 </tr>
@@ -568,9 +583,22 @@ const modernTemplate = (data: ReportCardData): string => `
                         <div class="subject-info">
                             <div class="subject-name">${score.name}</div>
                             <div class="subject-breakdown">
-                                Assgn: ${score.assignments !== null ? score.assignments : '-'} | 
-                                Tests: ${score.tests !== null ? score.tests : '-'} | 
-                                Exam: ${score.exam !== null ? score.exam : '-'}
+                                ${score.componentScores
+                                  .map((componentScore) => {
+                                    const label = data.scoreComponents.find(
+                                      (component) =>
+                                        component.component ===
+                                        componentScore.component,
+                                    );
+                                    const displayLabel = label
+                                      ? formatComponentLabel(
+                                          label.component,
+                                          label.maxScore,
+                                        )
+                                      : componentScore.component;
+                                    return `${displayLabel}: ${componentScore.score !== null ? componentScore.score : '-'}`;
+                                  })
+                                  .join(' | ')}
                             </div>
                         </div>
                         <div class="subject-score-box">
