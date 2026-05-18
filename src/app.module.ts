@@ -49,7 +49,8 @@ import { AccessModule } from './access/access.module';
       useFactory: (config: ConfigService) => ({
         autoSchemaFile: 'schema.gql',
         sortSchema: true,
-        playground: config.get<string>('NODE_ENV') !== 'production',
+        playground: true,
+        introspection: true,
         csrfPrevention: false,
         context: ({ req }: { req: Request }) => ({ req }),
       }),
