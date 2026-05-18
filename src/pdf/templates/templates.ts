@@ -11,13 +11,22 @@ const getDisplayPosition = (position: number | null) => {
   return toOrdinal(position);
 };
 
+const escapeHtml = (unsafe: string): string => {
+  return (unsafe || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
 const formatComponentLabel = (component: string, maxScore: number) => {
   const normalized = (component || '')
     .replace(/[_-]/g, ' ')
     .trim()
     .toUpperCase();
   const scoreText = Number.isFinite(maxScore) ? ` /${maxScore}` : '';
-  return `${normalized}${scoreText}`;
+  return escapeHtml(`${normalized}${scoreText}`);
 };
 
 const classicTemplate = (data: ReportCardData): string => `
@@ -38,72 +47,82 @@ const classicTemplate = (data: ReportCardData): string => `
         .header {
             display: flex;
             align-items: center;
-            border-bottom: 2px solid #1A56A8;
-            padding-bottom: 20px;
-            margin-bottom: 20px;
+            border: 1px solid #dbe5f3;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 12px;
+            background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
         }
         .logo {
-            width: 100px;
-            height: 100px;
+            width: 56px;
+            height: 56px;
             object-fit: contain;
-            margin-right: 20px;
+            margin-right: 12px;
         }
         .school-info {
             flex-grow: 1;
-            text-align: center;
+            min-width: 0;
         }
         .school-name {
-            font-size: 28px;
-            font-weight: bold;
+            font-size: 24px;
+            line-height: 1.1;
+            font-weight: 800;
             color: #1A56A8;
-            margin: 0 0 5px 0;
+            margin: 0;
             text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .school-address {
-            font-size: 14px;
+            font-size: 12px;
             color: #555;
-            margin: 0;
+            margin: 2px 0 0 0;
+            line-height: 1.3;
         }
         .report-title {
             text-align: center;
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            background-color: #f4f4f4;
-            padding: 10px;
-            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            background: linear-gradient(90deg, #f4f7fc 0%, #eef3fb 100%);
+            border: 1px solid #e1e8f4;
+            padding: 8px 12px;
+            border-radius: 8px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.9px;
+            color: #1f2e44;
         }
         .student-info-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr auto;
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: 1fr 1fr 96px;
+            gap: 10px;
+            margin-bottom: 16px;
         }
         .info-group {
-            border: 1px solid #e0e0e0;
-            padding: 15px;
-            border-radius: 4px;
+            border: 1px solid #e1e8f4;
+            background: #fbfcff;
+            padding: 10px 12px;
+            border-radius: 8px;
         }
         .info-row {
             display: flex;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
         }
         .info-row:last-child {
             margin-bottom: 0;
         }
         .info-label {
-            font-weight: bold;
-            width: 130px;
-            color: #555;
+            font-weight: 700;
+            width: 110px;
+            color: #3d4f69;
         }
         .student-photo {
-            width: 120px;
-            height: 120px;
+            width: 96px;
+            height: 96px;
             object-fit: cover;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            border: 1px solid #d7dfed;
+            border-radius: 8px;
         }
         table {
             width: 100%;
@@ -184,7 +203,7 @@ const classicTemplate = (data: ReportCardData): string => `
             <h1 class="school-name">${data.school.name}</h1>
             <p class="school-address">${data.school.address || ''}</p>
         </div>
-        <div style="width: 100px;"></div> <!-- balance flex -->
+        <div style="padding: 6px 10px; border: 1px solid #d9e3f2; border-radius: 999px; font-size: 10px; font-weight: 700; color: #1A56A8; white-space: nowrap;">${data.term.sessionName} • ${data.term.name}</div>
     </div>
 
     <div class="report-title">
@@ -260,16 +279,6 @@ const classicTemplate = (data: ReportCardData): string => `
                 <div class="remark-line"></div>
                 <div class="remark-line"></div>
             </div>
-        </div>
-    </div>
-
-    <div class="student-info-grid" style="grid-template-columns: 1fr; margin-bottom: 20px;">
-        <div class="info-group" style="display: flex; justify-content: space-around;">
-            <div><strong>Attendance Summary:</strong></div>
-            <div>Days Present: ${data.attendance.daysPresent}</div>
-            <div>Days Absent: ${data.attendance.daysAbsent}</div>
-            <div>Days Late: ${data.attendance.daysLate}</div>
-            <div>Total School Days: ${data.term.totalSchoolDays}</div>
         </div>
     </div>
 
@@ -595,7 +604,7 @@ const modernTemplate = (data: ReportCardData): string => `
                                           label.component,
                                           label.maxScore,
                                         )
-                                      : componentScore.component;
+                                      : escapeHtml(componentScore.component);
                                     return `${displayLabel}: ${componentScore.score !== null ? componentScore.score : '-'}`;
                                   })
                                   .join(' | ')}

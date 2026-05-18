@@ -77,9 +77,10 @@ export class PdfService {
     return '';
   };
 
-  private toSafeNumber = (value: unknown) => {
+  private toSafeNumber = (value: unknown): number | null => {
+    if (value === null || value === undefined || value === '') return null;
     const parsed = Number(value);
-    if (Number.isNaN(parsed)) return 0;
+    if (Number.isNaN(parsed)) return null;
     return parsed;
   };
 
