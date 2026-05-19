@@ -30,8 +30,15 @@ export class AttendanceResolver {
   classAttendance(
     @Args('classId') classId: string,
     @Args('date') date: string,
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
-    return this.attendanceService.getClassAttendance(classId, date);
+    return this.attendanceService.getClassAttendance(
+      classId,
+      date,
+      user.sub,
+      user.schoolId,
+      user.role,
+    );
   }
 
   @Query(() => [StudentAttendance])
