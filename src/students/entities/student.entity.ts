@@ -23,12 +23,8 @@ export class Student extends BaseEntity {
   @Field()
   @Column({
     type: 'date',
-    transformer: {
-      to: (val: Date | string) => val,
-      from: (val: string) => (val ? new Date(val) : null),
-    },
   })
-  dateOfBirth: Date;
+  dateOfBirth: string;
 
   @Field(() => Gender)
   @Column({ type: 'enum', enum: Gender })
