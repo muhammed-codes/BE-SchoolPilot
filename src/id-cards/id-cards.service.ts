@@ -98,6 +98,8 @@ export class IdCardsService {
             qrCodeBase64,
             session: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
             gender: student.gender,
+            dateOfBirth: student.dateOfBirth || 'N/A',
+            address: student.address || 'N/A',
           })),
         );
       });
@@ -185,6 +187,8 @@ export class IdCardsService {
                 qrCodeBase64,
                 session: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
                 gender: student.gender,
+                dateOfBirth: student.dateOfBirth || 'N/A',
+                address: student.address || 'N/A',
               })),
             );
 

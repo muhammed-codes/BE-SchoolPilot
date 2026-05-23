@@ -8,6 +8,8 @@ export interface StudentCardData {
   qrCodeBase64: string;
   session: string;
   gender: string;
+  dateOfBirth: string;
+  address: string;
 }
 
 export interface StaffCardData {
