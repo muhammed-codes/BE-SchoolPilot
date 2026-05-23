@@ -131,7 +131,7 @@ export class StudentsService {
         updateData.lastName = input.lastName;
       }
       if (input.dateOfBirth !== undefined) {
-        updateData.dateOfBirth = new Date(input.dateOfBirth);
+        updateData.dateOfBirth = input.dateOfBirth;
       }
       if (input.gender !== undefined) {
         updateData.gender = input.gender;
@@ -181,7 +181,7 @@ export class StudentsService {
       validStudents.push({
         firstName: input.firstName,
         lastName: input.lastName,
-        dateOfBirth: new Date(input.dateOfBirth),
+        dateOfBirth: input.dateOfBirth,
         gender: input.gender,
         currentClassId: input.classId,
         address: input.address,

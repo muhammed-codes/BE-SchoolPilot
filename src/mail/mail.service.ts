@@ -32,10 +32,16 @@ export class MailService {
           <p>You requested to reset your password. Click the link below to set a new password:</p>
           <a href="${resetUrl}">Reset Password</a>
           <p>If you did not request this, please ignore this email.</p>
-          <p>This link will expire in 1 hour.</p>
+          <p>This link will expire in 30 minutes.</p>
         `,
       })
-      .then(() => {
+      .then((result) => {
+        if (result.error) {
+          this.logger.error(
+            `Failed to send password reset email to ${this.maskEmail(email)}: ${result.error.message}`,
+          );
+          throw new Error(result.error.message);
+        }
         this.logger.log(
           `Password reset email sent to ${this.maskEmail(email)}`,
         );

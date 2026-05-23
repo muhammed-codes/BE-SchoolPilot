@@ -153,7 +153,7 @@ export class AuthService {
         .update(token)
         .digest('hex');
       const expires = new Date();
-      expires.setHours(expires.getHours() + 1);
+      expires.setMinutes(expires.getMinutes() + 30);
 
       return this.usersService
         .update(user.id, {

@@ -3,6 +3,7 @@ FROM node:20-slim
 # Install dependencies for Puppeteer
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    chromium \
     fonts-liberation \
     libasound2 \
     libatk-bridge2.0-0 \
@@ -45,6 +46,7 @@ RUN apt-get update && apt-get install -y \
 RUN npm install -g pnpm
 
 WORKDIR /app
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Copy lockfile and package.json
 COPY package.json pnpm-lock.yaml ./

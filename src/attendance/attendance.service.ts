@@ -105,16 +105,69 @@ export class AttendanceService {
     });
   };
 
-  getClassAttendance = (classId: string, date: string) => {
+  getClassAttendance = (
+    classId: string,
+    date: string,
+    userId?: string,
+    schoolId?: string,
+    role?: UserRole,
+  ) => {
     const normalizedClassId = String(classId || '').trim();
     if (!normalizedClassId) {
       throw new BadRequestException('classId is required');
     }
-    return this.studentAttendanceRepo.find({
-      where: { classId: normalizedClassId, date },
-      relations: ['student'],
-      order: { student: { firstName: 'ASC' } },
-    });
+    return this.getClassAttendanceByRole(
+      normalizedClassId,
+      date,
+      userId,
+      schoolId,
+      role,
+    );
+  };
+
+  getClassAttendanceByRole = (
+    classId: string,
+    date: string,
+    userId?: string,
+    schoolId?: string,
+    role?: UserRole,
+  ) => {
+    if (!userId || !schoolId || !role) {
+      return this.studentAttendanceRepo.find({
+        where: { classId, date },
+        relations: ['student'],
+        order: { student: { firstName: 'ASC' } },
+      });
+    }
+
+    const classLookup =
+      role === UserRole.SUPER_ADMIN
+        ? this.classRepo.findOne({ where: { id: classId } })
+        : this.classRepo.findOne({ where: { id: classId, schoolId } });
+
+    return classLookup
+      .then((classEntity) => {
+        if (!classEntity) {
+          throw new NotFoundException('Class not found');
+        }
+
+        const canViewAllClassAttendance =
+          role === UserRole.SUPER_ADMIN ||
+          role === UserRole.SCHOOL_ADMIN ||
+          role === UserRole.PRINCIPAL;
+
+        if (!canViewAllClassAttendance && classEntity.classTeacherId !== userId) {
+          throw new ForbiddenException(
+            'You can only view attendance for your assigned class',
+          );
+        }
+
+        return this.studentAttendanceRepo.find({
+          where: { classId, date },
+          relations: ['student'],
+          order: { student: { firstName: 'ASC' } },
+        });
+      });
   };
 
   getStudentAttendanceSummary = (
