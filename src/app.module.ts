@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { SchoolsModule } from './schools/schools.module';
@@ -20,6 +21,7 @@ import { TermsModule } from './terms/terms.module';
 import { IdCardsModule } from './id-cards/id-cards.module';
 import { MailModule } from './mail/mail.module';
 import { AccessModule } from './access/access.module';
+import { GqlThrottlerGuard } from './common/guards/gql-throttler.guard';
 
 @Module({
   imports: [
@@ -29,7 +31,7 @@ import { AccessModule } from './access/access.module';
       {
         name: 'default',
         ttl: 60000,
-        limit: 60,
+        limit: 100,
       },
     ]),
 
@@ -97,5 +99,11 @@ import { AccessModule } from './access/access.module';
     AccessModule,
   ],
   controllers: [AppController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: GqlThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
