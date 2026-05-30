@@ -20,8 +20,15 @@ export class UploadService implements OnModuleInit {
   private readonly logger = new Logger(UploadService.name);
   private readonly pdfUrlDurationSeconds = 60 * 60 * 24 * 7;
   private readonly maxCloudinaryUploadAttempts = 3;
-  private readonly getErrorMessage = (error: unknown) => {
-    return error instanceof Error ? error.message : 'Unknown error';
+  private readonly getErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) return error.message;
+    if (error && typeof error === 'object') {
+      const obj = error as Record<string, unknown>;
+      if (typeof obj['message'] === 'string') return obj['message'];
+      if (typeof obj['error'] === 'string') return obj['error'];
+    }
+    if (typeof error === 'string') return error;
+    return 'Unknown error';
   };
   private readonly isRetriableCloudinaryError = (rawMessage?: string) => {
     const normalized = String(rawMessage || '').toLowerCase();
@@ -172,12 +179,8 @@ export class UploadService implements OnModuleInit {
         const cloudinaryError = this.getCloudinaryErrorMessage(
           this.getErrorMessage(error),
         );
-        this.logger.error(
-          `Cloudinary startup validation failed: ${cloudinaryError}`,
-        );
-        throw new HttpException(
-          `Cloudinary startup validation failed: ${cloudinaryError}`,
-          HttpStatus.INTERNAL_SERVER_ERROR,
+        this.logger.warn(
+          `Cloudinary startup ping failed (server will still start): ${cloudinaryError}`,
         );
       });
   };
