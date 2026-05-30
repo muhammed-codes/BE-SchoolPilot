@@ -153,6 +153,28 @@ export class UploadService implements OnModuleInit {
     );
   };
 
+  private readonly validateMimeType = (mimetype: string) => {
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+      'application/pdf',
+    ];
+
+    if (!allowedMimeTypes.includes(mimetype.toLowerCase())) {
+      throw new HttpException(
+        `Invalid file type: ${mimetype}. Only JPEG, PNG, WEBP, GIF, and PDF are allowed.`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  };
+
+  private readonly validateFile = (file: FileUpload): FileUpload => {
+    this.validateMimeType(file.mimetype);
+    return file;
+  };
+
   constructor(private readonly configService: ConfigService) {}
 
   private readonly validateCloudinaryConnection = (): Promise<void> => {
@@ -190,6 +212,7 @@ export class UploadService implements OnModuleInit {
     folder: string,
   ): Promise<UploadResult> => {
     return this.resolveFileUpload(file)
+      .then(this.validateFile)
       .then(({ createReadStream }: { createReadStream: () => Readable }) => {
         return new Promise<UploadResult>((resolve, reject) => {
           const stream = createReadStream();
