@@ -9,6 +9,7 @@ export class ResetPasswordInput {
 
   @Field()
   @IsNotEmpty()
-  @MinLength(6)
+  @MinLength(8)
   newPassword: string;
 }
+

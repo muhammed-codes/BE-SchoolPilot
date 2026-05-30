@@ -57,4 +57,43 @@ export class MailService {
         throw error;
       });
   };
+
+  sendVerificationEmail = (email: string, token: string) => {
+    const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
+    const verifyUrl = `${frontendUrl}/verify-email?token=${token}`;
+
+    return this.resend.emails
+      .send({
+        from: 'SchoolPilot <noreply@schoolpilot.app>',
+        to: email,
+        subject: 'Verify Your Email Address',
+        html: `
+          <h1>Welcome to SchoolPilot!</h1>
+          <p>Please verify your email address by clicking the link below:</p>
+          <a href="${verifyUrl}">Verify Email</a>
+          <p>If you did not create an account, please ignore this email.</p>
+          <p>This link will expire in 24 hours.</p>
+        `,
+      })
+      .then((result) => {
+        if (result.error) {
+          this.logger.error(
+            `Failed to send verification email to ${this.maskEmail(email)}: ${result.error.message}`,
+          );
+          throw new Error(result.error.message);
+        }
+        this.logger.log(`Verification email sent to ${this.maskEmail(email)}`);
+        return true;
+      })
+      .catch((error) => {
+        const errorStack =
+          error instanceof Error ? error.stack : 'Unknown error';
+        this.logger.error(
+          `Failed to send verification email to ${this.maskEmail(email)}`,
+          errorStack,
+        );
+        throw error;
+      });
+  };
 }
+

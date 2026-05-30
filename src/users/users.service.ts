@@ -53,6 +53,14 @@ export class UsersService {
     });
   };
 
+  findByEmailVerificationToken = (token: string) => {
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    return this.usersRepository.findOne({
+      where: { emailVerificationToken: hashedToken },
+    });
+  };
+
+
   create = (data: Partial<User>) => {
     const user = this.usersRepository.create(data);
     return this.usersRepository.save(user);

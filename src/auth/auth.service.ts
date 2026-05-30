@@ -23,6 +23,12 @@ export class AuthService {
     private readonly mailService: MailService,
   ) {}
 
+  private generateVerificationToken = (): { raw: string; hashed: string } => {
+    const raw = crypto.randomBytes(32).toString('hex');
+    const hashed = crypto.createHash('sha256').update(raw).digest('hex');
+    return { raw, hashed };
+  };
+
   register = (input: RegisterInput) => {
     return this.usersService
       .findByEmail(input.email)
@@ -32,26 +38,68 @@ export class AuthService {
         }
         return this.hashData(input.password);
       })
-      .then((passwordHash) =>
-        this.usersService.create({
-          email: input.email,
-          firstName: input.firstName,
-          lastName: input.lastName,
-          role: input.role,
-          schoolId: input.schoolId,
-          phone: input.phone,
-          passwordHash,
-        }),
-      )
+      .then((passwordHash) => {
+        const { raw, hashed } = this.generateVerificationToken();
+        return this.usersService
+          .create({
+            email: input.email,
+            firstName: input.firstName,
+            lastName: input.lastName,
+            role: input.role,
+            schoolId: input.schoolId,
+            phone: input.phone,
+            passwordHash,
+            isEmailVerified: false,
+            emailVerificationToken: hashed,
+          })
+          .then((user) =>
+            this.mailService
+              .sendVerificationEmail(user.email, raw)
+              .catch(() => null)
+              .then(() => user),
+          );
+      })
       .then((user) =>
         this.generateTokens(user).then((tokens) => ({ ...tokens, user })),
       );
   };
 
   login = (input: LoginInput) => {
-    return this.validateUser(input.email, input.password).then((user) =>
-      this.generateTokens(user).then((tokens) => ({ ...tokens, user })),
-    );
+    return this.validateUser(input.email, input.password).then((user) => {
+      if (!user.isEmailVerified) {
+        throw new UnauthorizedException(
+          'Please verify your email address before logging in.',
+        );
+      }
+      return this.generateTokens(user).then((tokens) => ({ ...tokens, user }));
+    });
+  };
+
+  verifyEmail = (token: string) => {
+    return this.usersService.findByEmailVerificationToken(token).then((user) => {
+      if (!user) {
+        throw new BadRequestException('Invalid or expired verification token');
+      }
+      return this.usersService
+        .update(user.id, {
+          isEmailVerified: true,
+          emailVerificationToken: null,
+        })
+        .then(() => true);
+    });
+  };
+
+  resendVerificationEmail = (email: string) => {
+    return this.usersService.findByEmail(email).then((user) => {
+      if (!user) return true;
+      if (user.isEmailVerified) return true;
+
+      const { raw, hashed } = this.generateVerificationToken();
+      return this.usersService
+        .update(user.id, { emailVerificationToken: hashed })
+        .then(() => this.mailService.sendVerificationEmail(email, raw))
+        .then(() => true);
+    });
   };
 
   refreshTokens = (userId: string, refreshToken: string) => {
@@ -116,7 +164,7 @@ export class AuthService {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
         expiresIn: this.configService.getOrThrow<string>(
           'JWT_ACCESS_EXPIRES',
-        ) as any,
+        ) as never,
       },
     );
 
@@ -126,7 +174,7 @@ export class AuthService {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
         expiresIn: this.configService.getOrThrow<string>(
           'JWT_REFRESH_EXPIRES',
-        ) as any,
+        ) as never,
       },
     );
 
@@ -190,3 +238,4 @@ export class AuthService {
     });
   };
 }
+

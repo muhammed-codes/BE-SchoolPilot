@@ -66,7 +66,15 @@ export class User extends BaseEntity {
   resetPasswordExpires: Date | null;
 
   @Field()
+  @Column({ default: false })
+  isEmailVerified: boolean;
+
+  @Column({ type: 'varchar', nullable: true })
+  emailVerificationToken: string | null;
+
+  @Field()
   get fullName(): string {
     return `${this.firstName} ${this.lastName}`;
   }
 }
+

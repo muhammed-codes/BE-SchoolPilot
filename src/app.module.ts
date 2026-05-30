@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { SchoolsModule } from './schools/schools.module';
@@ -23,6 +24,14 @@ import { AccessModule } from './access/access.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60000,
+        limit: 60,
+      },
+    ]),
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -64,10 +73,9 @@ import { AccessModule } from './access/access.module';
       useFactory: (config: ConfigService) => ({
         autoSchemaFile: 'schema.gql',
         sortSchema: true,
-        // playground: true,
-        // introspection: true,
         playground: config.get<string>('NODE_ENV') !== 'production',
-        csrfPrevention: false,
+        introspection: config.get<string>('NODE_ENV') !== 'production',
+        csrfPrevention: true,
         context: ({ req }: { req: Request }) => ({ req }),
       }),
     }),
