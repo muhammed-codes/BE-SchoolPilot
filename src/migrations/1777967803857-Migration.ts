@@ -19,7 +19,7 @@ export class Migration1777967803857 implements MigrationInterface {
         await queryRunner.query(`CREATE TYPE "public"."role_permissions_role_enum" AS ENUM('super_admin', 'school_admin', 'principal', 'vice_principal', 'head_teacher', 'class_teacher', 'subject_teacher', 'parent')`);
         await queryRunner.query(`CREATE TYPE "public"."role_permissions_resource_enum" AS ENUM('students', 'results', 'attendance', 'classes', 'subjects', 'users', 'settings', 'id_cards')`);
         await queryRunner.query(`CREATE TABLE "role_permissions" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), "role" "public"."role_permissions_role_enum" NOT NULL, "resource" "public"."role_permissions_resource_enum" NOT NULL, "canCreate" boolean NOT NULL DEFAULT false, "canRead" boolean NOT NULL DEFAULT false, "canUpdate" boolean NOT NULL DEFAULT false, "canDelete" boolean NOT NULL DEFAULT false, CONSTRAINT "UQ_01ff9a39fe9f715a1171c56e6c3" UNIQUE ("role", "resource"), CONSTRAINT "PK_84059017c90bfcb701b8fa42297" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "customPermissions"`);
+        // await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "customPermissions"`);
         await queryRunner.query(`CREATE INDEX "IDX_b65b291e6868af0bbe821d3594" ON "admission_sequences" ("schoolId") `);
         await queryRunner.query(`ALTER TABLE "admission_sequences" ADD CONSTRAINT "UQ_bd8e2e14112c1403f3d56bc398a" UNIQUE ("schoolId", "year")`);
         await queryRunner.query(`ALTER TABLE "result_sheets" ADD CONSTRAINT "FK_4320cf1fa376bea423bf928e5bc" FOREIGN KEY ("classId") REFERENCES "classes"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);

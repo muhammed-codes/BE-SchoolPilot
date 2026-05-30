@@ -20,8 +20,15 @@ export class UploadService implements OnModuleInit {
   private readonly logger = new Logger(UploadService.name);
   private readonly pdfUrlDurationSeconds = 60 * 60 * 24 * 7;
   private readonly maxCloudinaryUploadAttempts = 3;
-  private readonly getErrorMessage = (error: unknown) => {
-    return error instanceof Error ? error.message : 'Unknown error';
+  private readonly getErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) return error.message;
+    if (error && typeof error === 'object') {
+      const obj = error as Record<string, unknown>;
+      if (typeof obj['message'] === 'string') return obj['message'];
+      if (typeof obj['error'] === 'string') return obj['error'];
+    }
+    if (typeof error === 'string') return error;
+    return 'Unknown error';
   };
   private readonly isRetriableCloudinaryError = (rawMessage?: string) => {
     const normalized = String(rawMessage || '').toLowerCase();
@@ -146,6 +153,28 @@ export class UploadService implements OnModuleInit {
     );
   };
 
+  private readonly validateMimeType = (mimetype: string) => {
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+      'application/pdf',
+    ];
+
+    if (!allowedMimeTypes.includes(mimetype.toLowerCase())) {
+      throw new HttpException(
+        `Invalid file type: ${mimetype}. Only JPEG, PNG, WEBP, GIF, and PDF are allowed.`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  };
+
+  private readonly validateFile = (file: FileUpload): FileUpload => {
+    this.validateMimeType(file.mimetype);
+    return file;
+  };
+
   constructor(private readonly configService: ConfigService) {}
 
   private readonly validateCloudinaryConnection = (): Promise<void> => {
@@ -172,12 +201,8 @@ export class UploadService implements OnModuleInit {
         const cloudinaryError = this.getCloudinaryErrorMessage(
           this.getErrorMessage(error),
         );
-        this.logger.error(
-          `Cloudinary startup validation failed: ${cloudinaryError}`,
-        );
-        throw new HttpException(
-          `Cloudinary startup validation failed: ${cloudinaryError}`,
-          HttpStatus.INTERNAL_SERVER_ERROR,
+        this.logger.warn(
+          `Cloudinary startup ping failed (server will still start): ${cloudinaryError}`,
         );
       });
   };
@@ -187,6 +212,7 @@ export class UploadService implements OnModuleInit {
     folder: string,
   ): Promise<UploadResult> => {
     return this.resolveFileUpload(file)
+      .then(this.validateFile)
       .then(({ createReadStream }: { createReadStream: () => Readable }) => {
         return new Promise<UploadResult>((resolve, reject) => {
           const stream = createReadStream();

@@ -580,19 +580,21 @@ export class ResultsService {
       });
   };
 
-  saveTeacherRemark = (subjectScoreId: string, remark: string) => {
+  saveTeacherRemark = (subjectScoreId: string, remark: string, userId: string, schoolId: string) => {
     return this.subjectScoreRepo
-      .findOne({ where: { id: subjectScoreId } })
+      .findOne({ where: { id: subjectScoreId }, relations: ['studentResult'] })
       .then((score) => {
-        if (!score) throw new NotFoundException('Subject score not found');
+        if (!score || score.studentResult.schoolId !== schoolId) {
+           throw new NotFoundException('Subject score not found');
+        }
         score.teacherRemark = remark;
         return this.subjectScoreRepo.save(score);
       });
   };
 
-  savePrincipalRemark = (studentResultId: string, remark: string) => {
+  savePrincipalRemark = (studentResultId: string, remark: string, schoolId: string) => {
     return this.studentResultRepo
-      .findOne({ where: { id: studentResultId } })
+      .findOne({ where: { id: studentResultId, schoolId } })
       .then((result) => {
         if (!result) throw new NotFoundException('Student result not found');
         result.principalRemark = remark;
@@ -600,15 +602,16 @@ export class ResultsService {
       });
   };
 
-  saveClassTeacherRemark = (studentResultId: string, remark: string) => {
+  saveClassTeacherRemark = (studentResultId: string, remark: string, userId: string, schoolId: string) => {
     return this.studentResultRepo
-      .findOne({ where: { id: studentResultId } })
+      .findOne({ where: { id: studentResultId, schoolId } })
       .then((result) => {
         if (!result) throw new NotFoundException('Student result not found');
         result.classTeacherRemark = remark;
         return this.studentResultRepo.save(result);
       });
   };
+
 
   getResultSheet = async (
     id: string,
@@ -732,18 +735,19 @@ export class ResultsService {
     });
   };
 
-  getStudentResult = (studentId: string, termId: string) => {
+  getStudentResult = (studentId: string, termId: string, schoolId: string) => {
     return this.studentResultRepo
       .createQueryBuilder('sr')
       .innerJoinAndSelect('sr.resultSheet', 'rs')
       .leftJoinAndSelect('sr.subjectScores', 'ss')
       .where('sr.studentId = :studentId', { studentId })
       .andWhere('rs.termId = :termId', { termId })
+      .andWhere('sr.schoolId = :schoolId', { schoolId })
       .getOne()
       .then((result) => {
         if (!result) throw new NotFoundException('Student result not found');
         return this.resultSheetRepo
-          .findOne({ where: { id: result.resultSheetId } })
+          .findOne({ where: { id: result.resultSheetId, schoolId } })
           .then((sheet) => {
             if (sheet) {
               this.applyComputedMetrics(sheet.scoreComponents || [], [result]);

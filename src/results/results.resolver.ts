@@ -69,8 +69,9 @@ export class ResultsResolver {
   studentResult(
     @Args('studentId') studentId: string,
     @Args('termId') termId: string,
+    @CurrentUser() user: { schoolId: string },
   ) {
-    return this.resultsService.getStudentResult(studentId, termId);
+    return this.resultsService.getStudentResult(studentId, termId, user.schoolId);
   }
 
   @Query(() => [SubjectScore])
@@ -199,8 +200,9 @@ export class ResultsResolver {
   saveTeacherRemark(
     @Args('subjectScoreId') subjectScoreId: string,
     @Args('remark') remark: string,
+    @CurrentUser() user: { sub: string; schoolId: string },
   ) {
-    return this.resultsService.saveTeacherRemark(subjectScoreId, remark);
+    return this.resultsService.saveTeacherRemark(subjectScoreId, remark, user.sub, user.schoolId);
   }
 
   @Mutation(() => StudentResult)
@@ -209,8 +211,9 @@ export class ResultsResolver {
   savePrincipalRemark(
     @Args('studentResultId') studentResultId: string,
     @Args('remark') remark: string,
+    @CurrentUser() user: { schoolId: string },
   ) {
-    return this.resultsService.savePrincipalRemark(studentResultId, remark);
+    return this.resultsService.savePrincipalRemark(studentResultId, remark, user.schoolId);
   }
 
   @Mutation(() => StudentResult)
@@ -219,7 +222,9 @@ export class ResultsResolver {
   saveClassTeacherRemark(
     @Args('studentResultId') studentResultId: string,
     @Args('remark') remark: string,
+    @CurrentUser() user: { sub: string; schoolId: string },
   ) {
-    return this.resultsService.saveClassTeacherRemark(studentResultId, remark);
+    return this.resultsService.saveClassTeacherRemark(studentResultId, remark, user.sub, user.schoolId);
   }
 }
+

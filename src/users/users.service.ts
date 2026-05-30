@@ -53,6 +53,14 @@ export class UsersService {
     });
   };
 
+  findByEmailVerificationToken = (token: string) => {
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    return this.usersRepository.findOne({
+      where: { emailVerificationToken: hashedToken },
+    });
+  };
+
+
   create = (data: Partial<User>) => {
     const user = this.usersRepository.create(data);
     return this.usersRepository.save(user);
@@ -191,6 +199,7 @@ export class UsersService {
     input: UpdateUserInput,
     requesterId: string,
     requesterRole: UserRole,
+    requesterSchoolId: string,
   ) => {
     return this.findById(id).then((user) => {
       if (!user) throw new NotFoundException('User not found');
@@ -202,6 +211,13 @@ export class UsersService {
 
       if (!isSelfUpdate && !isAdmin) {
         throw new ForbiddenException('You can only update your own profile');
+      }
+
+      if (
+        requesterRole === UserRole.SCHOOL_ADMIN &&
+        user.schoolId !== requesterSchoolId
+      ) {
+        throw new ForbiddenException('You can only update users in your own school');
       }
 
       if (input.role && !isAdmin) {
@@ -232,9 +248,16 @@ export class UsersService {
     });
   };
 
-  assignSchool = (userId: string, schoolId: string) => {
+  assignSchool = (userId: string, schoolId: string, requesterRole: UserRole, requesterSchoolId: string) => {
     return this.findById(userId).then((user) => {
       if (!user) throw new NotFoundException('User not found');
+
+      if (
+        requesterRole === UserRole.SCHOOL_ADMIN &&
+        (user.schoolId !== requesterSchoolId || schoolId !== requesterSchoolId)
+      ) {
+        throw new ForbiddenException('You can only reassign users within your own school');
+      }
 
       // Prevent assigning duplicate leadership roles into the same school.
       return this.ensureUniqueLeadershipRolePerSchool(

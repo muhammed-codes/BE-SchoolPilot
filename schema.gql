@@ -220,6 +220,7 @@ type Mutation {
   refreshTokens(refreshToken: String!): AuthResponse!
   regenerateQrCode(schoolId: String!): School!
   register(input: RegisterInput!): AuthResponse!
+  resendVerificationEmail(email: String!): Boolean!
   resetPassword(input: ResetPasswordInput!): Boolean!
   returnResult(reason: String!, resultSheetId: String!): ResultSheet!
   saveClassTeacherRemark(remark: String!, studentResultId: String!): StudentResult!
@@ -242,6 +243,7 @@ type Mutation {
   uploadSchoolLogo(file: Upload!, schoolId: String!): School!
   uploadSchoolStamp(file: Upload!, schoolId: String!): School!
   uploadUserAvatar(file: Upload!, userId: String!): User!
+  verifyEmail(token: String!): Boolean!
 }
 
 enum NamePrefix {
@@ -616,6 +618,7 @@ type User {
   fullName: String!
   id: ID!
   isActive: Boolean!
+  isEmailVerified: Boolean!
   lastName: String!
   namePrefix: NamePrefix
   phone: String
