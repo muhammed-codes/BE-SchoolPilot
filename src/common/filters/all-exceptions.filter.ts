@@ -3,13 +3,17 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { GqlExceptionFilter, GqlArgumentsHost } from '@nestjs/graphql';
 
 @Catch()
 export class AllExceptionsFilter implements GqlExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost) {
-    GqlArgumentsHost.create(host);
+    const gqlHost = GqlArgumentsHost.create(host);
+    const ctx = gqlHost.getContext();
 
     const status =
       exception instanceof HttpException
@@ -21,6 +25,18 @@ export class AllExceptionsFilter implements GqlExceptionFilter {
         ? exception.message
         : 'Internal server error';
 
-    return { statusCode: status, message };
+    // Log the error
+    const req = ctx.req;
+    const requestPath = req ? req.url : 'GraphQL';
+    const requestIp = req ? req.ip : 'unknown';
+    
+    this.logger.error(
+      `API Error - Path: ${requestPath} - IP: ${requestIp} - Status: ${status} - Message: ${message}`,
+      exception instanceof Error ? exception.stack : String(exception),
+    );
+
+    // Re-throw for GraphQL to handle formatting correctly
+    return exception;
   }
 }
+
