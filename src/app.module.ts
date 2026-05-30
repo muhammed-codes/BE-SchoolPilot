@@ -27,19 +27,34 @@ import { AccessModule } from './access/access.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get<string>('SUPABASE_DB_HOST'),
-        port: config.get<number>('SUPABASE_DB_PORT'),
-        database: config.get<string>('SUPABASE_DB_NAME'),
-        username: config.get<string>('SUPABASE_DB_USER'),
-        password: config.get<string>('SUPABASE_DB_PASSWORD'),
-        ssl: { rejectUnauthorized: false },
-        synchronize: false,
-        autoLoadEntities: true,
-        migrationsRun: config.get<string>('NODE_ENV') === 'production',
-        migrations: [__dirname + '/migrations/*{.ts,.js}'],
-      }),
+      useFactory: async (config: ConfigService) => {
+        const host = config.get<string>('SUPABASE_DB_HOST') || '';
+        let resolvedHost = host;
+        
+        try {
+          if (host && !/^[0-9.]+$/.test(host)) {
+            const dns = await import('dns');
+            const { address } = await dns.promises.lookup(host, { family: 4 });
+            resolvedHost = address;
+          }
+        } catch (err) {
+          console.warn(`Failed to resolve IPv4 for ${host}, falling back to original host`, err);
+        }
+
+        return {
+          type: 'postgres',
+          host: resolvedHost,
+          port: config.get<number>('SUPABASE_DB_PORT'),
+          database: config.get<string>('SUPABASE_DB_NAME'),
+          username: config.get<string>('SUPABASE_DB_USER'),
+          password: config.get<string>('SUPABASE_DB_PASSWORD'),
+          ssl: { rejectUnauthorized: false },
+          synchronize: false,
+          autoLoadEntities: true,
+          migrationsRun: config.get<string>('NODE_ENV') === 'production',
+          migrations: [__dirname + '/migrations/*{.ts,.js}'],
+        };
+      },
     }),
 
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
