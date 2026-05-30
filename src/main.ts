@@ -19,7 +19,7 @@ const bootstrap = async () => {
 
   app.setGlobalPrefix('api');
   app.use(graphqlUploadExpress({ maxFileSize: 10_000_000, maxFiles: 10 }));
-  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }));
+  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 
   const port = process.env.PORT || 9996;
   await app.listen(port);
