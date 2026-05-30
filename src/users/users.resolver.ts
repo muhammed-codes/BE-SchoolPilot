@@ -93,8 +93,9 @@ export class UsersResolver {
   assignUserToSchool(
     @Args('userId') userId: string,
     @Args('schoolId') schoolId: string,
+    @CurrentUser() user: { role: UserRole; schoolId: string },
   ) {
-    return this.usersService.assignSchool(userId, schoolId);
+    return this.usersService.assignSchool(userId, schoolId, user.role, user.schoolId);
   }
 
   @Mutation(() => User)
@@ -103,9 +104,9 @@ export class UsersResolver {
   updateUser(
     @Args('id') id: string,
     @Args('input') input: UpdateUserInput,
-    @CurrentUser() user: { sub: string; role: UserRole },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
   ) {
-    return this.usersService.updateUser(id, input, user.sub, user.role);
+    return this.usersService.updateUser(id, input, user.sub, user.role, user.schoolId);
   }
 
   @Mutation(() => Boolean)

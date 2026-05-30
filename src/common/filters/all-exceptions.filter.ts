@@ -5,16 +5,13 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { GqlExceptionFilter, GqlArgumentsHost } from '@nestjs/graphql';
+import { GqlExceptionFilter, GqlArgumentsHost, GqlContextType } from '@nestjs/graphql';
 
 @Catch()
 export class AllExceptionsFilter implements GqlExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
   catch(exception: unknown, host: ArgumentsHost) {
-    const gqlHost = GqlArgumentsHost.create(host);
-    const ctx = gqlHost.getContext();
-
     const status =
       exception instanceof HttpException
         ? exception.getStatus()
@@ -25,18 +22,42 @@ export class AllExceptionsFilter implements GqlExceptionFilter {
         ? exception.message
         : 'Internal server error';
 
-    // Log the error
-    const req = ctx.req;
-    const requestPath = req ? req.url : 'GraphQL';
-    const requestIp = req ? req.ip : 'unknown';
-    
+    if (host.getType<GqlContextType>() === 'graphql') {
+      const gqlHost = GqlArgumentsHost.create(host);
+      const ctx = gqlHost.getContext();
+      const req = ctx.req;
+      const requestPath = req ? req.url : 'GraphQL';
+      const requestIp = req ? req.ip : 'unknown';
+      
+      this.logger.error(
+        `GraphQL Error - Path: ${requestPath} - IP: ${requestIp} - Status: ${status} - Message: ${message}`,
+        exception instanceof Error ? exception.stack : String(exception),
+      );
+
+      return exception; // GraphQL handles formatting
+    }
+
+    // Handle standard HTTP errors
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse();
+    const request = ctx.getRequest();
+
     this.logger.error(
-      `API Error - Path: ${requestPath} - IP: ${requestIp} - Status: ${status} - Message: ${message}`,
+      `HTTP Error - Path: ${request?.url} - IP: ${request?.ip} - Status: ${status} - Message: ${message}`,
       exception instanceof Error ? exception.stack : String(exception),
     );
 
-    // Re-throw for GraphQL to handle formatting correctly
-    return exception;
+    if (response && typeof response.status === 'function') {
+      response.status(status).json({
+        statusCode: status,
+        timestamp: new Date().toISOString(),
+        path: request?.url,
+        message,
+      });
+    } else {
+      return exception;
+    }
   }
 }
+
 
