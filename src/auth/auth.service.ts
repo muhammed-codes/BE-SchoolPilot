@@ -75,12 +75,6 @@ export class AuthService {
 
   login = (input: LoginInput) => {
     return this.validateUser(input.email, input.password).then((user) => {
-      if (!user.isEmailVerified) {
-        this.logger.warn(`Failed login attempt (unverified email): ${input.email}`);
-        throw new UnauthorizedException(
-          'Please verify your email address before logging in.',
-        );
-      }
       this.logger.log(`Successful login for user: ${input.email}`);
       return this.generateTokens(user).then((tokens) => ({ ...tokens, user }));
     });
