@@ -1,5 +1,5 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { UseGuards, ForbiddenException } from '@nestjs/common';
+import { UseGuards, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { GraphQLUpload, Upload } from 'graphql-upload-ts';
 import { SchoolsService } from './schools.service';
 import { School } from './entities/school.entity';
@@ -36,7 +36,7 @@ export class SchoolsResolver {
   @UseGuards(JwtAuthGuard)
   mySchool(@CurrentUser() user: { sub: string; schoolId: string }) {
     if (!user.schoolId) {
-      throw new ForbiddenException('No school assigned to your account');
+      throw new NotFoundException('No school assigned to your account');
     }
     return this.schoolsService.findById(user.schoolId);
   }
@@ -103,12 +103,12 @@ export class SchoolsResolver {
 
   @Mutation(() => School)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   regenerateQrCode(
     @Args('schoolId') schoolId: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { schoolId: string; role: UserRole },
   ) {
-    if (user.schoolId !== schoolId) {
+    if (user.role !== UserRole.SUPER_ADMIN && user.schoolId !== schoolId) {
       throw new ForbiddenException(
         'You can only regenerate QR for your own school',
       );
