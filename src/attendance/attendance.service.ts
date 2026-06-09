@@ -56,6 +56,7 @@ export class AttendanceService {
       if (!term) throw new NotFoundException('No active term found');
 
       if (
+        marker.role !== UserRole.SUPER_ADMIN &&
         marker.role !== UserRole.SCHOOL_ADMIN &&
         classEntity.classTeacherId !== markerId
       ) {

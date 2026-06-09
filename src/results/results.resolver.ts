@@ -106,6 +106,7 @@ export class ResultsResolver {
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
     if (
+      user.role === UserRole.SUPER_ADMIN ||
       user.role === UserRole.SCHOOL_ADMIN ||
       user.role === UserRole.PRINCIPAL
     ) {

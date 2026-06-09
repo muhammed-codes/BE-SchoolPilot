@@ -75,11 +75,6 @@ export class UsersResolver {
     }
 
     if (user.role === UserRole.SUPER_ADMIN) {
-      if (input.role !== UserRole.SCHOOL_ADMIN) {
-        throw new ForbiddenException(
-          'Super admins can only create school admins via this endpoint',
-        );
-      }
       return this.usersService.createUser(
         input,
         input.schoolId || user.schoolId,
