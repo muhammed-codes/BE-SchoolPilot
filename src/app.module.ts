@@ -75,6 +75,7 @@ import { GqlThrottlerGuard } from './common/guards/gql-throttler.guard';
       useFactory: (config: ConfigService) => ({
         autoSchemaFile: 'schema.gql',
         sortSchema: true,
+        resolvers: { Upload: require('graphql-upload-ts').GraphQLUpload },
         playground: config.get<string>('NODE_ENV') !== 'production',
         introspection: config.get<string>('NODE_ENV') !== 'production',
         csrfPrevention: true,

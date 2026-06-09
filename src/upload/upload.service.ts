@@ -107,6 +107,7 @@ export class UploadService implements OnModuleInit {
   private readonly resolveFileUpload = (
     file: Upload | Promise<FileUpload> | FileUpload,
   ): Promise<FileUpload> => {
+    console.log("RESOLVE_FILE_UPLOAD_DEBUG:", file);
     if (!file) {
       return Promise.reject(
         new HttpException('No file provided', HttpStatus.BAD_REQUEST),
