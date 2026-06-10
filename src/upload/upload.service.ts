@@ -12,8 +12,9 @@ import {
   UploadApiResponse,
 } from 'cloudinary';
 import { Readable } from 'stream';
-import { FileUpload, Upload } from 'graphql-upload-ts';
+import { FileUpload } from 'graphql-upload-ts';
 import { UploadResult } from './dto/upload-result.type';
+import { type UploadInput } from './interfaces/upload-input.interface';
 
 @Injectable()
 export class UploadService implements OnModuleInit {
@@ -65,7 +66,10 @@ export class UploadService implements OnModuleInit {
   private readonly parseBase64Input = (base64: string) => {
     const rawInput = String(base64 || '').trim();
     if (!rawInput) {
-      throw new HttpException('Image payload is required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Image payload is required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const dataUrlMatch = rawInput.match(
       /^data:([a-z0-9.+-]+\/[a-z0-9.+-]+);base64,([\s\S]+)$/i,
@@ -104,8 +108,23 @@ export class UploadService implements OnModuleInit {
     );
     return { ...base, pdfPrivateUrl, expiresAt };
   };
+  private readonly isObjectRecord = (
+    value: unknown,
+  ): value is Record<string, unknown> => {
+    return typeof value === 'object' && value !== null;
+  };
+  private readonly isFileUpload = (value: unknown): value is FileUpload => {
+    return (
+      this.isObjectRecord(value) && typeof value.createReadStream === 'function'
+    );
+  };
+  private readonly isFileUploadPromise = (
+    value: unknown,
+  ): value is Promise<FileUpload> => {
+    return this.isObjectRecord(value) && typeof value.then === 'function';
+  };
   private readonly resolveFileUpload = (
-    file: Upload | Promise<FileUpload> | FileUpload,
+    file: UploadInput,
   ): Promise<FileUpload> => {
     if (!file) {
       return Promise.reject(
@@ -113,36 +132,21 @@ export class UploadService implements OnModuleInit {
       );
     }
 
-    const uploadWithPromise = file as { promise?: Promise<FileUpload> };
-    if (
-      uploadWithPromise.promise &&
-      typeof (uploadWithPromise.promise as Promise<FileUpload>).then ===
-        'function'
-    ) {
+    if (this.isFileUpload(file)) {
+      return Promise.resolve(file);
+    }
+
+    if (this.isFileUploadPromise(file)) {
+      return file;
+    }
+
+    if (this.isObjectRecord(file) && this.isFileUploadPromise(file.promise)) {
+      const uploadWithPromise = file as { promise: Promise<FileUpload> };
       return uploadWithPromise.promise;
     }
 
-    const thenable = file as Promise<FileUpload>;
-    if (typeof thenable.then === 'function') {
-      return thenable;
-    }
-
-    const fileUpload = file as FileUpload;
-    if (typeof fileUpload.createReadStream === 'function') {
-      return Promise.resolve(fileUpload);
-    }
-
-    const wrappedFile = file as { file?: FileUpload | Promise<FileUpload> };
-    if (wrappedFile.file) {
-      const innerFile = wrappedFile.file as Promise<FileUpload> | FileUpload;
-      if (typeof (innerFile as Promise<FileUpload>).then === 'function') {
-        return innerFile as Promise<FileUpload>;
-      }
-      if (
-        typeof (innerFile as FileUpload).createReadStream === 'function'
-      ) {
-        return Promise.resolve(innerFile as FileUpload);
-      }
+    if (this.isObjectRecord(file) && file.file) {
+      return this.resolveFileUpload(file.file as UploadInput);
     }
 
     return Promise.reject(
@@ -207,10 +211,7 @@ export class UploadService implements OnModuleInit {
       });
   };
 
-  uploadFile = (
-    file: Upload | Promise<FileUpload> | FileUpload,
-    folder: string,
-  ): Promise<UploadResult> => {
+  uploadFile = (file: UploadInput, folder: string): Promise<UploadResult> => {
     return this.resolveFileUpload(file)
       .then(this.validateFile)
       .then(({ createReadStream }: { createReadStream: () => Readable }) => {
