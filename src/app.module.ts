@@ -71,19 +71,15 @@ import { GqlThrottlerGuard } from './common/guards/gql-throttler.guard';
       },
     }),
 
-    GraphQLModule.forRootAsync<ApolloDriverConfig>({
+    GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        autoSchemaFile: 'schema.gql',
-        sortSchema: true,
-        resolvers: { Upload: require('graphql-upload-ts').GraphQLUpload },
-        playground: true,
-        introspection: true,
-        csrfPrevention: true,
-        context: ({ req }: { req: Request }) => ({ req }),
-      }),
+      autoSchemaFile: process.env.VERCEL ? true : 'schema.gql',
+      sortSchema: true,
+      resolvers: { Upload: require('graphql-upload-ts').GraphQLUpload },
+      playground: true,
+      introspection: true,
+      csrfPrevention: true,
+      context: ({ req }: { req: Request }) => ({ req }),
     }),
 
     AuthModule,
