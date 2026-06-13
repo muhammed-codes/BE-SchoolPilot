@@ -7,7 +7,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import { StudentResult } from '../results/entities/student-result.entity';
 import { ResultSheet } from '../results/entities/result-sheet.entity';
 import { Student } from '../students/entities/student.entity';
@@ -113,18 +114,24 @@ export class PdfService {
   generatePdfFromHtml = (html: string): Promise<Buffer> => {
     let browserInstance: Awaited<ReturnType<typeof puppeteer.launch>>;
 
-    return puppeteer
-      .launch({
+    return (process.env.VERCEL
+      ? chromium.executablePath()
+      : Promise.resolve(process.env.PUPPETEER_EXECUTABLE_PATH || undefined)
+    ).then((executablePath) =>
+      puppeteer.launch({
         headless: true,
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        executablePath,
+        args: process.env.VERCEL
+          ? chromium.args
+          : ['--no-sandbox', '--disable-setuid-sandbox'],
       })
+    )
       .then((browser) => {
         browserInstance = browser;
         return browser.newPage();
       })
       .then((page) => {
-        return page.setContent(html, { waitUntil: 'networkidle0' }).then(() =>
+        return page.setContent(html, { waitUntil: 'load' }).then(() =>
           page.pdf({
             format: 'A4',
             printBackground: true,

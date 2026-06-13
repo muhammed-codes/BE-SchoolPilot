@@ -1,0 +1,8 @@
+node_modules/puppeteer/.local-chromium
+node_modules/puppeteer/.local-browsers
+node_modules/@sparticuz/chromium/bin
+src
+test
+*.log
+Dockerfile
+.dockerignore
