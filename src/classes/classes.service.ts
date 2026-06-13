@@ -235,7 +235,10 @@ export class ClassesService {
     );
   };
 
-  getTeacherClassIds = (teacherId: string, schoolId: string): Promise<string[]> =>
+  getTeacherClassIds = (
+    teacherId: string,
+    schoolId: string,
+  ): Promise<string[]> =>
     this.getClassesForTeacher(teacherId, schoolId).then((classes) =>
       classes.map((c) => c.id),
     );

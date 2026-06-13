@@ -38,7 +38,9 @@ export class AuthService {
       .findByEmail(input.email)
       .then((existing) => {
         if (existing) {
-          this.logger.warn(`Registration failed: Email already exists: ${input.email}`);
+          this.logger.warn(
+            `Registration failed: Email already exists: ${input.email}`,
+          );
           throw new BadRequestException('User with this email already exists');
         }
         return this.hashData(input.password);
@@ -61,15 +63,21 @@ export class AuthService {
             this.mailService
               .sendVerificationEmail(user.email, raw)
               .catch((err) => {
-                 this.logger.error(`Failed to send verification email to ${user.email}`, err);
-                 return null;
+                this.logger.error(
+                  `Failed to send verification email to ${user.email}`,
+                  err,
+                );
+                return null;
               })
               .then(() => user),
           );
       })
       .then((user) => {
         this.logger.log(`User registered successfully: ${user.email}`);
-        return this.generateTokens(user).then((tokens) => ({ ...tokens, user }));
+        return this.generateTokens(user).then((tokens) => ({
+          ...tokens,
+          user,
+        }));
       });
   };
 
@@ -81,21 +89,29 @@ export class AuthService {
   };
 
   verifyEmail = (token: string) => {
-    return this.usersService.findByEmailVerificationToken(token).then((user) => {
-      if (!user) {
-        this.logger.warn(`Email verification failed: Invalid or expired token`);
-        throw new BadRequestException('Invalid or expired verification token');
-      }
-      return this.usersService
-        .update(user.id, {
-          isEmailVerified: true,
-          emailVerificationToken: null,
-        })
-        .then(() => {
-          this.logger.log(`Email verified successfully for user ID: ${user.id}`);
-          return true;
-        });
-    });
+    return this.usersService
+      .findByEmailVerificationToken(token)
+      .then((user) => {
+        if (!user) {
+          this.logger.warn(
+            `Email verification failed: Invalid or expired token`,
+          );
+          throw new BadRequestException(
+            'Invalid or expired verification token',
+          );
+        }
+        return this.usersService
+          .update(user.id, {
+            isEmailVerified: true,
+            emailVerificationToken: null,
+          })
+          .then(() => {
+            this.logger.log(
+              `Email verified successfully for user ID: ${user.id}`,
+            );
+            return true;
+          });
+      });
   };
 
   resendVerificationEmail = (email: string) => {
@@ -115,7 +131,9 @@ export class AuthService {
   refreshTokens = (userId: string, refreshToken: string) => {
     return this.usersService.findById(userId).then((user) => {
       if (!user || !user.refreshToken) {
-        this.logger.warn(`Suspicious refresh token attempt for user ID: ${userId}`);
+        this.logger.warn(
+          `Suspicious refresh token attempt for user ID: ${userId}`,
+        );
         throw new ForbiddenException('Access denied');
       }
 
@@ -123,7 +141,9 @@ export class AuthService {
         .compare(refreshToken, user.refreshToken)
         .then((matches: boolean) => {
           if (!matches) {
-            this.logger.warn(`Failed refresh token attempt (mismatch) for user ID: ${userId}`);
+            this.logger.warn(
+              `Failed refresh token attempt (mismatch) for user ID: ${userId}`,
+            );
             throw new ForbiddenException('Access denied');
           }
           this.logger.log(`Tokens refreshed for user ID: ${userId}`);
@@ -158,7 +178,9 @@ export class AuthService {
         .compare(password, user.passwordHash)
         .then((isValid: boolean) => {
           if (!isValid) {
-            this.logger.warn(`Failed login attempt (invalid password): ${email}`);
+            this.logger.warn(
+              `Failed login attempt (invalid password): ${email}`,
+            );
             throw new UnauthorizedException('Invalid credentials');
           }
           return user;
@@ -240,7 +262,9 @@ export class AuthService {
       }
 
       if (user.resetPasswordExpires < new Date()) {
-        this.logger.warn(`Failed password reset attempt (expired token) for user ID: ${user.id}`);
+        this.logger.warn(
+          `Failed password reset attempt (expired token) for user ID: ${user.id}`,
+        );
         throw new BadRequestException('Reset token has expired');
       }
 
@@ -253,11 +277,12 @@ export class AuthService {
             resetPasswordExpires: null,
           })
           .then(() => {
-            this.logger.log(`Password reset successfully for user ID: ${user.id}`);
+            this.logger.log(
+              `Password reset successfully for user ID: ${user.id}`,
+            );
             return true;
           });
       });
     });
   };
 }
-

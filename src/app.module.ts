@@ -41,7 +41,7 @@ import { GqlThrottlerGuard } from './common/guards/gql-throttler.guard';
       useFactory: async (config: ConfigService) => {
         const host = config.get<string>('SUPABASE_DB_HOST') || '';
         let resolvedHost = host;
-        
+
         try {
           if (host && !/^[0-9.]+$/.test(host)) {
             const dns = await import('dns');
@@ -49,7 +49,10 @@ import { GqlThrottlerGuard } from './common/guards/gql-throttler.guard';
             resolvedHost = address;
           }
         } catch (err) {
-          console.warn(`Failed to resolve IPv4 for ${host}, falling back to original host`, err);
+          console.warn(
+            `Failed to resolve IPv4 for ${host}, falling back to original host`,
+            err,
+          );
         }
 
         return {

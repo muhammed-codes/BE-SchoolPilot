@@ -1,6 +1,10 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { UseGuards, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { GraphQLUpload, Upload } from 'graphql-upload-ts';
+import {
+  UseGuards,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
+
 import { SchoolsService } from './schools.service';
 import { School } from './entities/school.entity';
 import { CreateSchoolInput } from './dto/create-school.input';
@@ -67,7 +71,7 @@ export class SchoolsResolver {
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   uploadSchoolLogo(
     @Args('schoolId') schoolId: string,
-    @Args({ name: 'file', type: () => GraphQLUpload }) file: Upload,
+    @Args('imageUrl') imageUrl: string,
     @CurrentUser() user: { role: UserRole; schoolId: string },
   ) {
     if (user.role === UserRole.SCHOOL_ADMIN && user.schoolId !== schoolId) {
@@ -75,7 +79,7 @@ export class SchoolsResolver {
         'You can only upload logo for your own school',
       );
     }
-    return this.schoolsService.uploadLogo(schoolId, file);
+    return this.schoolsService.uploadLogo(schoolId, imageUrl);
   }
 
   @Mutation(() => School)
@@ -83,7 +87,7 @@ export class SchoolsResolver {
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   uploadSchoolStamp(
     @Args('schoolId') schoolId: string,
-    @Args({ name: 'file', type: () => GraphQLUpload }) file: Upload,
+    @Args('imageUrl') imageUrl: string,
     @CurrentUser() user: { role: UserRole; schoolId: string },
   ) {
     if (user.role === UserRole.SCHOOL_ADMIN && user.schoolId !== schoolId) {
@@ -91,7 +95,7 @@ export class SchoolsResolver {
         'You can only upload stamp for your own school',
       );
     }
-    return this.schoolsService.uploadStamp(schoolId, file);
+    return this.schoolsService.uploadStamp(schoolId, imageUrl);
   }
 
   @Mutation(() => School)

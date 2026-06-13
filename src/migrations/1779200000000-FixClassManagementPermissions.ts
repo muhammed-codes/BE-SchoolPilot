@@ -5,12 +5,14 @@ export class FixClassManagementPermissions1779200000000 implements MigrationInte
 
   public up(queryRunner: QueryRunner): Promise<void> {
     return queryRunner
-      .query(`
+      .query(
+        `
         UPDATE "role_permissions"
         SET "canUpdate" = true
         WHERE "resource" = 'classes'
           AND "role" IN ('school_admin', 'principal', 'vice_principal', 'head_teacher', 'class_teacher')
-      `)
+      `,
+      )
       .then(() =>
         queryRunner.query(`
           UPDATE "role_permissions"
@@ -24,12 +26,14 @@ export class FixClassManagementPermissions1779200000000 implements MigrationInte
 
   public down(queryRunner: QueryRunner): Promise<void> {
     return queryRunner
-      .query(`
+      .query(
+        `
         UPDATE "role_permissions"
         SET "canUpdate" = false
         WHERE "resource" = 'classes'
           AND "role" IN ('principal', 'vice_principal', 'head_teacher', 'class_teacher')
-      `)
+      `,
+      )
       .then(() => undefined);
   }
 }

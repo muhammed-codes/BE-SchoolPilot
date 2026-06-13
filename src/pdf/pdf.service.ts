@@ -116,8 +116,7 @@ export class PdfService {
     return puppeteer
       .launch({
         headless: true,
-        executablePath:
-          process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
       })
       .then((browser) => {
@@ -237,7 +236,8 @@ export class PdfService {
             };
           });
 
-        const sheetScoreComponents = studentResult.resultSheet?.scoreComponents || [];
+        const sheetScoreComponents =
+          studentResult.resultSheet?.scoreComponents || [];
         const percentage = this.computePercentage(
           studentResult.totalScore,
           (studentResult.subjectScores || []).length,
@@ -246,7 +246,8 @@ export class PdfService {
         const prefix = this.formatNamePrefix(
           student.currentClass?.classTeacher?.namePrefix,
         );
-        const rawClassTeacherName = student.currentClass?.classTeacher?.fullName || null;
+        const rawClassTeacherName =
+          student.currentClass?.classTeacher?.fullName || null;
         const classTeacherName =
           rawClassTeacherName && prefix
             ? `${prefix} ${rawClassTeacherName}`

@@ -12,4 +12,3 @@ export class ResetPasswordInput {
   @MinLength(8)
   newPassword: string;
 }
-

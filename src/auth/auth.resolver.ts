@@ -84,7 +84,7 @@ export class AuthResolver {
   }
 
   private extractSubFromRefreshToken = (token: string): string => {
-    const payload = this.jwtService.decode(token) as { sub?: string } | null;
+    const payload = this.jwtService.decode(token);
 
     if (!payload?.sub) {
       throw new ForbiddenException('Invalid refresh token');
@@ -93,4 +93,3 @@ export class AuthResolver {
     return payload.sub;
   };
 }
-

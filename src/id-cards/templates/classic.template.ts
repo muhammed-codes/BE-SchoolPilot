@@ -16,9 +16,9 @@ export const classicTemplate = (
   const qr = data.qrCodeBase64;
   const session = data.session;
 
-  const dob = isStudent ? (data as StudentCardData).dateOfBirth : null;
-  const gender = isStudent ? (data as StudentCardData).gender : null;
-  const address = isStudent ? (data as StudentCardData).address : null;
+  const dob = isStudent ? data.dateOfBirth : null;
+  const gender = isStudent ? data.gender : null;
+  const address = isStudent ? data.address : null;
 
   const infoRow = (label: string, value: string) => `
     <tr>

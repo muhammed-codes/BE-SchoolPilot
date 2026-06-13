@@ -238,11 +238,11 @@ type Mutation {
   updateStudent(id: String!, input: UpdateStudentInput!): Student!
   updateTotalSchoolDays(days: Int!, termId: String!): Term!
   updateUser(id: String!, input: UpdateUserInput!): User!
-  uploadAvatar(file: Upload!): User!
-  uploadPassportPhoto(file: Upload!, studentId: String!): Student!
-  uploadSchoolLogo(file: Upload!, schoolId: String!): School!
-  uploadSchoolStamp(file: Upload!, schoolId: String!): School!
-  uploadUserAvatar(file: Upload!, userId: String!): User!
+  uploadAvatar(imageUrl: String!): User!
+  uploadPassportPhoto(imageUrl: String!, studentId: String!): Student!
+  uploadSchoolLogo(imageUrl: String!, schoolId: String!): School!
+  uploadSchoolStamp(imageUrl: String!, schoolId: String!): School!
+  uploadUserAvatar(imageUrl: String!, userId: String!): User!
   verifyEmail(token: String!): Boolean!
 }
 

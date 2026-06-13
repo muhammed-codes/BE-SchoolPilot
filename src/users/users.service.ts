@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { Upload } from 'graphql-upload-ts';
+
 import { User } from './entities/user.entity';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
@@ -59,7 +59,6 @@ export class UsersService {
       where: { emailVerificationToken: hashedToken },
     });
   };
-
 
   create = (data: Partial<User>) => {
     const user = this.usersRepository.create(data);
@@ -217,7 +216,9 @@ export class UsersService {
         requesterRole === UserRole.SCHOOL_ADMIN &&
         user.schoolId !== requesterSchoolId
       ) {
-        throw new ForbiddenException('You can only update users in your own school');
+        throw new ForbiddenException(
+          'You can only update users in your own school',
+        );
       }
 
       if (input.role && !isAdmin) {
@@ -248,7 +249,12 @@ export class UsersService {
     });
   };
 
-  assignSchool = (userId: string, schoolId: string, requesterRole: UserRole, requesterSchoolId: string) => {
+  assignSchool = (
+    userId: string,
+    schoolId: string,
+    requesterRole: UserRole,
+    requesterSchoolId: string,
+  ) => {
     return this.findById(userId).then((user) => {
       if (!user) throw new NotFoundException('User not found');
 
@@ -256,7 +262,9 @@ export class UsersService {
         requesterRole === UserRole.SCHOOL_ADMIN &&
         (user.schoolId !== requesterSchoolId || schoolId !== requesterSchoolId)
       ) {
-        throw new ForbiddenException('You can only reassign users within your own school');
+        throw new ForbiddenException(
+          'You can only reassign users within your own school',
+        );
       }
 
       // Prevent assigning duplicate leadership roles into the same school.
@@ -301,30 +309,21 @@ export class UsersService {
     });
   };
 
-  updateAvatar = (userId: string, file: Upload) => {
+  updateAvatar = (userId: string, imageUrl: string) => {
     return this.findById(userId).then((user) => {
       if (!user) throw new NotFoundException('User not found');
 
-      const deleteOld = user.avatarPublicId
-        ? this.uploadService.deleteFile(user.avatarPublicId)
-        : Promise.resolve();
-
-      return deleteOld
-        .then(() => this.uploadService.uploadFile(file, 'avatars'))
-        .then((result) =>
-          this.usersRepository
-            .update(userId, {
-              avatarUrl: result.url,
-              avatarPublicId: result.publicId,
-            })
-            .then(() => this.findById(userId)),
-        );
+      return this.usersRepository
+        .update(userId, {
+          avatarUrl: imageUrl,
+        })
+        .then(() => this.findById(userId));
     });
   };
 
   updateUserAvatarByAdmin = (
     userId: string,
-    file: Upload,
+    imageUrl: string,
     requesterRole: UserRole,
     requesterSchoolId: string,
   ) => {
@@ -340,7 +339,7 @@ export class UsersService {
         );
       }
 
-      return this.updateAvatar(userId, file);
+      return this.updateAvatar(userId, imageUrl);
     });
   };
 
