@@ -77,4 +77,3 @@ export class User extends BaseEntity {
     return `${this.firstName} ${this.lastName}`;
   }
 }
-

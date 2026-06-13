@@ -8,7 +8,7 @@ export enum AppResource {
   SUBJECTS = 'subjects',
   USERS = 'users',
   SETTINGS = 'settings',
-  ID_CARDS = 'id_cards'
+  ID_CARDS = 'id_cards',
 }
 
 registerEnumType(AppResource, { name: 'AppResource' });

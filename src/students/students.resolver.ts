@@ -1,7 +1,7 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
 import { UseGuards } from '@nestjs/common';
-import { GraphQLUpload, Upload } from 'graphql-upload-ts';
+
 import { StudentsService } from './students.service';
 import { Student } from './entities/student.entity';
 import { CreateStudentInput } from './dto/create-student.input';
@@ -126,12 +126,12 @@ export class StudentsResolver {
   @RequirePermission(AppResource.STUDENTS, 'canCreate')
   uploadPassportPhoto(
     @Args('studentId') studentId: string,
-    @Args('file', { type: () => GraphQLUpload }) file: Upload,
+    @Args('imageUrl') imageUrl: string,
     @CurrentUser() user: { schoolId: string },
   ) {
     return this.studentsService.uploadPassportPhoto(
       studentId,
-      file,
+      imageUrl,
       user.schoolId,
     );
   }

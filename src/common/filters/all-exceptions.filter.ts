@@ -5,7 +5,11 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { GqlExceptionFilter, GqlArgumentsHost, GqlContextType } from '@nestjs/graphql';
+import {
+  GqlExceptionFilter,
+  GqlArgumentsHost,
+  GqlContextType,
+} from '@nestjs/graphql';
 
 @Catch()
 export class AllExceptionsFilter implements GqlExceptionFilter {
@@ -28,7 +32,7 @@ export class AllExceptionsFilter implements GqlExceptionFilter {
       const req = ctx.req;
       const requestPath = req ? req.url : 'GraphQL';
       const requestIp = req ? req.ip : 'unknown';
-      
+
       this.logger.error(
         `GraphQL Error - Path: ${requestPath} - IP: ${requestIp} - Status: ${status} - Message: ${message}`,
         exception instanceof Error ? exception.stack : String(exception),
@@ -59,5 +63,3 @@ export class AllExceptionsFilter implements GqlExceptionFilter {
     }
   }
 }
-
-

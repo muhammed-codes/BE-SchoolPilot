@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, ILike, EntityManager, In } from 'typeorm';
-import { Upload } from 'graphql-upload-ts';
+
 import { Student } from './entities/student.entity';
 import { StudentParent } from './entities/student-parent.entity';
 import { AdmissionSequence } from './entities/admission-sequence.entity';
@@ -256,22 +256,17 @@ export class StudentsService {
     );
   };
 
-  uploadPassportPhoto = (studentId: string, file: Upload, schoolId: string) => {
-    return this.getStudentById(studentId, schoolId).then((student) => {
-      const deleteOld = student.passportPhotoPublicId
-        ? this.uploadService.deleteFile(student.passportPhotoPublicId)
-        : Promise.resolve();
-
-      return deleteOld
-        .then(() => this.uploadService.uploadFile(file, 'student-passports'))
-        .then((result) =>
-          this.studentsRepository
-            .update(studentId, {
-              passportPhotoUrl: result.url,
-              passportPhotoPublicId: result.publicId,
-            })
-            .then(() => this.getStudentById(studentId, schoolId)),
-        );
+  uploadPassportPhoto = (
+    studentId: string,
+    imageUrl: string,
+    schoolId: string,
+  ) => {
+    return this.getStudentById(studentId, schoolId).then(() => {
+      return this.studentsRepository
+        .update(studentId, {
+          passportPhotoUrl: imageUrl,
+        })
+        .then(() => this.getStudentById(studentId, schoolId));
     });
   };
 
@@ -342,7 +337,11 @@ export class StudentsService {
     });
   };
 
-  searchStudentsForTeacher = (query: string, teacherId: string, schoolId: string) =>
+  searchStudentsForTeacher = (
+    query: string,
+    teacherId: string,
+    schoolId: string,
+  ) =>
     this.classesService
       .getTeacherClassIds(teacherId, schoolId)
       .then((classIds) => this.searchStudents(query, schoolId, classIds));

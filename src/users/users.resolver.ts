@@ -1,7 +1,7 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
 import { UseGuards, ForbiddenException } from '@nestjs/common';
-import { GraphQLUpload, Upload } from 'graphql-upload-ts';
+
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
 import { CreateUserInput } from './dto/create-user.input';
@@ -90,7 +90,12 @@ export class UsersResolver {
     @Args('schoolId') schoolId: string,
     @CurrentUser() user: { role: UserRole; schoolId: string },
   ) {
-    return this.usersService.assignSchool(userId, schoolId, user.role, user.schoolId);
+    return this.usersService.assignSchool(
+      userId,
+      schoolId,
+      user.role,
+      user.schoolId,
+    );
   }
 
   @Mutation(() => User)
@@ -101,7 +106,13 @@ export class UsersResolver {
     @Args('input') input: UpdateUserInput,
     @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
   ) {
-    return this.usersService.updateUser(id, input, user.sub, user.role, user.schoolId);
+    return this.usersService.updateUser(
+      id,
+      input,
+      user.sub,
+      user.role,
+      user.schoolId,
+    );
   }
 
   @Mutation(() => Boolean)
@@ -119,10 +130,10 @@ export class UsersResolver {
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission(AppResource.USERS, 'canCreate')
   uploadAvatar(
-    @Args({ name: 'file', type: () => GraphQLUpload }) file: Upload,
+    @Args('imageUrl') imageUrl: string,
     @CurrentUser() user: { sub: string },
   ) {
-    return this.usersService.updateAvatar(user.sub, file);
+    return this.usersService.updateAvatar(user.sub, imageUrl);
   }
 
   @Mutation(() => User)
@@ -130,12 +141,12 @@ export class UsersResolver {
   @RequirePermission(AppResource.USERS, 'canCreate')
   uploadUserAvatar(
     @Args('userId') userId: string,
-    @Args({ name: 'file', type: () => GraphQLUpload }) file: Upload,
+    @Args('imageUrl') imageUrl: string,
     @CurrentUser() user: { role: UserRole; schoolId: string },
   ) {
     return this.usersService.updateUserAvatarByAdmin(
       userId,
-      file,
+      imageUrl,
       user.role,
       user.schoolId,
     );

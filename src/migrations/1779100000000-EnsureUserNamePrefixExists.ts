@@ -5,7 +5,8 @@ export class EnsureUserNamePrefixExists1779100000000 implements MigrationInterfa
 
   public up(queryRunner: QueryRunner): Promise<void> {
     return queryRunner
-      .query(`
+      .query(
+        `
         DO $$
         BEGIN
           IF NOT EXISTS (
@@ -18,7 +19,8 @@ export class EnsureUserNamePrefixExists1779100000000 implements MigrationInterfa
           END IF;
         END
         $$;
-      `)
+      `,
+      )
       .then(() =>
         queryRunner.query(`
           ALTER TABLE "users"
@@ -30,10 +32,12 @@ export class EnsureUserNamePrefixExists1779100000000 implements MigrationInterfa
 
   public down(queryRunner: QueryRunner): Promise<void> {
     return queryRunner
-      .query(`
+      .query(
+        `
         ALTER TABLE "users"
         DROP COLUMN IF EXISTS "namePrefix"
-      `)
+      `,
+      )
       .then(() =>
         queryRunner.query(`
           DO $$

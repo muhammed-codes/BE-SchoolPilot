@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
-import { Upload } from 'graphql-upload-ts';
+
 import { School } from './entities/school.entity';
 import { CreateSchoolInput } from './dto/create-school.input';
 import { UpdateSchoolInput } from './dto/update-school.input';
@@ -76,41 +76,23 @@ export class SchoolsService {
       .then(() => this.findById(id));
   };
 
-  uploadLogo = (schoolId: string, file: Upload) => {
-    return this.findById(schoolId).then((school) => {
-      const deleteOld = school.logoPublicId
-        ? this.uploadService.deleteFile(school.logoPublicId)
-        : Promise.resolve();
-
-      return deleteOld
-        .then(() => this.uploadService.uploadFile(file, 'schools/logos'))
-        .then((result) =>
-          this.schoolsRepository
-            .update(schoolId, {
-              logoUrl: result.url,
-              logoPublicId: result.publicId,
-            })
-            .then(() => this.findById(schoolId)),
-        );
+  uploadLogo = (schoolId: string, imageUrl: string) => {
+    return this.findById(schoolId).then(() => {
+      return this.schoolsRepository
+        .update(schoolId, {
+          logoUrl: imageUrl,
+        })
+        .then(() => this.findById(schoolId));
     });
   };
 
-  uploadStamp = (schoolId: string, file: Upload) => {
-    return this.findById(schoolId).then((school) => {
-      const deleteOld = school.stampPublicId
-        ? this.uploadService.deleteFile(school.stampPublicId)
-        : Promise.resolve();
-
-      return deleteOld
-        .then(() => this.uploadService.uploadFile(file, 'schools/stamps'))
-        .then((result) =>
-          this.schoolsRepository
-            .update(schoolId, {
-              stampUrl: result.url,
-              stampPublicId: result.publicId,
-            })
-            .then(() => this.findById(schoolId)),
-        );
+  uploadStamp = (schoolId: string, imageUrl: string) => {
+    return this.findById(schoolId).then(() => {
+      return this.schoolsRepository
+        .update(schoolId, {
+          stampUrl: imageUrl,
+        })
+        .then(() => this.findById(schoolId));
     });
   };
 

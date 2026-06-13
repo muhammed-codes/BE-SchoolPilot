@@ -580,19 +580,28 @@ export class ResultsService {
       });
   };
 
-  saveTeacherRemark = (subjectScoreId: string, remark: string, userId: string, schoolId: string) => {
+  saveTeacherRemark = (
+    subjectScoreId: string,
+    remark: string,
+    userId: string,
+    schoolId: string,
+  ) => {
     return this.subjectScoreRepo
       .findOne({ where: { id: subjectScoreId }, relations: ['studentResult'] })
       .then((score) => {
         if (!score || score.studentResult.schoolId !== schoolId) {
-           throw new NotFoundException('Subject score not found');
+          throw new NotFoundException('Subject score not found');
         }
         score.teacherRemark = remark;
         return this.subjectScoreRepo.save(score);
       });
   };
 
-  savePrincipalRemark = (studentResultId: string, remark: string, schoolId: string) => {
+  savePrincipalRemark = (
+    studentResultId: string,
+    remark: string,
+    schoolId: string,
+  ) => {
     return this.studentResultRepo
       .findOne({ where: { id: studentResultId, schoolId } })
       .then((result) => {
@@ -602,7 +611,12 @@ export class ResultsService {
       });
   };
 
-  saveClassTeacherRemark = (studentResultId: string, remark: string, userId: string, schoolId: string) => {
+  saveClassTeacherRemark = (
+    studentResultId: string,
+    remark: string,
+    userId: string,
+    schoolId: string,
+  ) => {
     return this.studentResultRepo
       .findOne({ where: { id: studentResultId, schoolId } })
       .then((result) => {
@@ -611,7 +625,6 @@ export class ResultsService {
         return this.studentResultRepo.save(result);
       });
   };
-
 
   getResultSheet = async (
     id: string,
@@ -646,9 +659,10 @@ export class ResultsService {
 
       if (!isClassTeacher && role === UserRole.SUBJECT_TEACHER) {
         // Filter classSubjects
-        sheet.classEntity.classSubjects = sheet.classEntity.classSubjects.filter(
-          (cs) => cs.subjectTeacherId === userId,
-        );
+        sheet.classEntity.classSubjects =
+          sheet.classEntity.classSubjects.filter(
+            (cs) => cs.subjectTeacherId === userId,
+          );
 
         // Filter subjectScores
         const allowedSubjectIds = sheet.classEntity.classSubjects.map(
@@ -663,7 +677,10 @@ export class ResultsService {
       }
     }
 
-    this.applyComputedMetrics(sheet.scoreComponents || [], sheet.studentResults || []);
+    this.applyComputedMetrics(
+      sheet.scoreComponents || [],
+      sheet.studentResults || [],
+    );
     return sheet;
   };
 
