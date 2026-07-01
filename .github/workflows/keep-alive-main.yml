@@ -15,7 +15,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install Supabase client
         run: npm install @supabase/supabase-js
@@ -26,6 +26,11 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           node -e "
+            if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+              console.error('❌ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. Did you add them to GitHub Secrets?');
+              process.exit(1);
+            }
+            
             const { createClient } = require('@supabase/supabase-js');
             const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -35,9 +40,13 @@ jobs:
               .limit(1)
               .then(({ data, error }) => {
                 if (error) {
-                  console.error('Ping failed:', error.message);
+                  console.error('❌ Ping failed:', error.message);
+                  console.error('Hint: Did you create the `keep-alive` table in your Supabase project?');
                   process.exit(1);
                 }
-                console.log('Supabase (main & development) is alive. Result:', JSON.stringify(data));
+                console.log('✅ Supabase (main & development) is alive. Result:', JSON.stringify(data));
+              }).catch(err => {
+                console.error('❌ Unexpected error:', err.message);
+                process.exit(1);
               });
           "
