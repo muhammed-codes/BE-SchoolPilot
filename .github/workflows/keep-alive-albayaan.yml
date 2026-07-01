@@ -1,0 +1,26 @@
+name: Supabase Keep-Alive (Albayaan)
+
+on:
+  schedule:
+    - cron: '0 17 * * 1,4' # Runs at 17:00 UTC (6 PM WAT) every Monday and Thursday
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase to prevent auto-pause (Albayaan)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL_ALBAYAAN }}/rest/v1/profiles?limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_ALBAYAAN }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_ALBAYAAN }}")
+
+          echo "Response status: $STATUS"
+
+          if [ "$STATUS" -lt 200 ] || [ "$STATUS" -ge 300 ]; then
+            echo "Ping failed with status $STATUS"
+            exit 1
+          fi
+
+          echo "Supabase (albayaan) is alive."
