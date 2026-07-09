@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { StudentAttendance } from './entities/student-attendance.entity';
 import { StaffAttendance } from './entities/staff-attendance.entity';
@@ -21,6 +22,7 @@ import { UploadModule } from '../upload/upload.module';
       Term,
     ]),
     UploadModule,
+    JwtModule.register({}),
   ],
   providers: [AttendanceService, AttendanceResolver],
   exports: [AttendanceService],

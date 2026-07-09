@@ -19,6 +19,8 @@ import {
 } from './dto/attendance.dto';
 import { AttendanceStatus, UserRole } from '../common/enums';
 import { UploadService } from '../upload/upload.service';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AttendanceService {
@@ -36,6 +38,8 @@ export class AttendanceService {
     @InjectRepository(Term)
     private readonly termRepo: Repository<Term>,
     private readonly uploadService: UploadService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   markStudentAttendance = (
@@ -345,6 +349,64 @@ export class AttendanceService {
             const markedClassIds = new Set(records.map((r) => r.classId));
             return classes.filter((c) => !markedClassIds.has(c.id));
           });
+      });
+  };
+
+  generateStaffQrCode = (schoolId: string) => {
+    const payload = { schoolId, purpose: 'staff_attendance' };
+    const secret = this.configService.getOrThrow<string>('JWT_ACCESS_SECRET');
+    return this.jwtService.sign(payload, { secret, expiresIn: '30s' });
+  };
+
+  markAttendanceWithQr = (token: string, userId: string, schoolId: string) => {
+    const secret = this.configService.getOrThrow<string>('JWT_ACCESS_SECRET');
+    return this.jwtService
+      .verifyAsync(token, { secret })
+      .catch(() => {
+        throw new BadRequestException('QR Code has expired, please scan again');
+      })
+      .then((decodedToken) => {
+        if (decodedToken.schoolId !== schoolId || decodedToken.purpose !== 'staff_attendance') {
+          throw new ForbiddenException('Invalid QR code');
+        }
+
+        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+
+        return Promise.all([
+          this.staffAttendanceRepo.findOne({ where: { userId, date: today } }),
+          this.schoolRepo.findOne({ where: { id: schoolId } }),
+        ]).then(([record, school]) => {
+          if (!record || !record.clockInTime) {
+            let isLate = false;
+            if (school && school.schoolStartTime) {
+              const [hours, minutes] = school.schoolStartTime.split(':').map(Number);
+              const startDateTime = new Date();
+              startDateTime.setHours(hours, minutes, 0, 0);
+              if (now > startDateTime) {
+                isLate = true;
+              }
+            }
+            if (record) {
+              record.clockInTime = now;
+              record.isLate = isLate;
+              return this.staffAttendanceRepo.save(record);
+            } else {
+              const newRecord = this.staffAttendanceRepo.create({
+                userId,
+                schoolId,
+                date: today,
+                clockInTime: now,
+                isManual: false,
+                isLate,
+              });
+              return this.staffAttendanceRepo.save(newRecord);
+            }
+          } else {
+            record.clockOutTime = now;
+            return this.staffAttendanceRepo.save(record);
+          }
+        });
       });
   };
 }

@@ -143,4 +143,35 @@ export class AttendanceResolver {
       user.schoolId,
     );
   }
+
+  @Query(() => String)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
+  activeStaffQrCode(
+    @CurrentUser() user: { schoolId: string; role: UserRole },
+  ) {
+    if (
+      !LEADERSHIP_ROLES.includes(user.role) &&
+      user.role !== UserRole.SCHOOL_ADMIN &&
+      user.role !== UserRole.SUPER_ADMIN &&
+      user.role !== UserRole.ADMIN
+    ) {
+      throw new ForbiddenException('Only administrators can generate the QR code');
+    }
+    return this.attendanceService.generateStaffQrCode(user.schoolId);
+  }
+
+  @Mutation(() => StaffAttendance)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
+  markAttendanceWithQr(
+    @Args('token') token: string,
+    @CurrentUser() user: { sub: string; schoolId: string },
+  ) {
+    return this.attendanceService.markAttendanceWithQr(
+      token,
+      user.sub,
+      user.schoolId,
+    );
+  }
 }
