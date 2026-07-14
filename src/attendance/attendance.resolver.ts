@@ -14,7 +14,6 @@ import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission } from '../common/decorators';
 import { UserRole } from '../common/enums';
 import {
-  SCHOOL_STAFF_ROLES,
   LEADERSHIP_ROLES,
   TEACHER_ROLES,
 } from '../common/constants/roles.constant';
@@ -147,16 +146,15 @@ export class AttendanceResolver {
   @Query(() => String)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.ATTENDANCE, 'canRead')
-  activeStaffQrCode(
-    @CurrentUser() user: { schoolId: string; role: UserRole },
-  ) {
+  activeStaffQrCode(@CurrentUser() user: { schoolId: string; role: UserRole }) {
     if (
       !LEADERSHIP_ROLES.includes(user.role) &&
       user.role !== UserRole.SCHOOL_ADMIN &&
-      user.role !== UserRole.SUPER_ADMIN &&
-      user.role !== UserRole.ADMIN
+      user.role !== UserRole.SUPER_ADMIN
     ) {
-      throw new ForbiddenException('Only administrators can generate the QR code');
+      throw new ForbiddenException(
+        'Only administrators can generate the QR code',
+      );
     }
     return this.attendanceService.generateStaffQrCode(user.schoolId);
   }
