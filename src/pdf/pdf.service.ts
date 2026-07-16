@@ -114,24 +114,47 @@ export class PdfService {
   generatePdfFromHtml = (html: string): Promise<Buffer> => {
     let browserInstance: Awaited<ReturnType<typeof puppeteer.launch>>;
 
-    return (process.env.VERCEL
-      ? chromium.executablePath()
-      : Promise.resolve(process.env.PUPPETEER_EXECUTABLE_PATH || undefined)
-    ).then((executablePath) =>
-      puppeteer.launch({
-        headless: true,
-        executablePath,
-        args: process.env.VERCEL
-          ? chromium.args
-          : ['--no-sandbox', '--disable-setuid-sandbox'],
-      })
-    )
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    const resolveLaunchConfig = (): Promise<{
+      executablePath: string;
+      args: string[];
+    }> => {
+      if (isProduction) {
+        return chromium.executablePath().then((executablePath) => ({
+          executablePath,
+          args: chromium.args,
+        }));
+      }
+
+      const localPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+      if (!localPath) {
+        return Promise.reject(
+          new Error(
+            'PUPPETEER_EXECUTABLE_PATH is not set in .env. Run `which google-chrome-stable` and add the result.',
+          ),
+        );
+      }
+      return Promise.resolve({
+        executablePath: localPath,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      });
+    };
+
+    return resolveLaunchConfig()
+      .then(({ executablePath, args }) =>
+        puppeteer.launch({
+          headless: true,
+          executablePath,
+          args,
+        }),
+      )
       .then((browser) => {
         browserInstance = browser;
         return browser.newPage();
       })
-      .then((page) => {
-        return page.setContent(html, { waitUntil: 'load' }).then(() =>
+      .then((page) =>
+        page.setContent(html, { waitUntil: 'load' }).then(() =>
           page.pdf({
             format: 'A4',
             printBackground: true,
@@ -142,11 +165,11 @@ export class PdfService {
               right: '15mm',
             },
           }),
-        );
-      })
-      .then((pdfBuffer) => {
-        return browserInstance.close().then(() => Buffer.from(pdfBuffer));
-      })
+        ),
+      )
+      .then((pdfBuffer) =>
+        browserInstance.close().then(() => Buffer.from(pdfBuffer)),
+      )
       .catch((error) => {
         if (browserInstance) {
           browserInstance
@@ -221,7 +244,8 @@ export class PdfService {
             const componentScores = scoreComponents.map((componentDef) => {
               const matchingScore = (score.scores || []).find(
                 (componentScore) =>
-                  componentScore.component === componentDef.component,
+                  String(componentScore.component) ===
+                  String(componentDef.component),
               );
               if (!matchingScore) {
                 return { component: componentDef.component, score: null };
