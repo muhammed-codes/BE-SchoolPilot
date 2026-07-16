@@ -531,7 +531,7 @@ export class ResultsService {
       .then((sheet) => {
         if (!sheet) throw new NotFoundException('Result sheet not found');
 
-        const totalMaxScore = sheet.scoreComponents.reduce(
+        const totalMaxPerSubject = sheet.scoreComponents.reduce(
           (sum, sc) => sum + sc.maxScore,
           0,
         );
@@ -550,29 +550,32 @@ export class ResultsService {
               sr.totalScore = subjectTotal;
 
               const subjectCount = sr.subjectScores.length || 1;
-              const overallMaxScore = totalMaxScore * subjectCount;
+              const overallMaxScore = totalMaxPerSubject * subjectCount;
               sr.grade = calculateGrade(
                 subjectTotal,
                 overallMaxScore,
                 sheet.gradingSystem,
               );
+              sr.percentage = this.computeStudentPercentage(
+                subjectTotal,
+                subjectCount,
+                totalMaxPerSubject,
+              );
             });
 
             studentResults.sort(
-              (a, b) => (b.totalScore || 0) - (a.totalScore || 0),
+              (a, b) => (b.percentage ?? -1) - (a.percentage ?? -1),
             );
 
-            let currentPosition = 1;
             studentResults.forEach((sr, index) => {
               if (
                 index > 0 &&
-                sr.totalScore === studentResults[index - 1].totalScore
+                sr.percentage === studentResults[index - 1].percentage
               ) {
                 sr.position = studentResults[index - 1].position;
               } else {
-                sr.position = currentPosition;
+                sr.position = index + 1;
               }
-              currentPosition = index + 2;
             });
 
             return this.studentResultRepo.save(studentResults);
@@ -796,12 +799,16 @@ export class ResultsService {
       .find({ where: { resultSheetId: sheet.id } })
       .then((results) => {
         const studentIds = results.map((r) => r.studentId);
+        if (studentIds.length === 0) return Promise.resolve();
+
         return this.studentParentRepo
           .find({ where: studentIds.map((sid) => ({ studentId: sid })) })
           .then((parentLinks) => {
             const parentIds = [
               ...new Set(parentLinks.map((pl) => pl.parentId)),
             ];
+            if (parentIds.length === 0) return Promise.resolve();
+
             return this.userRepo
               .find({ where: parentIds.map((pid) => ({ id: pid })) })
               .then((parents) => {
