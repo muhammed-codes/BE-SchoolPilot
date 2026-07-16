@@ -10,51 +10,51 @@ import { Subject } from '../../subjects/entities/subject.entity';
 export class SubjectScore extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
-  studentResultId: string;
+  studentResultId!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  subjectId: string;
+  subjectId!: string;
 
   @Field(() => Subject, { nullable: true })
   @ManyToOne(() => Subject, { nullable: true, eager: false })
   @JoinColumn({ name: 'subjectId' })
-  subject: Subject;
+  subject!: Subject;
 
   @Field()
   @Column({ type: 'uuid' })
-  resultSheetId: string;
+  resultSheetId!: string;
 
   @Field(() => [ComponentScore], { nullable: true })
   @Column({ type: 'jsonb', nullable: true })
-  scores: ComponentScore[];
+  scores!: ComponentScore[];
 
   @Field(() => Float, { nullable: true })
   @Column({ type: 'float', nullable: true })
-  totalScore: number;
+  totalScore!: number;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  grade: string;
+  grade!: string;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  teacherRemark: string;
+  teacherRemark!: string;
 
   @Field()
   @Column({ default: false })
-  isSubmitted: boolean;
+  isSubmitted!: boolean;
 
   @Field({ nullable: true })
   @Column({ type: 'timestamp', nullable: true })
-  submittedAt: Date;
+  submittedAt!: Date;
 
   @Field()
   @Column({ type: 'uuid' })
-  enteredByUserId: string;
+  enteredByUserId!: string;
 
   @Field(() => StudentResult)
   @ManyToOne(() => StudentResult, (sr) => sr.subjectScores)
   @JoinColumn({ name: 'studentResultId' })
-  studentResult: StudentResult;
+  studentResult!: StudentResult;
 }

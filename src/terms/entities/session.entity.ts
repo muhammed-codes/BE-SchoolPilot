@@ -8,17 +8,17 @@ import { Term } from './term.entity';
 export class Session extends BaseEntity {
   @Field()
   @Column()
-  name: string;
+  name!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  schoolId: string;
+  schoolId!: string;
 
   @Field()
   @Column({ default: false })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Field(() => [Term], { nullable: true })
   @OneToMany(() => Term, (term) => term.session, { eager: false })
-  terms: Term[];
+  terms!: Term[];
 }

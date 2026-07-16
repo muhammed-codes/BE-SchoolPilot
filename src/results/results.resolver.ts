@@ -250,4 +250,43 @@ export class ResultsResolver {
       user.schoolId,
     );
   }
+
+  @Query(() => [ResultSheet])
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canRead')
+  archivedResultSheets(
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+    @Args('status', { type: () => ResultStatus, nullable: true })
+    status?: ResultStatus,
+  ) {
+    return this.resultsService.getArchivedResultSheets(
+      user.schoolId,
+      user.sub,
+      user.role,
+      status,
+    );
+  }
+
+  @Mutation(() => ResultSheet)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canUpdate')
+  archiveResultSheet(
+    @Args('resultSheetId') resultSheetId: string,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.resultsService.archiveResultSheet(resultSheetId, user.schoolId);
+  }
+
+  @Mutation(() => ResultSheet)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canUpdate')
+  unarchiveResultSheet(
+    @Args('resultSheetId') resultSheetId: string,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.resultsService.unarchiveResultSheet(
+      resultSheetId,
+      user.schoolId,
+    );
+  }
 }

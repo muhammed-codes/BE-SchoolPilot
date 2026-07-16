@@ -10,28 +10,28 @@ import { User } from '../../users/entities/user.entity';
 export class ClassSubject extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
-  classId: string;
+  classId!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  subjectId: string;
+  subjectId!: string;
 
   @Field({ nullable: true })
   @Column({ type: 'uuid', nullable: true })
-  subjectTeacherId: string;
+  subjectTeacherId!: string;
 
   @Field(() => ClassEntity)
   @ManyToOne(() => ClassEntity, (c) => c.classSubjects)
   @JoinColumn({ name: 'classId' })
-  classEntity: ClassEntity;
+  classEntity!: ClassEntity;
 
   @Field(() => Subject)
   @ManyToOne(() => Subject)
   @JoinColumn({ name: 'subjectId' })
-  subject: Subject;
+  subject!: Subject;
 
   @Field(() => User, { nullable: true })
   @ManyToOne(() => User, { nullable: true, eager: false })
   @JoinColumn({ name: 'subjectTeacherId' })
-  subjectTeacher: User;
+  subjectTeacher!: User;
 }

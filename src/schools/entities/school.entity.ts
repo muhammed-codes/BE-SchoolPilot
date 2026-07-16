@@ -7,55 +7,55 @@ import { BaseEntity } from '../../common/entities/base.entity';
 export class School extends BaseEntity {
   @Field()
   @Column()
-  name: string;
+  name!: string;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  address: string;
+  address!: string;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  phone: string;
+  phone!: string;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  email: string;
+  email!: string;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  logoUrl: string;
+  logoUrl!: string;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  stampUrl: string;
+  stampUrl!: string;
 
   @Column({ nullable: true })
-  logoPublicId: string;
+  logoPublicId!: string;
 
   @Column({ nullable: true })
-  stampPublicId: string;
+  stampPublicId!: string;
 
   @Field()
   @Column({ default: 'basic' })
-  schoolType: string;
+  schoolType!: string;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  schoolCode: string;
+  schoolCode!: string;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  defaultReportTemplate: string;
+  defaultReportTemplate!: string;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  schoolStartTime: string;
+  schoolStartTime!: string;
 
   @Field()
   @Column({ default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Field()
   @Column({ unique: true })
-  uniqueQrCode: string;
+  uniqueQrCode!: string;
 }

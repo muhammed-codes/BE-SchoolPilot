@@ -11,31 +11,31 @@ export class Term extends BaseEntity {
 
   @Field()
   @Column()
-  name: string;
+  name!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  sessionId: string;
+  sessionId!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  schoolId: string;
+  schoolId!: string;
 
   @Field(() => String)
   @Column({ type: 'date' })
-  startDate: Date;
+  startDate!: Date;
 
   @Field(() => String)
   @Column({ type: 'date' })
-  endDate: Date;
+  endDate!: Date;
 
   @Field(() => TermStatus)
   @Column({ type: 'enum', enum: TermStatus, default: TermStatus.CLOSED })
-  status: TermStatus;
+  status!: TermStatus;
 
   @Field(() => Int)
   @Column({ default: 0 })
-  totalSchoolDays: number;
+  totalSchoolDays!: number;
 
   private normalizeToUtcDateOnly(value: Date | string): Date {
     const date = new Date(value);
@@ -80,5 +80,5 @@ export class Term extends BaseEntity {
   @Field(() => Session)
   @ManyToOne(() => Session, (session) => session.terms)
   @JoinColumn({ name: 'sessionId' })
-  session: Session;
+  session!: Session;
 }

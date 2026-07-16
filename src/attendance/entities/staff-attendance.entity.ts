@@ -9,48 +9,48 @@ import { User } from '../../users/entities/user.entity';
 export class StaffAttendance extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
-  userId: string;
+  userId!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  schoolId: string;
+  schoolId!: string;
 
   @Field()
   @Column({ type: 'date' })
-  date: string;
+  date!: string;
 
   @Field({ nullable: true })
   @Column({ type: 'timestamp', nullable: true })
-  clockInTime: Date;
+  clockInTime!: Date;
 
   @Field({ nullable: true })
   @Column({ type: 'timestamp', nullable: true })
-  clockOutTime: Date;
+  clockOutTime!: Date;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  isLate: boolean;
+  isLate!: boolean;
 
   @Field({ nullable: true })
   @Column({ default: false })
-  isManual: boolean;
+  isManual!: boolean;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  clockInPhotoUrl: string;
+  clockInPhotoUrl!: string;
 
   @Column({ nullable: true })
-  clockInPhotoPublicId: string;
+  clockInPhotoPublicId!: string;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  clockOutPhotoUrl: string;
+  clockOutPhotoUrl!: string;
 
   @Column({ nullable: true })
-  clockOutPhotoPublicId: string;
+  clockOutPhotoPublicId!: string;
 
   @Field(() => User)
   @ManyToOne(() => User, { eager: false })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user!: User;
 }

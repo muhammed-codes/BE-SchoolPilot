@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In } from 'typeorm';
+import { Repository, DataSource, In, FindOptionsWhere } from 'typeorm';
 import { ResultSheet } from './entities/result-sheet.entity';
 import { StudentResult } from './entities/student-result.entity';
 import { SubjectScore } from './entities/subject-score.entity';
@@ -717,7 +717,14 @@ export class ResultsService {
     ].includes(role);
 
     if (isLeadership) {
-      const where: { schoolId: string; status?: ResultStatus } = { schoolId };
+      const where: {
+        schoolId: string;
+        isArchived: boolean;
+        status?: ResultStatus;
+      } = {
+        schoolId,
+        isArchived: false,
+      };
       if (status) where.status = status;
       return this.resultSheetRepo.find({
         where,
@@ -742,7 +749,10 @@ export class ResultsService {
       return [];
     }
 
-    const where: any = { schoolId };
+    const where: FindOptionsWhere<ResultSheet> = {
+      schoolId,
+      isArchived: false,
+    };
     if (status) where.status = status;
     where.classId = In(Array.from(classIds));
 
@@ -825,5 +835,87 @@ export class ResultsService {
           `Your result sheet has been returned. Reason: ${reason}`,
         );
       });
+  };
+
+  archiveResultSheet = async (id: string, schoolId: string) => {
+    const sheet = await this.resultSheetRepo.findOne({
+      where: { id, schoolId },
+    });
+
+    if (!sheet) throw new NotFoundException('Result sheet not found');
+
+    sheet.isArchived = true;
+    return this.resultSheetRepo.save(sheet);
+  };
+
+  unarchiveResultSheet = async (id: string, schoolId: string) => {
+    const sheet = await this.resultSheetRepo.findOne({
+      where: { id, schoolId },
+    });
+
+    if (!sheet) throw new NotFoundException('Result sheet not found');
+
+    sheet.isArchived = false;
+    return this.resultSheetRepo.save(sheet);
+  };
+
+  getArchivedResultSheets = async (
+    schoolId: string,
+    userId: string,
+    role: UserRole,
+    status?: ResultStatus,
+  ) => {
+    const isLeadership = [
+      UserRole.SUPER_ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.PRINCIPAL,
+      UserRole.VICE_PRINCIPAL,
+      UserRole.HEAD_TEACHER,
+    ].includes(role);
+
+    if (isLeadership) {
+      const where: {
+        schoolId: string;
+        isArchived: boolean;
+        status?: ResultStatus;
+      } = {
+        schoolId,
+        isArchived: true,
+      };
+      if (status) where.status = status;
+      return this.resultSheetRepo.find({
+        where,
+        order: { createdAt: 'DESC' },
+      });
+    }
+
+    const myClasses = await this.classRepo.find({
+      where: [{ classTeacherId: userId, schoolId }],
+    });
+
+    const mySubjectClasses = await this.classSubjectRepo.find({
+      where: { subjectTeacherId: userId },
+    });
+
+    const classIds = new Set([
+      ...myClasses.map((c) => c.id),
+      ...mySubjectClasses.map((c) => c.classId),
+    ]);
+
+    if (classIds.size === 0) {
+      return [];
+    }
+
+    const where: FindOptionsWhere<ResultSheet> = {
+      schoolId,
+      isArchived: true,
+    };
+    if (status) where.status = status;
+    where.classId = In(Array.from(classIds));
+
+    return this.resultSheetRepo.find({
+      where,
+      order: { createdAt: 'DESC' },
+    });
   };
 }

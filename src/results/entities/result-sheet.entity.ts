@@ -11,38 +11,42 @@ import { ClassEntity } from '../../classes/entities/class.entity';
 export class ResultSheet extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
-  classId: string;
+  classId!: string;
 
   @Field(() => ClassEntity, { nullable: true })
   @ManyToOne(() => ClassEntity, { nullable: true, eager: false })
   @JoinColumn({ name: 'classId' })
-  classEntity: ClassEntity;
+  classEntity!: ClassEntity;
 
   @Field()
   @Column({ type: 'uuid' })
-  termId: string;
+  termId!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  schoolId: string;
+  schoolId!: string;
 
   @Field(() => GradingSystem)
   @Column({ type: 'enum', enum: GradingSystem })
-  gradingSystem: GradingSystem;
+  gradingSystem!: GradingSystem;
 
   @Field(() => [ScoreComponentConfig])
   @Column({ type: 'jsonb' })
-  scoreComponents: ScoreComponentConfig[];
+  scoreComponents!: ScoreComponentConfig[];
 
   @Field(() => ResultStatus)
   @Column({ type: 'enum', enum: ResultStatus, default: ResultStatus.DRAFT })
-  status: ResultStatus;
+  status!: ResultStatus;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  returnReason: string;
+  returnReason!: string;
+
+  @Field({ defaultValue: false })
+  @Column({ default: false })
+  isArchived!: boolean;
 
   @Field(() => [StudentResult], { nullable: true })
   @OneToMany(() => StudentResult, (sr) => sr.resultSheet, { eager: false })
-  studentResults: StudentResult[];
+  studentResults!: StudentResult[];
 }

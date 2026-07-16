@@ -13,53 +13,53 @@ import { Term } from '../../terms/entities/term.entity';
 export class StudentAttendance extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
-  studentId: string;
+  studentId!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  classId: string;
+  classId!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  schoolId: string;
+  schoolId!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  termId: string;
+  termId!: string;
 
   @Field()
   @Column({ type: 'date' })
-  date: string;
+  date!: string;
 
   @Field(() => AttendanceStatus)
   @Column({ type: 'enum', enum: AttendanceStatus })
-  status: AttendanceStatus;
+  status!: AttendanceStatus;
 
   @Field()
   @Column({ type: 'uuid' })
-  markedByUserId: string;
+  markedByUserId!: string;
 
   @Field()
   @Column({ type: 'timestamp' })
-  markedAt: Date;
+  markedAt!: Date;
 
   @Field(() => Student)
   @ManyToOne(() => Student, { eager: false })
   @JoinColumn({ name: 'studentId' })
-  student: Student;
+  student!: Student;
 
   @Field(() => ClassEntity)
   @ManyToOne(() => ClassEntity, { eager: false })
   @JoinColumn({ name: 'classId' })
-  classEntity: ClassEntity;
+  classEntity!: ClassEntity;
 
   @Field(() => User)
   @ManyToOne(() => User, { eager: false })
   @JoinColumn({ name: 'markedByUserId' })
-  markedByUser: User;
+  markedByUser!: User;
 
   @Field(() => Term)
   @ManyToOne(() => Term, { eager: false })
   @JoinColumn({ name: 'termId' })
-  term: Term;
+  term!: Term;
 }

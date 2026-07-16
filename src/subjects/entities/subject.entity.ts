@@ -7,9 +7,9 @@ import { BaseEntity } from '../../common/entities/base.entity';
 export class Subject extends BaseEntity {
   @Field()
   @Column()
-  name: string;
+  name!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  schoolId: string;
+  schoolId!: string;
 }

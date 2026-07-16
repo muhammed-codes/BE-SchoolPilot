@@ -11,54 +11,54 @@ import { Student } from '../../students/entities/student.entity';
 export class StudentResult extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
-  resultSheetId: string;
+  resultSheetId!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  studentId: string;
+  studentId!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  schoolId: string;
+  schoolId!: string;
 
   @Field(() => [ComponentScore], { nullable: true })
   @Column({ type: 'jsonb', nullable: true })
-  scores: ComponentScore[];
+  scores!: ComponentScore[];
 
   @Field(() => Float, { nullable: true })
   @Column({ type: 'float', nullable: true })
-  totalScore: number;
+  totalScore!: number;
 
   @Field(() => Float, { nullable: true })
   percentage?: number;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  grade: string;
+  grade!: string;
 
   @Field(() => Int, { nullable: true })
   @Column({ type: 'int', nullable: true })
-  position: number;
+  position!: number;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  classTeacherRemark: string;
+  classTeacherRemark!: string;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  principalRemark: string;
+  principalRemark!: string;
 
   @Field(() => ResultSheet)
   @ManyToOne(() => ResultSheet, (rs) => rs.studentResults)
   @JoinColumn({ name: 'resultSheetId' })
-  resultSheet: ResultSheet;
+  resultSheet!: ResultSheet;
 
   @Field(() => Student, { nullable: true })
   @ManyToOne(() => Student, { nullable: true, eager: false })
   @JoinColumn({ name: 'studentId' })
-  student: Student;
+  student!: Student;
 
   @Field(() => [SubjectScore], { nullable: true })
   @OneToMany(() => SubjectScore, (ss) => ss.studentResult, { eager: false })
-  subjectScores: SubjectScore[];
+  subjectScores!: SubjectScore[];
 }

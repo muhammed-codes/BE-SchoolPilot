@@ -10,19 +10,19 @@ import { User } from '../../users/entities/user.entity';
 export class StudentParent extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
-  studentId: string;
+  studentId!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  parentId: string;
+  parentId!: string;
 
   @Field(() => Student)
   @ManyToOne(() => Student, { eager: false })
   @JoinColumn({ name: 'studentId' })
-  student: Student;
+  student!: Student;
 
   @Field(() => User)
   @ManyToOne(() => User, { eager: false })
   @JoinColumn({ name: 'parentId' })
-  parent: User;
+  parent!: User;
 }

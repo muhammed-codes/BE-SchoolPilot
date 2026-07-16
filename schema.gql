@@ -184,6 +184,7 @@ input MarkAttendanceInput {
 type Mutation {
   activateTerm(termId: String!): Term!
   approveResult(resultSheetId: String!): ResultSheet!
+  archiveResultSheet(resultSheetId: String!): ResultSheet!
   assignClassTeacher(classId: String!, teacherId: String!): ClassEntity!
   assignSubjectTeacher(classId: String!, subjectId: String!, teacherId: String!): ClassSubject!
   assignSubjectsToClass(classId: String!, subjectIds: [String!]!): ClassEntity!
@@ -231,6 +232,7 @@ type Mutation {
   singleUpload(file: Upload!, folder: String!): UploadResult!
   submitForAdminReview(resultSheetId: String!): ResultSheet!
   submitForPrincipalApproval(resultSheetId: String!): ResultSheet!
+  unarchiveResultSheet(resultSheetId: String!): ResultSheet!
   unlinkParent(parentUserId: String!, studentId: String!): Boolean!
   unlockTerm(termId: String!): Term!
   updateExpoPushToken(token: String!): Boolean!
@@ -290,6 +292,7 @@ type Query {
   activeStaffQrCode: String!
   activeTerm: Term!
   allRolePermissions: [RolePermission!]!
+  archivedResultSheets(status: ResultStatus): [ResultSheet!]!
   classAttendance(classId: String!, date: String!): [StudentAttendance!]!
   classById(id: String!): ClassEntity!
   me: User!
@@ -349,6 +352,7 @@ type ResultSheet {
   createdAt: DateTime!
   gradingSystem: GradingSystem!
   id: ID!
+  isArchived: Boolean!
   returnReason: String
   schoolId: String!
   scoreComponents: [ScoreComponentConfig!]!

@@ -10,25 +10,25 @@ import { AppResource } from '../enums/resource.enum';
 export class RolePermission extends BaseEntity {
   @Field(() => UserRole)
   @Column({ type: 'enum', enum: UserRole })
-  role: UserRole;
+  role!: UserRole;
 
   @Field(() => AppResource)
   @Column({ type: 'enum', enum: AppResource })
-  resource: AppResource;
+  resource!: AppResource;
 
   @Field()
   @Column({ default: false })
-  canCreate: boolean;
+  canCreate!: boolean;
 
   @Field()
   @Column({ default: false })
-  canRead: boolean;
+  canRead!: boolean;
 
   @Field()
   @Column({ default: false })
-  canUpdate: boolean;
+  canUpdate!: boolean;
 
   @Field()
   @Column({ default: false })
-  canDelete: boolean;
+  canDelete!: boolean;
 }

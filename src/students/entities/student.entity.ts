@@ -10,57 +10,57 @@ import { ClassEntity } from '../../classes/entities/class.entity';
 export class Student extends BaseEntity {
   @Field()
   @Column()
-  firstName: string;
+  firstName!: string;
 
   @Field()
   @Column()
-  lastName: string;
+  lastName!: string;
 
   @Field()
   @Column()
-  admissionNumber: string;
+  admissionNumber!: string;
 
   @Field()
   @Column({
     type: 'date',
   })
-  dateOfBirth: string;
+  dateOfBirth!: string;
 
   @Field(() => Gender)
   @Column({ type: 'enum', enum: Gender })
-  gender: Gender;
+  gender!: Gender;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  passportPhotoUrl: string;
+  passportPhotoUrl!: string;
 
   @Column({ nullable: true })
-  passportPhotoPublicId: string;
-
-  @Field({ nullable: true })
-  @Column({ nullable: true })
-  address: string;
+  passportPhotoPublicId!: string;
 
   @Field({ nullable: true })
   @Column({ nullable: true })
-  stateOfOrigin: string;
+  address!: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  stateOfOrigin!: string;
 
   @Field()
   @Column({ type: 'uuid' })
-  schoolId: string;
+  schoolId!: string;
 
   @Field()
   @Column({ default: false })
-  isArchived: boolean;
+  isArchived!: boolean;
 
   @Field({ nullable: true })
   @Column({ type: 'uuid', nullable: true })
-  currentClassId: string;
+  currentClassId!: string;
 
   @Field(() => ClassEntity, { nullable: true })
   @ManyToOne(() => ClassEntity, { nullable: true, eager: false })
   @JoinColumn({ name: 'currentClassId' })
-  currentClass: ClassEntity;
+  currentClass!: ClassEntity;
 
   @Field()
   get fullName(): string {
