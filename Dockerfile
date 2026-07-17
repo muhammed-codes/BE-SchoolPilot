@@ -1,11 +1,11 @@
 FROM node:20-slim
 
-# Install dependencies for Puppeteer
+# Install dependencies for Puppeteer (Debian Bookworm compatible package names)
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     chromium \
     fonts-liberation \
-    libasound2 \
+    libasound2t64 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
     libc6 \
@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     libexpat1 \
     libfontconfig1 \
     libgbm1 \
-    libgcc1 \
+    libgcc-s1 \
     libglib2.0-0 \
     libgtk-3-0 \
     libnspr4 \
@@ -48,8 +48,8 @@ RUN npm install -g pnpm
 WORKDIR /app
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Copy lockfile and package.json
-COPY package.json pnpm-lock.yaml ./
+# Copy lockfile, package.json and workspace config
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
@@ -68,7 +68,7 @@ RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
 
 USER pptruser
 
-EXPOSE 9996
+EXPOSE 3000
 
 # Start application
 CMD ["pnpm", "run", "start:prod"]
