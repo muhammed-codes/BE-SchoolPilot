@@ -24,7 +24,7 @@ export class PdfResolver {
     );
   }
 
-  @Mutation(() => BulkPDFResult)
+  @Mutation(() => String)
   @UseGuards(JwtAuthGuard, RolesGuard)
   generateBulkReportCards(
     @Args('resultSheetId') resultSheetId: string,

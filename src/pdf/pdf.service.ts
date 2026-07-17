@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
+
 import { StudentResult } from '../results/entities/student-result.entity';
 import { ResultSheet } from '../results/entities/result-sheet.entity';
 import { Student } from '../students/entities/student.entity';
@@ -26,7 +27,6 @@ import {
   ScoreComponentData,
   SubjectScoreData,
 } from './templates/report-card-data.interface';
-import { BulkPDFResult } from './dto/pdf.dto';
 
 @Injectable()
 export class PdfService {
@@ -326,16 +326,8 @@ export class PdfService {
         const templateFn = getReportCardTemplate(school.defaultReportTemplate);
         const htmlContent = templateFn(reportCardData);
 
-        return this.generatePdfFromHtml(htmlContent).then((pdfBuffer) => {
-          const filename = `report_card_${student.admissionNumber.replace(/\s+/g, '_')}_${Date.now()}`;
-          return this.uploadService.uploadBuffer(
-            pdfBuffer,
-            'report-cards',
-            filename,
-          );
-        });
-      })
-      .then((uploadResult) => uploadResult.pdfPrivateUrl || uploadResult.url);
+        return htmlContent;
+      });
   };
 
   generateBulkReportCards = (
@@ -343,7 +335,7 @@ export class PdfService {
     userId: string,
     schoolId: string,
     role: UserRole,
-  ): Promise<BulkPDFResult> => {
+  ): Promise<string> => {
     return this.resultSheetRepo
       .findOne({ where: { id: resultSheetId, schoolId } })
       .then((resultSheet) => {
@@ -371,43 +363,25 @@ export class PdfService {
           );
         }
 
-        const studentIds = studentResults.map((sr) => sr.studentId);
-        return this.studentRepo
-          .find({
-            where: { id: In(studentIds) },
-          })
-          .then((students) => {
-            const studentMap = new Map(students.map((s) => [s.id, s.fullName]));
-            const reportCards: any[] = [];
+        const reportCardsHtml: string[] = [];
 
-            // Execute sequentially to prevent memory overflow in Puppeteer
-            return studentResults
-              .reduce(
-                (promiseChain, currentResult) =>
-                  promiseChain.then(() =>
-                    this.generateReportCard(
-                      currentResult.id,
-                      userId,
-                      schoolId,
-                      role,
-                    ).then((pdfUrl) => {
-                      reportCards.push({
-                        studentId: currentResult.studentId,
-                        studentName:
-                          studentMap.get(currentResult.studentId) ||
-                          'Unknown Student',
-                        pdfUrl,
-                      });
-                    }),
-                  ),
-                Promise.resolve(),
-              )
-              .then(() => {
-                return {
-                  totalGenerated: reportCards.length,
-                  reportCards,
-                };
-              });
+        return studentResults
+          .reduce(
+            (promiseChain, currentResult) =>
+              promiseChain.then(() =>
+                this.generateReportCard(
+                  currentResult.id,
+                  userId,
+                  schoolId,
+                  role,
+                ).then((html) => {
+                  reportCardsHtml.push(html);
+                }),
+              ),
+            Promise.resolve(),
+          )
+          .then(() => {
+            return reportCardsHtml.join('<div style="page-break-before: always;"></div>');
           });
       });
   };

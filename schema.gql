@@ -44,11 +44,6 @@ type BulkImportResult {
   students: [Student!]!
 }
 
-type BulkPDFResult {
-  reportCards: [ReportCardItem!]!
-  totalGenerated: Int!
-}
-
 type ClassEntity {
   classSubjects: [ClassSubject!]
   classTeacher: User
@@ -205,7 +200,7 @@ type Mutation {
   deactivateUser(id: String!): User!
   deleteSubject(id: String!): Boolean!
   forgotPassword(input: ForgotPasswordInput!): Boolean!
-  generateBulkReportCards(resultSheetId: String!): BulkPDFResult!
+  generateBulkReportCards(resultSheetId: String!): String!
   generateBulkStaffCards: BulkCardResult!
   generateBulkStudentCards(classId: String!): BulkCardResult!
   generateReportCard(studentResultId: String!): String!
@@ -333,12 +328,6 @@ input RegisterInput {
   phone: String
   role: UserRole!
   schoolId: String
-}
-
-type ReportCardItem {
-  pdfUrl: String!
-  studentId: String!
-  studentName: String!
 }
 
 input ResetPasswordInput {

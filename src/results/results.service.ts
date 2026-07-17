@@ -644,6 +644,7 @@ export class ResultsService {
         'studentResults',
         'studentResults.subjectScores',
         'studentResults.subjectScores.subject',
+        'studentResults.student',
       ],
     });
 
