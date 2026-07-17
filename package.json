@@ -105,5 +105,14 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@apollo/protobufjs",
+      "@nestjs/core",
+      "bcrypt",
+      "esbuild",
+      "unrs-resolver"
+    ]
   }
 }

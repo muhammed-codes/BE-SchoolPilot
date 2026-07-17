@@ -27,13 +27,13 @@ import { GqlThrottlerGuard } from './common/guards/gql-throttler.guard';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
 
-    ThrottlerModule.forRoot([
-      {
-        name: 'default',
-        ttl: 60000,
-        limit: 100,
-      },
-    ]),
+    // ThrottlerModule.forRoot([
+    //   {
+    //     name: 'default',
+    //     ttl: 60000,
+    //     limit: 100,
+    //   },
+    // ]),
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -100,10 +100,10 @@ import { GqlThrottlerGuard } from './common/guards/gql-throttler.guard';
   ],
   controllers: [AppController],
   providers: [
-    {
-      provide: APP_GUARD,
-      useClass: GqlThrottlerGuard,
-    },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: GqlThrottlerGuard,
+    // },
   ],
 })
 export class AppModule {}
