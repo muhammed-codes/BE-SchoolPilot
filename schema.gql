@@ -32,12 +32,6 @@ type AuthResponse {
   user: User!
 }
 
-type BulkCardResult {
-  label: String!
-  pdfUrl: String!
-  totalCards: Int!
-}
-
 type BulkImportResult {
   failed: [FailedRow!]!
   imported: Int!
@@ -201,11 +195,7 @@ type Mutation {
   deleteSubject(id: String!): Boolean!
   forgotPassword(input: ForgotPasswordInput!): Boolean!
   generateBulkReportCards(resultSheetId: String!): String!
-  generateBulkStaffCards: BulkCardResult!
-  generateBulkStudentCards(classId: String!): BulkCardResult!
   generateReportCard(studentResultId: String!): String!
-  generateStaffCard(userId: String!): String!
-  generateStudentCard(studentId: String!): String!
   linkParent(parentUserId: String!, studentId: String!): Student!
   login(input: LoginInput!): AuthResponse!
   logout: Boolean!
