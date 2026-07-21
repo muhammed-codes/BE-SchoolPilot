@@ -1,9 +1,9 @@
 allowBuilds:
-  '@apollo/protobufjs': set this to true or false
-  '@nestjs/core': set this to true or false
-  bcrypt: set this to true or false
-  esbuild: set this to true or false
-  unrs-resolver: set this to true or false
+  '@apollo/protobufjs': true
+  '@nestjs/core': true
+  bcrypt: true
+  esbuild: true
+  unrs-resolver: true
 onlyBuiltDependencies:
   - '@apollo/protobufjs'
   - '@nestjs/core'

@@ -21,6 +21,7 @@ import { UploadService } from '../upload/upload.service';
 import { AttendanceService } from '../attendance/attendance.service';
 import { Subject } from '../subjects/entities/subject.entity';
 import { UserRole } from '../common/enums';
+import { calculateGrade } from '../results/utils/grading.util';
 import { getReportCardTemplate } from './templates/templates';
 import {
   ReportCardData,
@@ -236,6 +237,12 @@ export class PdfService {
           maxScore: component.maxScore,
         }));
 
+        const totalMaxPerSubject = scoreComponents.reduce(
+          (sum, sc) => sum + sc.maxScore,
+          0,
+        );
+        const gradingSystem = studentResult.resultSheet?.gradingSystem;
+
         const subjectScoresData: SubjectScoreData[] = (
           studentResult.subjectScores || []
         )
@@ -256,6 +263,17 @@ export class PdfService {
               };
             });
 
+            const computedGrade =
+              score.totalScore != null &&
+              totalMaxPerSubject > 0 &&
+              gradingSystem
+                ? calculateGrade(
+                    score.totalScore,
+                    totalMaxPerSubject,
+                    gradingSystem,
+                  )
+                : score.grade;
+
             return {
               name:
                 score.subject?.name ||
@@ -263,7 +281,7 @@ export class PdfService {
                 'Unknown Subject',
               componentScores,
               totalScore: score.totalScore,
-              grade: score.grade,
+              grade: computedGrade,
             };
           });
 

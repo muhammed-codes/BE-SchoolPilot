@@ -61,18 +61,54 @@ export class ResultsService {
   private applyComputedMetrics = (
     scoreComponents: { maxScore: number }[],
     studentResults: StudentResult[],
+    gradingSystem?: any,
   ) => {
     const totalMaxPerSubject = (scoreComponents || []).reduce(
       (sum, sc) => sum + sc.maxScore,
       0,
     );
     studentResults.forEach((sr) => {
+      let subjectTotalSum = 0;
+      if (sr.subjectScores) {
+        sr.subjectScores.forEach((ss) => {
+          if (
+            ss.totalScore !== null &&
+            ss.totalScore !== undefined &&
+            totalMaxPerSubject > 0 &&
+            gradingSystem
+          ) {
+            ss.grade = calculateGrade(
+              ss.totalScore,
+              totalMaxPerSubject,
+              gradingSystem,
+            );
+          }
+          subjectTotalSum += ss.totalScore || 0;
+        });
+      }
       const subjectCount = sr.subjectScores?.length || 0;
+      const effectiveTotal =
+        sr.totalScore !== null && sr.totalScore !== undefined
+          ? sr.totalScore
+          : subjectTotalSum;
       sr.percentage = this.computeStudentPercentage(
-        sr.totalScore,
+        effectiveTotal,
         subjectCount,
         totalMaxPerSubject,
       );
+      if (
+        gradingSystem &&
+        totalMaxPerSubject > 0 &&
+        subjectCount > 0 &&
+        effectiveTotal !== null &&
+        effectiveTotal !== undefined
+      ) {
+        sr.grade = calculateGrade(
+          effectiveTotal,
+          totalMaxPerSubject * subjectCount,
+          gradingSystem,
+        );
+      }
     });
     return studentResults;
   };
@@ -373,24 +409,49 @@ export class ResultsService {
         0,
       );
 
+      const subjectScoreUpdates: SubjectScore[] = [];
+
       const updates = studentResults.map((sr) => {
-        const subjectTotal = sr.subjectScores.reduce(
-          (sum, ss) => sum + (ss.totalScore || 0),
-          0,
-        );
+        const subjectTotal = sr.subjectScores.reduce((sum, ss) => {
+          if (
+            ss.totalScore !== null &&
+            ss.totalScore !== undefined &&
+            totalMaxScore > 0 &&
+            sheet.gradingSystem
+          ) {
+            const newGrade = calculateGrade(
+              ss.totalScore,
+              totalMaxScore,
+              sheet.gradingSystem,
+            );
+            if (ss.grade !== newGrade) {
+              ss.grade = newGrade;
+              subjectScoreUpdates.push(ss);
+            }
+          }
+          return sum + (ss.totalScore || 0);
+        }, 0);
         sr.totalScore = subjectTotal;
 
         const subjectCount = sr.subjectScores.length || 1;
         const overallMaxScore = totalMaxScore * subjectCount;
-        sr.grade = calculateGrade(
-          subjectTotal,
-          overallMaxScore,
-          sheet.gradingSystem,
-        );
+        if (totalMaxScore > 0 && sheet.gradingSystem) {
+          sr.grade = calculateGrade(
+            subjectTotal,
+            overallMaxScore,
+            sheet.gradingSystem,
+          );
+        }
         return sr;
       });
 
-      return this.studentResultRepo.save(updates);
+      const savePromises: Promise<any>[] = [
+        this.studentResultRepo.save(updates),
+      ];
+      if (subjectScoreUpdates.length > 0) {
+        savePromises.push(this.subjectScoreRepo.save(subjectScoreUpdates));
+      }
+      return Promise.all(savePromises).then(([savedUpdates]) => savedUpdates);
     });
   };
 
@@ -542,20 +603,38 @@ export class ResultsService {
             relations: ['subjectScores'],
           })
           .then((studentResults) => {
+            const subjectScoreUpdates: SubjectScore[] = [];
             studentResults.forEach((sr) => {
-              const subjectTotal = sr.subjectScores.reduce(
-                (sum, ss) => sum + (ss.totalScore || 0),
-                0,
-              );
+              const subjectTotal = sr.subjectScores.reduce((sum, ss) => {
+                if (
+                  ss.totalScore !== null &&
+                  ss.totalScore !== undefined &&
+                  totalMaxPerSubject > 0 &&
+                  sheet.gradingSystem
+                ) {
+                  const newGrade = calculateGrade(
+                    ss.totalScore,
+                    totalMaxPerSubject,
+                    sheet.gradingSystem,
+                  );
+                  if (ss.grade !== newGrade) {
+                    ss.grade = newGrade;
+                    subjectScoreUpdates.push(ss);
+                  }
+                }
+                return sum + (ss.totalScore || 0);
+              }, 0);
               sr.totalScore = subjectTotal;
 
               const subjectCount = sr.subjectScores.length || 1;
               const overallMaxScore = totalMaxPerSubject * subjectCount;
-              sr.grade = calculateGrade(
-                subjectTotal,
-                overallMaxScore,
-                sheet.gradingSystem,
-              );
+              if (totalMaxPerSubject > 0 && sheet.gradingSystem) {
+                sr.grade = calculateGrade(
+                  subjectTotal,
+                  overallMaxScore,
+                  sheet.gradingSystem,
+                );
+              }
               sr.percentage = this.computeStudentPercentage(
                 subjectTotal,
                 subjectCount,
@@ -578,7 +657,17 @@ export class ResultsService {
               }
             });
 
-            return this.studentResultRepo.save(studentResults);
+            const savePromises: Promise<any>[] = [
+              this.studentResultRepo.save(studentResults),
+            ];
+            if (subjectScoreUpdates.length > 0) {
+              savePromises.push(
+                this.subjectScoreRepo.save(subjectScoreUpdates),
+              );
+            }
+            return Promise.all(savePromises).then(
+              ([savedResults]) => savedResults,
+            );
           });
       });
   };
@@ -684,6 +773,7 @@ export class ResultsService {
     this.applyComputedMetrics(
       sheet.scoreComponents || [],
       sheet.studentResults || [],
+      sheet.gradingSystem,
     );
     return sheet;
   };
@@ -781,7 +871,11 @@ export class ResultsService {
           .findOne({ where: { id: result.resultSheetId, schoolId } })
           .then((sheet) => {
             if (sheet) {
-              this.applyComputedMetrics(sheet.scoreComponents || [], [result]);
+              this.applyComputedMetrics(
+                sheet.scoreComponents || [],
+                [result],
+                sheet.gradingSystem,
+              );
             }
             return result;
           });
