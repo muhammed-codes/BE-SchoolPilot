@@ -87,10 +87,12 @@ input CreateResultSheetInput {
 
 input CreateSchoolInput {
   address: String
+  defaultReportTemplate: String
   email: String
   name: String!
   phone: String
   schoolCode: String
+  schoolStartTime: String
   schoolType: String = "basic"
 }
 
@@ -560,10 +562,12 @@ input UpdatePermissionInput {
 
 input UpdateSchoolInput {
   address: String
+  defaultReportTemplate: String
   email: String
   name: String
   phone: String
   schoolCode: String
+  schoolStartTime: String
   schoolType: String = "basic"
 }
 

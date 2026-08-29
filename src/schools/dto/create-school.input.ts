@@ -26,8 +26,16 @@ export class CreateSchoolInput {
 
   @Field({ nullable: true })
   @IsOptional()
-  @Matches(/^[A-Za-z0-9]{2,10}$/, {
+  @Matches(/^[A-Za-z0-9_-]{2,10}$/, {
     message: 'schoolCode must be 2-10 alphanumeric characters',
   })
   schoolCode?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  defaultReportTemplate?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  schoolStartTime?: string;
 }
