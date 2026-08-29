@@ -59,6 +59,8 @@ type ClassSubject {
   subjectId: String!
   subjectTeacher: User
   subjectTeacherId: String
+  teacher: User
+  teacherId: String
   updatedAt: DateTime!
 }
 
@@ -332,11 +334,13 @@ type ResultSheet {
   gradingSystem: GradingSystem!
   id: ID!
   isArchived: Boolean!
+  results: [StudentResult!]
   returnReason: String
   schoolId: String!
   scoreComponents: [ScoreComponentConfig!]!
   status: ResultStatus!
   studentResults: [StudentResult!]
+  term: Term
   termId: String!
   updatedAt: DateTime!
 }

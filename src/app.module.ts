@@ -38,30 +38,37 @@ import { GqlThrottlerGuard } from './common/guards/gql-throttler.guard';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (config: ConfigService) => {
-        const host = config.get<string>('SUPABASE_DB_HOST') || '';
-        let resolvedHost = host;
-
-        try {
-          if (host && !/^[0-9.]+$/.test(host)) {
-            const dns = await import('dns');
-            const { address } = await dns.promises.lookup(host, { family: 4 });
-            resolvedHost = address;
-          }
-        } catch (err) {
-          console.warn(
-            `Failed to resolve IPv4 for ${host}, falling back to original host`,
-            err,
-          );
-        }
+      useFactory: (config: ConfigService) => {
+        const databaseUrl = config.get<string>('DATABASE_URL');
+        const host =
+          config.get<string>('SUPABASE_DB_HOST') ||
+          config.get<string>('DB_HOST') ||
+          '';
+        const endpointId = host.includes('neon.tech')
+          ? host.split('.')[0]
+          : undefined;
 
         return {
           type: 'postgres',
-          host: resolvedHost,
-          port: config.get<number>('SUPABASE_DB_PORT'),
-          database: config.get<string>('SUPABASE_DB_NAME'),
-          username: config.get<string>('SUPABASE_DB_USER'),
-          password: config.get<string>('SUPABASE_DB_PASSWORD'),
+          ...(databaseUrl
+            ? { url: databaseUrl }
+            : {
+                host,
+                port:
+                  config.get<number>('SUPABASE_DB_PORT') ||
+                  config.get<number>('DB_PORT') ||
+                  5432,
+                database:
+                  config.get<string>('SUPABASE_DB_NAME') ||
+                  config.get<string>('DB_NAME'),
+                username:
+                  config.get<string>('SUPABASE_DB_USER') ||
+                  config.get<string>('DB_USER'),
+                password:
+                  config.get<string>('SUPABASE_DB_PASSWORD') ||
+                  config.get<string>('DB_PASSWORD'),
+              }),
+          extra: endpointId ? { options: `endpoint=${endpointId}` } : undefined,
           ssl: { rejectUnauthorized: false },
           synchronize: false,
           autoLoadEntities: true,

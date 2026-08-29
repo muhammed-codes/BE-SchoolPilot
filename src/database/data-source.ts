@@ -26,15 +26,26 @@ import { join } from 'path';
  * ==============================================================================
  */
 
+const host = process.env.SUPABASE_DB_HOST || process.env.DB_HOST || '';
+const endpointId = host.includes('neon.tech') ? host.split('.')[0] : undefined;
+
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
-  host: process.env.SUPABASE_DB_HOST,
-  port: parseInt(process.env.SUPABASE_DB_PORT || '5432', 10),
-  username: process.env.SUPABASE_DB_USER,
-  password: process.env.SUPABASE_DB_PASSWORD,
-  database: process.env.SUPABASE_DB_NAME,
+  ...(process.env.DATABASE_URL
+    ? { url: process.env.DATABASE_URL }
+    : {
+        host,
+        port: parseInt(
+          process.env.SUPABASE_DB_PORT || process.env.DB_PORT || '5432',
+          10,
+        ),
+        username: process.env.SUPABASE_DB_USER || process.env.DB_USER,
+        password: process.env.SUPABASE_DB_PASSWORD || process.env.DB_PASSWORD,
+        database: process.env.SUPABASE_DB_NAME || process.env.DB_NAME,
+      }),
+  extra: endpointId ? { options: `endpoint=${endpointId}` } : undefined,
   ssl: {
-    rejectUnauthorized: false, // Required for secure connections to platforms like Supabase
+    rejectUnauthorized: false,
   },
   entities: [join(__dirname, '../**/*.entity{.ts,.js}')],
   migrations: [join(__dirname, '../migrations/*{.ts,.js}')],

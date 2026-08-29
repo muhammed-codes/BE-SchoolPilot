@@ -5,6 +5,7 @@ import { GradingSystem, ResultStatus } from '../../common/enums';
 import { ScoreComponentConfig } from '../dto/score-component-config.type';
 import { StudentResult } from './student-result.entity';
 import { ClassEntity } from '../../classes/entities/class.entity';
+import { Term } from '../../terms/entities/term.entity';
 
 @ObjectType()
 @Entity('result_sheets')
@@ -21,6 +22,11 @@ export class ResultSheet extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
   termId!: string;
+
+  @Field(() => Term, { nullable: true })
+  @ManyToOne(() => Term, { nullable: true, eager: false })
+  @JoinColumn({ name: 'termId' })
+  term!: Term;
 
   @Field()
   @Column({ type: 'uuid' })
@@ -49,4 +55,9 @@ export class ResultSheet extends BaseEntity {
   @Field(() => [StudentResult], { nullable: true })
   @OneToMany(() => StudentResult, (sr) => sr.resultSheet, { eager: false })
   studentResults!: StudentResult[];
+
+  @Field(() => [StudentResult], { nullable: true })
+  get results(): StudentResult[] | undefined {
+    return this.studentResults;
+  }
 }

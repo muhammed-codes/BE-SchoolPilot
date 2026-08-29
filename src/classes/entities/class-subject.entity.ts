@@ -34,4 +34,14 @@ export class ClassSubject extends BaseEntity {
   @ManyToOne(() => User, { nullable: true, eager: false })
   @JoinColumn({ name: 'subjectTeacherId' })
   subjectTeacher!: User;
+
+  @Field(() => String, { nullable: true })
+  get teacherId(): string | undefined {
+    return this.subjectTeacherId;
+  }
+
+  @Field(() => User, { nullable: true })
+  get teacher(): User | undefined {
+    return this.subjectTeacher;
+  }
 }

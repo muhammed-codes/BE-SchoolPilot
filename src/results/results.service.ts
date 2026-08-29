@@ -822,6 +822,7 @@ export class ResultsService {
       if (status) where.status = status;
       return this.resultSheetRepo.find({
         where,
+        relations: ['classEntity', 'term', 'studentResults', 'studentResults.student'],
         order: { createdAt: 'DESC' },
       });
     }
@@ -852,6 +853,7 @@ export class ResultsService {
 
     return this.resultSheetRepo.find({
       where,
+      relations: ['classEntity', 'term', 'studentResults', 'studentResults.student'],
       order: { createdAt: 'DESC' },
     });
   };
