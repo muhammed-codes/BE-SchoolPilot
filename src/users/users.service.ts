@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
@@ -369,10 +369,7 @@ export class UsersService {
 
   findTeachersBySchool = (schoolId: string) => {
     return this.usersRepository.find({
-      where: [
-        { schoolId, role: UserRole.CLASS_TEACHER },
-        { schoolId, role: UserRole.SUBJECT_TEACHER },
-      ],
+      where: { schoolId, role: Not(UserRole.PARENT) },
       order: { firstName: 'ASC' },
     });
   };

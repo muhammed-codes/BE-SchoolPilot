@@ -68,7 +68,12 @@ import { GqlThrottlerGuard } from './common/guards/gql-throttler.guard';
                   config.get<string>('SUPABASE_DB_PASSWORD') ||
                   config.get<string>('DB_PASSWORD'),
               }),
-          extra: endpointId ? { options: `endpoint=${endpointId}` } : undefined,
+          extra: {
+            ...(endpointId ? { options: `endpoint=${endpointId}` } : {}),
+            connectionTimeoutMillis: 15000,
+            idleTimeoutMillis: 30000,
+            max: 25,
+          },
           ssl: { rejectUnauthorized: false },
           synchronize: false,
           autoLoadEntities: true,
