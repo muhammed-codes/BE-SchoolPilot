@@ -39,6 +39,9 @@ export class MarkAttendanceInput {
 }
 
 @InputType()
+export class MarkStudentAttendanceInput extends MarkAttendanceInput {}
+
+@InputType()
 export class ManualStaffAttendanceInput {
   @Field()
   @IsNotEmpty()

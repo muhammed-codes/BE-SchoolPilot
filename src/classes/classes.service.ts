@@ -21,6 +21,7 @@ export class ClassesService {
   createClass = (input: CreateClassInput, schoolId: string) => {
     const classEntity = this.classesRepository.create({
       name: input.name,
+      classTeacherId: input.classTeacherId,
       schoolId,
     });
     return this.classesRepository.save(classEntity);

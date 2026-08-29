@@ -53,4 +53,21 @@ export class StaffAttendance extends BaseEntity {
   @ManyToOne(() => User, { eager: false })
   @JoinColumn({ name: 'userId' })
   user!: User;
+
+  @Field({ nullable: true })
+  get staffId(): string {
+    return this.userId;
+  }
+
+  @Field(() => User, { nullable: true })
+  get staff(): User {
+    return this.user;
+  }
+
+  @Field({ nullable: true })
+  get status(): string {
+    if (!this.clockInTime) return 'ABSENT';
+    if (this.isLate) return 'LATE';
+    return 'PRESENT';
+  }
 }

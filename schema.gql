@@ -75,6 +75,7 @@ input ComponentScoreInput {
 }
 
 input CreateClassInput {
+  classTeacherId: String
   name: String!
 }
 
@@ -444,6 +445,9 @@ type StaffAttendance {
   isLate: Boolean
   isManual: Boolean
   schoolId: String!
+  staff: User
+  staffId: String
+  status: String
   updatedAt: DateTime!
   user: User!
   userId: String!
