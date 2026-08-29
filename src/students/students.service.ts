@@ -103,13 +103,22 @@ export class StudentsService {
             ).then((sequence) => {
               const student = manager.create(Student, {
                 firstName: input.firstName,
+                middleName: input.middleName,
                 lastName: input.lastName,
                 admissionNumber: this.getAdmissionNumber(prefix, sequence),
                 dateOfBirth: input.dateOfBirth,
                 gender: input.gender,
+                nationality: input.nationality || 'Nigerian',
+                stateOfOrigin: input.stateOfOrigin,
+                lga: input.lga,
+                status: input.status,
+                dateOfAdmission: input.dateOfAdmission,
+                admissionClassId: input.admissionClassId,
                 currentClassId: input.classId,
                 address: input.address,
-                stateOfOrigin: input.stateOfOrigin,
+                medicalInfo: input.medicalInfo,
+                notes: input.notes,
+                passportPhotoUrl: input.passportPhotoUrl,
                 schoolId,
               });
 
@@ -127,6 +136,9 @@ export class StudentsService {
       if (input.firstName !== undefined) {
         updateData.firstName = input.firstName;
       }
+      if (input.middleName !== undefined) {
+        updateData.middleName = input.middleName;
+      }
       if (input.lastName !== undefined) {
         updateData.lastName = input.lastName;
       }
@@ -136,11 +148,35 @@ export class StudentsService {
       if (input.gender !== undefined) {
         updateData.gender = input.gender;
       }
-      if (input.address !== undefined) {
-        updateData.address = input.address;
+      if (input.nationality !== undefined) {
+        updateData.nationality = input.nationality;
       }
       if (input.stateOfOrigin !== undefined) {
         updateData.stateOfOrigin = input.stateOfOrigin;
+      }
+      if (input.lga !== undefined) {
+        updateData.lga = input.lga;
+      }
+      if (input.status !== undefined) {
+        updateData.status = input.status;
+      }
+      if (input.dateOfAdmission !== undefined) {
+        updateData.dateOfAdmission = input.dateOfAdmission;
+      }
+      if (input.admissionClassId !== undefined) {
+        updateData.admissionClassId = input.admissionClassId;
+      }
+      if (input.address !== undefined) {
+        updateData.address = input.address;
+      }
+      if (input.medicalInfo !== undefined) {
+        updateData.medicalInfo = input.medicalInfo;
+      }
+      if (input.notes !== undefined) {
+        updateData.notes = input.notes;
+      }
+      if (input.passportPhotoUrl !== undefined) {
+        updateData.passportPhotoUrl = input.passportPhotoUrl;
       }
 
       const validateClass = input.classId
@@ -174,18 +210,22 @@ export class StudentsService {
         });
         return;
       }
-      if (!input.dateOfBirth) {
-        failed.push({ row: index + 1, reason: 'dateOfBirth is required' });
-        return;
-      }
       validStudents.push({
         firstName: input.firstName,
+        middleName: input.middleName,
         lastName: input.lastName,
         dateOfBirth: input.dateOfBirth,
         gender: input.gender,
+        nationality: input.nationality || 'Nigerian',
+        stateOfOrigin: input.stateOfOrigin,
+        lga: input.lga,
+        status: input.status,
+        dateOfAdmission: input.dateOfAdmission,
+        admissionClassId: input.admissionClassId,
         currentClassId: input.classId,
         address: input.address,
-        stateOfOrigin: input.stateOfOrigin,
+        medicalInfo: input.medicalInfo,
+        notes: input.notes,
         schoolId,
       });
     });

@@ -72,7 +72,7 @@ import { GqlThrottlerGuard } from './common/guards/gql-throttler.guard';
           ssl: { rejectUnauthorized: false },
           synchronize: false,
           autoLoadEntities: true,
-          migrationsRun: config.get<string>('NODE_ENV') === 'production',
+          migrationsRun: true,
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
         };
       },

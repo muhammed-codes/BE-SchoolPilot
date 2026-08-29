@@ -1,16 +1,21 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsNotEmpty, IsOptional, IsEnum, IsDateString } from 'class-validator';
-import { Gender } from '../../common/enums';
+import { Transform } from 'class-transformer';
+import { Gender, StudentStatus } from '../../common/enums';
 
 @InputType()
 export class CreateStudentInput {
   @Field()
   @IsNotEmpty()
-  firstName: string;
+  firstName!: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  middleName?: string;
 
   @Field()
   @IsNotEmpty()
-  lastName: string;
+  lastName!: string;
 
   @Field({
     nullable: true,
@@ -19,17 +24,46 @@ export class CreateStudentInput {
   @IsOptional()
   admissionNumber?: string;
 
-  @Field()
+  @Field({ nullable: true })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsDateString()
-  dateOfBirth: string;
+  dateOfBirth?: string;
 
   @Field(() => Gender)
   @IsEnum(Gender)
-  gender: Gender;
+  gender!: Gender;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  nationality?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  stateOfOrigin?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  lga?: string;
+
+  @Field(() => StudentStatus, { nullable: true })
+  @IsOptional()
+  @IsEnum(StudentStatus)
+  status?: StudentStatus;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsDateString()
+  dateOfAdmission?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  admissionClassId?: string;
 
   @Field()
   @IsNotEmpty()
-  classId: string;
+  classId!: string;
 
   @Field({ nullable: true })
   @IsOptional()
@@ -37,7 +71,15 @@ export class CreateStudentInput {
 
   @Field({ nullable: true })
   @IsOptional()
-  stateOfOrigin?: string;
+  medicalInfo?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  notes?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  passportPhotoUrl?: string;
 
   @Field({ nullable: true })
   @IsOptional()

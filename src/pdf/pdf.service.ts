@@ -313,7 +313,7 @@ export class PdfService {
           student: {
             fullName: student.fullName,
             admissionNumber: student.admissionNumber,
-            passportPhotoUrl: student.passportPhotoUrl,
+            passportPhotoUrl: student.passportPhotoUrl || null,
             currentClass: student.currentClass?.name || 'Unknown Class',
           },
           term: {
