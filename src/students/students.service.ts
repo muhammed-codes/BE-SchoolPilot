@@ -16,7 +16,7 @@ import { BulkImportResult, FailedRow } from './dto/bulk-import-result.type';
 import { PromotionResult } from './dto/promotion-result.type';
 import { UsersService } from '../users/users.service';
 import { UploadService } from '../upload/upload.service';
-import { UserRole } from '../common/enums';
+import { UserRole, StudentStatus } from '../common/enums';
 import { ClassesService } from '../classes/classes.service';
 import { SchoolsService } from '../schools/schools.service';
 
@@ -392,6 +392,10 @@ export class StudentsService {
   ): Promise<PromotionResult> => {
     const { fromClassId, toClassId, studentIds, archiveGraduated } = input;
 
+    if (!studentIds || studentIds.length === 0) {
+      return Promise.resolve({ promoted: 0, archived: 0 });
+    }
+
     return this.studentsRepository
       .find({
         where: studentIds.map((id) => ({
@@ -402,20 +406,24 @@ export class StudentsService {
         })),
       })
       .then((students) => {
+        if (students.length === 0) {
+          return { promoted: 0, archived: 0 };
+        }
+
+        const ids = students.map((s) => s.id);
+
         if (archiveGraduated) {
           return this.studentsRepository
-            .update(
-              students.map((s) => s.id),
-              { isArchived: true },
-            )
+            .update(ids, { isArchived: true, status: StudentStatus.GRADUATED })
             .then(() => ({ promoted: 0, archived: students.length }));
         }
 
+        if (!toClassId) {
+          throw new BadRequestException('Destination class (toClassId) is required when promoting students');
+        }
+
         return this.studentsRepository
-          .update(
-            students.map((s) => s.id),
-            { currentClassId: toClassId },
-          )
+          .update(ids, { currentClassId: toClassId })
           .then(() => ({ promoted: students.length, archived: 0 }));
       });
   };

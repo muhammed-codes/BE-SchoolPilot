@@ -278,7 +278,7 @@ input PromoteStudentsInput {
   archiveGraduated: Boolean!
   fromClassId: String!
   studentIds: [String!]!
-  toClassId: String!
+  toClassId: String
 }
 
 type PromotionResult {
@@ -291,6 +291,7 @@ type Query {
   activeTerm: Term!
   allRolePermissions: [RolePermission!]!
   archivedResultSheets(status: ResultStatus): [ResultSheet!]!
+  archivedStudents: [Student!]!
   classAttendance(classId: String!, date: String!): [StudentAttendance!]!
   classById(id: String!): ClassEntity!
   me: User!

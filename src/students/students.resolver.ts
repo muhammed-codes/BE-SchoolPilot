@@ -145,4 +145,11 @@ export class StudentsResolver {
   ) {
     return this.studentsService.promoteStudents(input, user.schoolId);
   }
+
+  @Query(() => [Student])
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, 'canRead')
+  archivedStudents(@CurrentUser() user: { schoolId: string }) {
+    return this.studentsService.getArchivedStudents(user.schoolId);
+  }
 }

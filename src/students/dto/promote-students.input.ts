@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsNotEmpty, IsArray, IsBoolean } from 'class-validator';
+import { IsNotEmpty, IsArray, IsBoolean, IsOptional } from 'class-validator';
 
 @InputType()
 export class PromoteStudentsInput {
@@ -7,9 +7,9 @@ export class PromoteStudentsInput {
   @IsNotEmpty()
   fromClassId: string;
 
-  @Field()
-  @IsNotEmpty()
-  toClassId: string;
+  @Field({ nullable: true })
+  @IsOptional()
+  toClassId?: string;
 
   @Field(() => [String])
   @IsArray()
