@@ -28,8 +28,11 @@ export class TermsResolver {
 
   @Query(() => [Term])
   @UseGuards(JwtAuthGuard)
-  termsBySession(@Args('sessionId') sessionId: string) {
-    return this.termsService.getTermsBySession(sessionId);
+  termsBySession(
+    @Args('sessionId') sessionId: string,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.termsService.getTermsBySession(sessionId, user.schoolId);
   }
 
   @Mutation(() => Session)

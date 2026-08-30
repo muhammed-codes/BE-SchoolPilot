@@ -49,7 +49,7 @@ async function seed() {
         lastName: 'Admin',
         role: UserRole.SUPER_ADMIN,
         passwordHash,
-        schoolId: school.id,
+        schoolId: null,
         isEmailVerified: true,
         isActive: true,
         staffId: 'STAFF-001',
@@ -62,7 +62,7 @@ async function seed() {
       adminUser.role = UserRole.SUPER_ADMIN;
       adminUser.isEmailVerified = true;
       adminUser.isActive = true;
-      adminUser.schoolId = adminUser.schoolId || school.id;
+      adminUser.schoolId = null;
       await userRepo.save(adminUser);
       console.log(`Admin user password successfully updated.`);
     }

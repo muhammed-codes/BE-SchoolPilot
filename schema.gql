@@ -185,6 +185,7 @@ input MarkAttendanceInput {
 }
 
 type Mutation {
+  activateSchool(id: String!): School!
   activateTerm(termId: String!): Term!
   approveResult(resultSheetId: String!): ResultSheet!
   archiveResultSheet(resultSheetId: String!): ResultSheet!
@@ -221,6 +222,7 @@ type Mutation {
   refreshTokens(refreshToken: String!): AuthResponse!
   regenerateQrCode(schoolId: String!): School!
   register(input: RegisterInput!): AuthResponse!
+  registerSchool(input: RegisterSchoolInput!): AuthResponse!
   resendVerificationEmail(email: String!): Boolean!
   resetPassword(input: ResetPasswordInput!): Boolean!
   returnResult(reason: String!, resultSheetId: String!): ResultSheet!
@@ -275,6 +277,13 @@ type PaginatedUser {
   totalPages: Int!
 }
 
+type PlatformStats {
+  activeSchools: Int!
+  totalSchools: Int!
+  totalStudents: Int!
+  totalUsers: Int!
+}
+
 input PromoteStudentsInput {
   archiveGraduated: Boolean!
   fromClassId: String!
@@ -302,6 +311,7 @@ type Query {
   mySchool: School!
   mySubjectScores(resultSheetId: String!): [SubjectScore!]!
   pendingPrincipalApprovals: [ResultSheet!]!
+  platformStats: PlatformStats!
   resultSheet(id: String!): ResultSheet!
   resultSheetsByClass(classId: String!, termId: String!): [ResultSheet!]!
   school(id: String!): School!
@@ -333,6 +343,20 @@ input RegisterInput {
   phone: String
   role: UserRole!
   schoolId: String
+}
+
+input RegisterSchoolInput {
+  adminEmail: String!
+  adminFirstName: String!
+  adminLastName: String!
+  adminPassword: String!
+  adminPhone: String
+  schoolAddress: String
+  schoolCode: String
+  schoolEmail: String
+  schoolName: String!
+  schoolPhone: String
+  schoolType: String = "basic"
 }
 
 input ResetPasswordInput {
@@ -376,6 +400,7 @@ type RolePermission {
   id: ID!
   resource: AppResource!
   role: UserRole!
+  schoolId: String
   updatedAt: DateTime!
 }
 

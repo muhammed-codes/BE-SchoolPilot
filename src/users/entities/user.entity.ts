@@ -37,9 +37,9 @@ export class User extends BaseEntity {
   @Column({ default: true })
   isActive!: boolean;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })
-  schoolId!: string;
+  schoolId!: string | null;
 
   @Column({ type: 'varchar', nullable: true })
   refreshToken!: string | null;

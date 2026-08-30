@@ -77,16 +77,23 @@ export class TermsService {
   };
 
   activateTerm = (termId: string, schoolId: string) => {
+    // First verify the target term belongs to this school
     return this.termsRepository
-      .update(
-        { schoolId, status: TermStatus.ACTIVE },
-        { status: TermStatus.CLOSED },
-      )
-      .then(() =>
-        this.termsRepository
-          .update(termId, { status: TermStatus.ACTIVE })
-          .then(() => this.findTermById(termId)),
-      );
+      .findOne({ where: { id: termId, schoolId } })
+      .then((term) => {
+        if (!term) throw new NotFoundException('Term not found in your school');
+        // Close any currently active term for this school
+        return this.termsRepository
+          .update(
+            { schoolId, status: TermStatus.ACTIVE },
+            { status: TermStatus.CLOSED },
+          )
+          .then(() =>
+            this.termsRepository
+              .update({ id: termId, schoolId }, { status: TermStatus.ACTIVE })
+              .then(() => this.findTermById(termId)),
+          );
+      });
   };
 
   closeTerm = (termId: string, schoolId: string) => {
@@ -116,11 +123,18 @@ export class TermsService {
     });
   };
 
-  getTermsBySession = (sessionId: string) => {
-    return this.termsRepository.find({
-      where: { sessionId },
-      order: { startDate: 'ASC' },
-    });
+  getTermsBySession = (sessionId: string, schoolId: string) => {
+    // Validate the session belongs to this school to prevent cross-school data access
+    return this.sessionsRepository
+      .findOne({ where: { id: sessionId, schoolId } })
+      .then((session) => {
+        if (!session)
+          throw new NotFoundException('Session not found in your school');
+        return this.termsRepository.find({
+          where: { sessionId },
+          order: { startDate: 'ASC' },
+        });
+      });
   };
 
   unlockTerm = (termId: string, schoolId: string) => {

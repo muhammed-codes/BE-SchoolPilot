@@ -39,7 +39,7 @@ export class PermissionGuard implements CanActivate {
     }
 
     return this.accessService
-      .getPermissionsByRole(user.role)
+      .getPermissionsByRole(user.role, user.schoolId)
       .then((permissions) => {
         const permission = permissions.find(
           (p) => p.resource === requiredPermission.resource,
@@ -53,3 +53,4 @@ export class PermissionGuard implements CanActivate {
       });
   }
 }
+
