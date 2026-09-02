@@ -187,6 +187,8 @@ input MarkAttendanceInput {
 type Mutation {
   activateSchool(id: String!): School!
   activateTerm(termId: String!): Term!
+  adminResetPassword(newPassword: String!, userId: String!): Boolean!
+  adminResetSchoolPassword(newPassword: String!, schoolId: String!): Boolean!
   approveResult(resultSheetId: String!): ResultSheet!
   archiveResultSheet(resultSheetId: String!): ResultSheet!
   assignClassTeacher(classId: String!, teacherId: String!): ClassEntity!

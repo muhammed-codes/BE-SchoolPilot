@@ -309,6 +309,60 @@ export class UsersService {
     });
   };
 
+  adminResetPassword = (
+    userId: string,
+    newPassword: string,
+    requesterRole: UserRole,
+    requesterSchoolId?: string,
+  ) => {
+    return this.findById(userId).then((user) => {
+      if (!user) throw new NotFoundException('User not found');
+
+      if (requesterRole !== UserRole.SUPER_ADMIN) {
+        if (
+          requesterRole !== UserRole.SCHOOL_ADMIN ||
+          user.schoolId !== requesterSchoolId
+        ) {
+          throw new ForbiddenException(
+            'You do not have permission to reset this user password',
+          );
+        }
+      }
+
+      return bcrypt.hash(newPassword, 12).then((passwordHash: string) =>
+        this.usersRepository
+          .update(userId, { passwordHash })
+          .then(() => true),
+      );
+    });
+  };
+
+  adminResetSchoolPassword = (
+    schoolId: string,
+    newPassword: string,
+    requesterRole: UserRole,
+  ) => {
+    if (requesterRole !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException(
+        'Only Super Admins can reset school passwords',
+      );
+    }
+
+    return this.usersRepository
+      .find({ where: { schoolId } })
+      .then((users) => {
+        if (!users || users.length === 0) {
+          throw new NotFoundException('No users found for this school');
+        }
+
+        return bcrypt.hash(newPassword, 12).then((passwordHash: string) =>
+          this.usersRepository
+            .update({ schoolId }, { passwordHash })
+            .then(() => true),
+        );
+      });
+  };
+
   updateAvatar = (userId: string, imageUrl: string) => {
     return this.findById(userId).then((user) => {
       if (!user) throw new NotFoundException('User not found');

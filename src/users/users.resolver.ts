@@ -7,7 +7,7 @@ import { User } from './entities/user.entity';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
-import { CurrentUser, RequirePermission } from '../common/decorators';
+import { CurrentUser, RequirePermission, Roles } from '../common/decorators';
 import { UserRole } from '../common/enums';
 import { SCHOOL_STAFF_ROLES } from '../common/constants/roles.constant';
 import { PaginationArgs, createPaginatedType } from '../common/pagination';
@@ -124,6 +124,37 @@ export class UsersResolver {
     @CurrentUser() user: { sub: string },
   ) {
     return this.usersService.changePassword(user.sub, oldPassword, newPassword);
+  }
+
+  @Mutation(() => Boolean)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.USERS, 'canUpdate')
+  adminResetPassword(
+    @Args('userId') userId: string,
+    @Args('newPassword') newPassword: string,
+    @CurrentUser() user: { role: UserRole; schoolId: string },
+  ) {
+    return this.usersService.adminResetPassword(
+      userId,
+      newPassword,
+      user.role,
+      user.schoolId,
+    );
+  }
+
+  @Mutation(() => Boolean)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN)
+  adminResetSchoolPassword(
+    @Args('schoolId') schoolId: string,
+    @Args('newPassword') newPassword: string,
+    @CurrentUser() user: { role: UserRole },
+  ) {
+    return this.usersService.adminResetSchoolPassword(
+      schoolId,
+      newPassword,
+      user.role,
+    );
   }
 
   @Mutation(() => User)
