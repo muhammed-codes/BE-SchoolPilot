@@ -74,7 +74,7 @@ export class UsersService {
   };
 
   private ensureUniqueLeadershipRolePerSchool = (
-    schoolId?: string,
+    schoolId?: string | null,
     role?: UserRole,
     excludeUserId?: string,
     isActive?: boolean,

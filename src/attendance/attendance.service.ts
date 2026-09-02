@@ -295,7 +295,7 @@ export class AttendanceService {
             } else {
               const newRecord = this.staffAttendanceRepo.create({
                 userId: input.userId,
-                schoolId: user.schoolId,
+                schoolId,
                 date: input.date,
                 clockInTime: input.clockInTime
                   ? new Date(input.clockInTime)
