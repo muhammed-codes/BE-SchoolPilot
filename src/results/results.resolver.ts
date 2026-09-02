@@ -7,6 +7,7 @@ import { StudentResult } from './entities/student-result.entity';
 import { SubjectScore } from './entities/subject-score.entity';
 import { CreateResultSheetInput } from './dto/create-result-sheet.input';
 import { SaveSubjectScoresInput } from './dto/save-subject-scores.input';
+import { ResultStats } from './dto/result-stats.type';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission } from '../common/decorators';
 import { UserRole, ResultStatus } from '../common/enums';
@@ -65,6 +66,19 @@ export class ResultsResolver {
       user.sub,
       user.role,
       status,
+    );
+  }
+
+  @Query(() => ResultStats)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canRead')
+  resultStats(
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+  ) {
+    return this.resultsService.getResultStats(
+      user.schoolId,
+      user.sub,
+      user.role,
     );
   }
 

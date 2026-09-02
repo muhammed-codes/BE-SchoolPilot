@@ -324,6 +324,7 @@ type Query {
   platformStats: PlatformStats!
   resultSheet(id: String!): ResultSheet!
   resultSheetsByClass(classId: String!, termId: String!): [ResultSheet!]!
+  resultStats: ResultStats!
   school(id: String!): School!
   schoolClasses(limit: Int! = 20, page: Int! = 1): PaginatedClassEntity!
   schoolResultSheets(status: ResultStatus): [ResultSheet!]!
@@ -390,6 +391,12 @@ type ResultSheet {
   term: Term
   termId: String!
   updatedAt: DateTime!
+}
+
+type ResultStats {
+  approvedSheets: Int!
+  pendingSheets: Int!
+  totalSheets: Int!
 }
 
 enum ResultStatus {

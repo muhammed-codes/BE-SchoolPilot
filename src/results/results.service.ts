@@ -858,6 +858,29 @@ export class ResultsService {
     });
   };
 
+  getResultStats = async (
+    schoolId: string,
+    userId: string,
+    role: UserRole,
+  ) => {
+    if (!schoolId) {
+      return { totalSheets: 0, pendingSheets: 0, approvedSheets: 0 };
+    }
+
+    const sheets = await this.getSchoolResultSheets(schoolId, userId, role);
+    const totalSheets = sheets.length;
+    const approvedSheets = sheets.filter(
+      (s) => s.status === ResultStatus.PUBLISHED,
+    ).length;
+    const pendingSheets = totalSheets - approvedSheets;
+
+    return {
+      totalSheets,
+      pendingSheets,
+      approvedSheets,
+    };
+  };
+
   getStudentResult = (studentId: string, termId: string, schoolId: string) => {
     return this.studentResultRepo
       .createQueryBuilder('sr')
