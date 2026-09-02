@@ -1,6 +1,7 @@
 import { InputType, Field } from '@nestjs/graphql';
 import {
   IsNotEmpty,
+  IsOptional,
   IsBoolean,
   ValidateNested,
   ArrayMinSize,
@@ -26,9 +27,9 @@ export class SaveSubjectScoresInput {
   @IsNotEmpty()
   resultSheetId: string;
 
-  @Field()
-  @IsNotEmpty()
-  subjectId: string;
+  @Field({ nullable: true })
+  @IsOptional()
+  subjectId?: string;
 
   @Field(() => [StudentScoreInput])
   @ValidateNested({ each: true })

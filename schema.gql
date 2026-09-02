@@ -424,7 +424,7 @@ type RolePermission {
 input SaveSubjectScoresInput {
   resultSheetId: String!
   scores: [StudentScoreInput!]!
-  subjectId: String!
+  subjectId: String
   submit: Boolean!
 }
 
@@ -547,8 +547,11 @@ input StudentAttendanceRecordInput {
 }
 
 type StudentResult {
+  ca1: Float
+  ca2: Float
   classTeacherRemark: String
   createdAt: DateTime!
+  exam: Float
   grade: String
   id: ID!
   percentage: Float

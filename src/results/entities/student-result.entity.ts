@@ -61,4 +61,49 @@ export class StudentResult extends BaseEntity {
   @Field(() => [SubjectScore], { nullable: true })
   @OneToMany(() => SubjectScore, (ss) => ss.studentResult, { eager: false })
   subjectScores!: SubjectScore[];
+
+  @Field(() => Float, { nullable: true })
+  get ca1(): number | undefined {
+    if (this.scores?.length) {
+      const match = this.scores.find((s) => (s.component as any) === 'CA1' || (s.component as any) === '1st CA');
+      if (match !== undefined) return match.score;
+    }
+    if (this.subjectScores?.length) {
+      for (const ss of this.subjectScores) {
+        const match = ss.scores?.find((s) => (s.component as any) === 'CA1' || (s.component as any) === '1st CA');
+        if (match !== undefined) return match.score;
+      }
+    }
+    return undefined;
+  }
+
+  @Field(() => Float, { nullable: true })
+  get ca2(): number | undefined {
+    if (this.scores?.length) {
+      const match = this.scores.find((s) => (s.component as any) === 'CA2' || (s.component as any) === '2nd CA');
+      if (match !== undefined) return match.score;
+    }
+    if (this.subjectScores?.length) {
+      for (const ss of this.subjectScores) {
+        const match = ss.scores?.find((s) => (s.component as any) === 'CA2' || (s.component as any) === '2nd CA');
+        if (match !== undefined) return match.score;
+      }
+    }
+    return undefined;
+  }
+
+  @Field(() => Float, { nullable: true })
+  get exam(): number | undefined {
+    if (this.scores?.length) {
+      const match = this.scores.find((s) => (s.component as any) === 'EXAM' || (s.component as any) === 'Examination');
+      if (match !== undefined) return match.score;
+    }
+    if (this.subjectScores?.length) {
+      for (const ss of this.subjectScores) {
+        const match = ss.scores?.find((s) => (s.component as any) === 'EXAM' || (s.component as any) === 'Examination');
+        if (match !== undefined) return match.score;
+      }
+    }
+    return undefined;
+  }
 }
