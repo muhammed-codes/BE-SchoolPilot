@@ -57,7 +57,14 @@ export class UsersResolver {
     @Args('input') input: CreateUserInput,
     @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
   ) {
-    if (user.role === UserRole.SCHOOL_ADMIN) {
+    const leadershipRoles = [
+      UserRole.SCHOOL_ADMIN,
+      UserRole.PRINCIPAL,
+      UserRole.VICE_PRINCIPAL,
+      UserRole.HEAD_TEACHER,
+    ];
+
+    if (leadershipRoles.includes(user.role)) {
       const allowedRoles = [
         UserRole.PRINCIPAL,
         UserRole.VICE_PRINCIPAL,
@@ -68,7 +75,7 @@ export class UsersResolver {
       ];
       if (!allowedRoles.includes(input.role)) {
         throw new ForbiddenException(
-          'School admins can only create leadership, teachers, and parents',
+          'School leadership can only create staff, teachers, and parents',
         );
       }
       return this.usersService.createUser(input, user.schoolId);

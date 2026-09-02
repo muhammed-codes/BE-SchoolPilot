@@ -117,7 +117,9 @@ export class ResultsResolver {
     if (
       user.role === UserRole.SUPER_ADMIN ||
       user.role === UserRole.SCHOOL_ADMIN ||
-      user.role === UserRole.PRINCIPAL
+      user.role === UserRole.PRINCIPAL ||
+      user.role === UserRole.VICE_PRINCIPAL ||
+      user.role === UserRole.HEAD_TEACHER
     ) {
       return this.resultsService.saveAdminScores(
         input,
