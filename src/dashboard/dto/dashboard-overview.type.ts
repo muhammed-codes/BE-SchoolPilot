@@ -1,17 +1,18 @@
-import { ObjectType, Field, Int } from '@nestjs/graphql';
+import { ObjectType, Field } from '@nestjs/graphql';
 import { Student } from '../../students/entities/student.entity';
+import { MetricStat } from '../../common/dto/metric-stat.type';
 
 @ObjectType()
 export class DashboardOverview {
-  @Field(() => Int)
-  studentsCount: number;
+  @Field(() => MetricStat)
+  studentsCount!: MetricStat;
 
-  @Field(() => Int)
-  teachersCount: number;
+  @Field(() => MetricStat)
+  teachersCount!: MetricStat;
 
-  @Field(() => Int)
-  classesCount: number;
+  @Field(() => MetricStat)
+  classesCount!: MetricStat;
 
   @Field(() => [Student])
-  recentStudents: Student[];
+  recentStudents!: Student[];
 }

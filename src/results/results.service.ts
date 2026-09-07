@@ -18,8 +18,10 @@ import { User } from '../users/entities/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateResultSheetInput } from './dto/create-result-sheet.input';
 import { SaveSubjectScoresInput } from './dto/save-subject-scores.input';
-import { UserRole, ResultStatus } from '../common/enums';
+import { UserRole, ResultStatus, TermStatus } from '../common/enums';
 import { calculateGrade } from './utils/grading.util';
+import { createMetricStat } from '../common/dto/metric-stat.type';
+import { ResultStats } from './dto/result-stats.type';
 
 @Injectable()
 export class ResultsService {
@@ -900,10 +902,19 @@ export class ResultsService {
     schoolId: string,
     userId: string,
     role: UserRole,
-  ) => {
+  ): Promise<ResultStats> => {
     if (!schoolId) {
-      return { totalSheets: 0, pendingSheets: 0, approvedSheets: 0 };
+      return {
+        totalSheets: createMetricStat(0, null, null, false),
+        pendingSheets: createMetricStat(0, null, null, false),
+        approvedSheets: createMetricStat(0, null, null, false),
+      };
     }
+
+    const activeTerm = await this.termRepo.findOne({
+      where: { schoolId, status: TermStatus.ACTIVE },
+    });
+    const hasActiveTerm = !!activeTerm;
 
     const sheets = await this.getSchoolResultSheets(schoolId, userId, role);
     const totalSheets = sheets.length;
@@ -913,9 +924,9 @@ export class ResultsService {
     const pendingSheets = totalSheets - approvedSheets;
 
     return {
-      totalSheets,
-      pendingSheets,
-      approvedSheets,
+      totalSheets: createMetricStat(totalSheets, null, null, hasActiveTerm),
+      pendingSheets: createMetricStat(pendingSheets, totalSheets, null, hasActiveTerm),
+      approvedSheets: createMetricStat(approvedSheets, totalSheets, null, hasActiveTerm),
     };
   };
 

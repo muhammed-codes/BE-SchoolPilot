@@ -1,13 +1,14 @@
-import { ObjectType, Field, Int } from '@nestjs/graphql';
+import { ObjectType, Field } from '@nestjs/graphql';
+import { MetricStat } from '../../common/dto/metric-stat.type';
 
 @ObjectType()
 export class ResultStats {
-  @Field(() => Int)
-  totalSheets: number;
+  @Field(() => MetricStat)
+  totalSheets!: MetricStat;
 
-  @Field(() => Int)
-  pendingSheets: number;
+  @Field(() => MetricStat)
+  pendingSheets!: MetricStat;
 
-  @Field(() => Int)
-  approvedSheets: number;
+  @Field(() => MetricStat)
+  approvedSheets!: MetricStat;
 }
