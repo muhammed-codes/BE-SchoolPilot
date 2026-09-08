@@ -141,10 +141,10 @@ input CreateUserInput {
 }
 
 type DashboardOverview {
-  classesCount: Int!
+  classesCount: MetricStat!
   recentStudents: [Student!]!
-  studentsCount: Int!
-  teachersCount: Int!
+  studentsCount: MetricStat!
+  teachersCount: MetricStat!
 }
 
 """
@@ -189,6 +189,13 @@ input MarkAttendanceInput {
   classId: String!
   date: String!
   records: [StudentAttendanceRecordInput!]!
+}
+
+type MetricStat {
+  delta: String
+  status: String!
+  total: Int
+  value: Int
 }
 
 type Mutation {
@@ -394,9 +401,9 @@ type ResultSheet {
 }
 
 type ResultStats {
-  approvedSheets: Int!
-  pendingSheets: Int!
-  totalSheets: Int!
+  approvedSheets: MetricStat!
+  pendingSheets: MetricStat!
+  totalSheets: MetricStat!
 }
 
 enum ResultStatus {
