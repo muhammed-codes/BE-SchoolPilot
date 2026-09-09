@@ -419,7 +419,9 @@ export class StudentsService {
         }
 
         if (!toClassId) {
-          throw new BadRequestException('Destination class (toClassId) is required when promoting students');
+          throw new BadRequestException(
+            'Destination class (toClassId) is required when promoting students',
+          );
         }
 
         return this.studentsRepository

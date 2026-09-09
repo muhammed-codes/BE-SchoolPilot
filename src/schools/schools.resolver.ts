@@ -1,4 +1,12 @@
-import { Resolver, Query, Mutation, Args, ObjectType, Field, Int } from '@nestjs/graphql';
+import {
+  Resolver,
+  Query,
+  Mutation,
+  Args,
+  ObjectType,
+  Field,
+  Int,
+} from '@nestjs/graphql';
 import {
   UseGuards,
   ForbiddenException,
@@ -58,21 +66,27 @@ export class SchoolsResolver {
       payload as Record<string, unknown>,
       {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
-        expiresIn: this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRES') as never,
+        expiresIn: this.configService.getOrThrow<string>(
+          'JWT_ACCESS_EXPIRES',
+        ) as never,
       },
     );
     const refreshToken = this.jwtService.sign(
       { sub: user.id } as Record<string, unknown>,
       {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-        expiresIn: this.configService.getOrThrow<string>('JWT_REFRESH_EXPIRES') as never,
+        expiresIn: this.configService.getOrThrow<string>(
+          'JWT_REFRESH_EXPIRES',
+        ) as never,
       },
     );
-    return bcrypt.hash(refreshToken, 12).then((hashedRefresh) =>
-      this.schoolsService
-        .saveUserRefreshToken(user.id, hashedRefresh)
-        .then(() => ({ accessToken, refreshToken })),
-    );
+    return bcrypt
+      .hash(refreshToken, 12)
+      .then((hashedRefresh) =>
+        this.schoolsService
+          .saveUserRefreshToken(user.id, hashedRefresh)
+          .then(() => ({ accessToken, refreshToken })),
+      );
   };
 
   // ─── Public Mutations (No Auth) ─────────────────────────────────────────────

@@ -399,7 +399,9 @@ export class PdfService {
             Promise.resolve(),
           )
           .then(() => {
-            return reportCardsHtml.join('<div style="page-break-before: always;"></div>');
+            return reportCardsHtml.join(
+              '<div style="page-break-before: always;"></div>',
+            );
           });
       });
   };

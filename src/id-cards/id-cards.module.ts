@@ -6,10 +6,7 @@ import { IdCardsResolver } from './id-cards.resolver';
 import { SchoolsModule } from '../schools/schools.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([User]),
-    SchoolsModule,
-  ],
+  imports: [TypeOrmModule.forFeature([User]), SchoolsModule],
   providers: [IdCardsService, IdCardsResolver],
   exports: [IdCardsService],
 })

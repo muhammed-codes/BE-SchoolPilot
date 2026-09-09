@@ -133,6 +133,7 @@ export class AccessService implements OnModuleInit {
         AppResource.ATTENDANCE,
         AppResource.CLASSES,
         AppResource.SUBJECTS,
+        AppResource.TIMETABLE,
       ];
       return {
         canRead: parentReadRes.includes(resource),
@@ -198,25 +199,23 @@ export class AccessService implements OnModuleInit {
     requesterRole?: UserRole,
     requesterSchoolId?: string | null,
   ) => {
-    return this.permissionRepo
-      .findOne({ where: { id } })
-      .then((existing) => {
-        if (!existing) throw new Error('Permission not found');
+    return this.permissionRepo.findOne({ where: { id } }).then((existing) => {
+      if (!existing) throw new Error('Permission not found');
 
-        // SCHOOL_ADMIN can only edit their own school's permissions
-        if (
-          requesterRole === UserRole.SCHOOL_ADMIN &&
-          existing.schoolId !== requesterSchoolId
-        ) {
-          throw new ForbiddenException(
-            'You can only update permissions for your own school',
-          );
-        }
+      // SCHOOL_ADMIN can only edit their own school's permissions
+      if (
+        requesterRole === UserRole.SCHOOL_ADMIN &&
+        existing.schoolId !== requesterSchoolId
+      ) {
+        throw new ForbiddenException(
+          'You can only update permissions for your own school',
+        );
+      }
 
-        return this.permissionRepo
-          .update(id, updates)
-          .then(() => this.permissionRepo.findOne({ where: { id } }));
-      });
+      return this.permissionRepo
+        .update(id, updates)
+        .then(() => this.permissionRepo.findOne({ where: { id } }));
+    });
   };
 
   /**
@@ -350,7 +349,9 @@ export class AccessService implements OnModuleInit {
 
       if (updates.length > 0) {
         return Promise.all(updates).then(() => {
-          console.log(`Repaired ${updates.length} existing permission records.`);
+          console.log(
+            `Repaired ${updates.length} existing permission records.`,
+          );
         });
       }
       return Promise.resolve();

@@ -14,9 +14,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * 5. Add performance index on schoolId
  * 6. Delete all existing global rows (they will be re-seeded per school on next startup)
  */
-export class AddSchoolIdToRolePermissions1788200000000
-  implements MigrationInterface
-{
+export class AddSchoolIdToRolePermissions1788200000000 implements MigrationInterface {
   name = 'AddSchoolIdToRolePermissions1788200000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

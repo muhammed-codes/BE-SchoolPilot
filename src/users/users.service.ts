@@ -329,11 +329,13 @@ export class UsersService {
         }
       }
 
-      return bcrypt.hash(newPassword, 12).then((passwordHash: string) =>
-        this.usersRepository
-          .update(userId, { passwordHash })
-          .then(() => true),
-      );
+      return bcrypt
+        .hash(newPassword, 12)
+        .then((passwordHash: string) =>
+          this.usersRepository
+            .update(userId, { passwordHash })
+            .then(() => true),
+        );
     });
   };
 
@@ -348,19 +350,19 @@ export class UsersService {
       );
     }
 
-    return this.usersRepository
-      .find({ where: { schoolId } })
-      .then((users) => {
-        if (!users || users.length === 0) {
-          throw new NotFoundException('No users found for this school');
-        }
+    return this.usersRepository.find({ where: { schoolId } }).then((users) => {
+      if (!users || users.length === 0) {
+        throw new NotFoundException('No users found for this school');
+      }
 
-        return bcrypt.hash(newPassword, 12).then((passwordHash: string) =>
+      return bcrypt
+        .hash(newPassword, 12)
+        .then((passwordHash: string) =>
           this.usersRepository
             .update({ schoolId }, { passwordHash })
             .then(() => true),
         );
-      });
+    });
   };
 
   updateAvatar = (userId: string, imageUrl: string) => {

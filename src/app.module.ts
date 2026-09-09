@@ -22,6 +22,7 @@ import { IdCardsModule } from './id-cards/id-cards.module';
 import { MailModule } from './mail/mail.module';
 import { AccessModule } from './access/access.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { TimetableModule } from './timetable/timetable.module';
 import { GqlThrottlerGuard } from './common/guards/gql-throttler.guard';
 
 @Module({
@@ -111,6 +112,7 @@ import { GqlThrottlerGuard } from './common/guards/gql-throttler.guard';
     MailModule,
     AccessModule,
     DashboardModule,
+    TimetableModule,
   ],
   controllers: [AppController],
   providers: [

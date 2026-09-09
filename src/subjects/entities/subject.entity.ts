@@ -12,4 +12,8 @@ export class Subject extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
   schoolId!: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  code?: string;
 }

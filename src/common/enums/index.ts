@@ -8,4 +8,3 @@ export { TermStatus } from './term-status.enum';
 export { Gender } from './gender.enum';
 export { NamePrefix } from './name-prefix.enum';
 export { StudentStatus } from './student-status.enum';
-

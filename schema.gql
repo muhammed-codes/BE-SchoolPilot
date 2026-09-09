@@ -55,6 +55,9 @@ type ClassSubject {
   classId: String!
   createdAt: DateTime!
   id: ID!
+  isDoublePeriod: Boolean
+  periodsPerWeek: Int
+  schoolId: String
   subject: Subject!
   subjectId: String!
   subjectTeacher: User
@@ -589,6 +592,7 @@ enum StudentStatus {
 }
 
 type Subject {
+  code: String
   createdAt: DateTime!
   id: ID!
   name: String!
@@ -695,6 +699,7 @@ type UploadResult {
 }
 
 type User {
+  assignedClassId: String
   avatarUrl: String
   createdAt: DateTime!
   email: String
@@ -703,8 +708,11 @@ type User {
   fullName: String!
   id: ID!
   isActive: Boolean!
+  isClassTeacher: Boolean
   isEmailVerified: Boolean!
   lastName: String!
+  maxPeriodsPerDay: Int
+  maxPeriodsPerWeek: Int
   namePrefix: NamePrefix
   phone: String
   role: UserRole!

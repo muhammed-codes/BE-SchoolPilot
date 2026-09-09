@@ -1,4 +1,4 @@
-import { ObjectType, Field } from '@nestjs/graphql';
+import { ObjectType, Field, Int } from '@nestjs/graphql';
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { ClassEntity } from './class.entity';
@@ -19,6 +19,18 @@ export class ClassSubject extends BaseEntity {
   @Field({ nullable: true })
   @Column({ type: 'uuid', nullable: true })
   subjectTeacherId!: string;
+
+  @Field(() => Boolean, { nullable: true, defaultValue: false })
+  @Column({ default: false })
+  isDoublePeriod?: boolean;
+
+  @Field(() => Int, { nullable: true, defaultValue: 4 })
+  @Column({ type: 'int', default: 4 })
+  periodsPerWeek?: number;
+
+  @Field(() => String, { nullable: true })
+  @Column({ type: 'uuid', nullable: true })
+  schoolId?: string;
 
   @Field(() => ClassEntity)
   @ManyToOne(() => ClassEntity, (c) => c.classSubjects)

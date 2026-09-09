@@ -25,8 +25,7 @@ export class AccessResolver {
     @CurrentUser() user: { role: UserRole; schoolId?: string },
   ) {
     // SUPER_ADMIN sees global permissions; SCHOOL_ADMIN sees their school's permissions
-    const schoolId =
-      user.role === UserRole.SUPER_ADMIN ? null : user.schoolId;
+    const schoolId = user.role === UserRole.SUPER_ADMIN ? null : user.schoolId;
     return this.accessService.getAllPermissions(schoolId);
   }
 

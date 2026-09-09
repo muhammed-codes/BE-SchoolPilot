@@ -264,7 +264,7 @@ export class ResultsService {
       /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
         subjectId,
       );
-    if (isUuid) return subjectId!;
+    if (isUuid) return subjectId;
 
     const classSub = await this.classSubjectRepo.findOne({
       where: { classId },
@@ -360,36 +360,36 @@ export class ResultsService {
                 return subjectScore;
               });
           })
-            .then((subjectScore) => {
-              const totalScore = studentScore.componentScores.reduce(
-                (sum, cs) => sum + cs.score,
-                0,
-              );
+          .then((subjectScore) => {
+            const totalScore = studentScore.componentScores.reduce(
+              (sum, cs) => sum + cs.score,
+              0,
+            );
 
-              subjectScore.scores = studentScore.componentScores;
-              subjectScore.totalScore = totalScore;
-              subjectScore.grade = calculateGrade(
-                totalScore,
-                totalMaxScore,
-                sheet.gradingSystem,
-              );
-              subjectScore.enteredByUserId = userId;
+            subjectScore.scores = studentScore.componentScores;
+            subjectScore.totalScore = totalScore;
+            subjectScore.grade = calculateGrade(
+              totalScore,
+              totalMaxScore,
+              sheet.gradingSystem,
+            );
+            subjectScore.enteredByUserId = userId;
 
-              if (input.submit) {
-                subjectScore.isSubmitted = true;
-                subjectScore.submittedAt = new Date();
-              }
+            if (input.submit) {
+              subjectScore.isSubmitted = true;
+              subjectScore.submittedAt = new Date();
+            }
 
-              return this.subjectScoreRepo.save(subjectScore);
-            }),
-        ),
-      ).then((savedScores) =>
-        input.submit
-          ? this.checkAndAdvanceStatus(sheet.id)
-              .then(() => this.recalculateStudentTotals(sheet.id))
-              .then(() => savedScores)
-          : this.recalculateStudentTotals(sheet.id).then(() => savedScores),
-      );
+            return this.subjectScoreRepo.save(subjectScore);
+          }),
+      ),
+    ).then((savedScores) =>
+      input.submit
+        ? this.checkAndAdvanceStatus(sheet.id)
+            .then(() => this.recalculateStudentTotals(sheet.id))
+            .then(() => savedScores)
+        : this.recalculateStudentTotals(sheet.id).then(() => savedScores),
+    );
   };
 
   private validateSubmitPayload = (
@@ -925,8 +925,18 @@ export class ResultsService {
 
     return {
       totalSheets: createMetricStat(totalSheets, null, null, hasActiveTerm),
-      pendingSheets: createMetricStat(pendingSheets, totalSheets, null, hasActiveTerm),
-      approvedSheets: createMetricStat(approvedSheets, totalSheets, null, hasActiveTerm),
+      pendingSheets: createMetricStat(
+        pendingSheets,
+        totalSheets,
+        null,
+        hasActiveTerm,
+      ),
+      approvedSheets: createMetricStat(
+        approvedSheets,
+        totalSheets,
+        null,
+        hasActiveTerm,
+      ),
     };
   };
 

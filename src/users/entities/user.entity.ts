@@ -1,4 +1,4 @@
-import { ObjectType, Field } from '@nestjs/graphql';
+import { ObjectType, Field, Int } from '@nestjs/graphql';
 import { Entity, Column } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { NamePrefix, UserRole } from '../../common/enums';
@@ -71,6 +71,20 @@ export class User extends BaseEntity {
 
   @Column({ type: 'varchar', nullable: true })
   emailVerificationToken!: string | null;
+
+  @Field(() => Int, { nullable: true, defaultValue: 6 })
+  @Column({ type: 'int', nullable: true, default: 6 })
+  maxPeriodsPerDay?: number;
+
+  @Field(() => Int, { nullable: true, defaultValue: 25 })
+  @Column({ type: 'int', nullable: true, default: 25 })
+  maxPeriodsPerWeek?: number;
+
+  @Field(() => Boolean, { nullable: true })
+  isClassTeacher?: boolean;
+
+  @Field(() => String, { nullable: true })
+  assignedClassId?: string;
 
   @Field()
   get fullName(): string {

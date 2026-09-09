@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
@@ -40,12 +44,14 @@ export class SchoolsService {
     });
     return this.schoolsRepository.save(school).then((savedSchool) => {
       // Seed per-school permissions after creation (fire-and-forget)
-      this.accessService.seedDefaultPermissions(savedSchool.id).catch((err) =>
-        console.error(
-          `Failed to seed permissions for school ${savedSchool.id}:`,
-          err,
-        ),
-      );
+      this.accessService
+        .seedDefaultPermissions(savedSchool.id)
+        .catch((err) =>
+          console.error(
+            `Failed to seed permissions for school ${savedSchool.id}:`,
+            err,
+          ),
+        );
       return savedSchool;
     });
   };
@@ -99,12 +105,14 @@ export class SchoolsService {
       })
       .then(({ school, user }) => {
         // 3. Seed default permissions for the new school (outside transaction - non-critical)
-        this.accessService.seedDefaultPermissions(school.id).catch((err) =>
-          console.error(
-            `Failed to seed permissions for new school ${school.id}:`,
-            err,
-          ),
-        );
+        this.accessService
+          .seedDefaultPermissions(school.id)
+          .catch((err) =>
+            console.error(
+              `Failed to seed permissions for new school ${school.id}:`,
+              err,
+            ),
+          );
         return { school, user };
       });
   };

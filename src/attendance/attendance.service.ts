@@ -366,7 +366,10 @@ export class AttendanceService {
         throw new BadRequestException('QR Code has expired, please scan again');
       })
       .then((decodedToken) => {
-        if (decodedToken.schoolId !== schoolId || decodedToken.purpose !== 'staff_attendance') {
+        if (
+          decodedToken.schoolId !== schoolId ||
+          decodedToken.purpose !== 'staff_attendance'
+        ) {
           throw new ForbiddenException('Invalid QR code');
         }
 
@@ -380,7 +383,9 @@ export class AttendanceService {
           if (!record || !record.clockInTime) {
             let isLate = false;
             if (school && school.schoolStartTime) {
-              const [hours, minutes] = school.schoolStartTime.split(':').map(Number);
+              const [hours, minutes] = school.schoolStartTime
+                .split(':')
+                .map(Number);
               const startDateTime = new Date();
               startDateTime.setHours(hours, minutes, 0, 0);
               if (now > startDateTime) {

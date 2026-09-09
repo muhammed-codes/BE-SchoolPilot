@@ -15,7 +15,9 @@ async function seed() {
     const userRepo = AppDataSource.getRepository(User);
 
     // 1. Ensure default School exists
-    let school = await schoolRepo.findOne({ where: { name: 'SchoolPilot Demonstration School' } });
+    let school = await schoolRepo.findOne({
+      where: { name: 'SchoolPilot Demonstration School' },
+    });
     if (!school) {
       console.log('Creating default Demonstration School...');
       school = schoolRepo.create({
@@ -57,7 +59,9 @@ async function seed() {
       await userRepo.save(adminUser);
       console.log(`Admin user created with ID: ${adminUser.id}`);
     } else {
-      console.log(`Updating existing Admin user: ${adminEmail} with new password...`);
+      console.log(
+        `Updating existing Admin user: ${adminEmail} with new password...`,
+      );
       adminUser.passwordHash = passwordHash;
       adminUser.role = UserRole.SUPER_ADMIN;
       adminUser.isEmailVerified = true;
