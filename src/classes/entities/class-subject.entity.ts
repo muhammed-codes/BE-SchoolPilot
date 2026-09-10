@@ -21,7 +21,7 @@ export class ClassSubject extends BaseEntity {
   subjectTeacherId!: string;
 
   @Field(() => Boolean, { nullable: true, defaultValue: false })
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   isDoublePeriod?: boolean;
 
   @Field(() => Int, { nullable: true, defaultValue: 4 })

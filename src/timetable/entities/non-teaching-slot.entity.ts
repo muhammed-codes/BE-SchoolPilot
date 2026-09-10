@@ -37,10 +37,10 @@ export class NonTeachingSlot extends BaseEntity {
   period?: Period | null;
 
   @Field({ nullable: true })
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   startTime?: string | null;
 
   @Field({ nullable: true })
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   endTime?: string | null;
 }

@@ -14,6 +14,6 @@ export class Subject extends BaseEntity {
   schoolId!: string;
 
   @Field({ nullable: true })
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   code?: string;
 }
