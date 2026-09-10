@@ -350,7 +350,7 @@ type Mutation {
   createSchool(input: CreateSchoolInput!): School!
   createSession(input: CreateSessionInput!): Session!
   createStudent(input: CreateStudentInput!): Student!
-  createSubject(name: String!): Subject!
+  createSubject(code: String, name: String!): Subject!
   createTerm(input: CreateTermInput!): Term!
   createTimetableEntry(input: CreateTimetableEntryInput!): TimetableMutationResult!
   createUser(input: CreateUserInput!): User!
@@ -404,6 +404,7 @@ type Mutation {
   updateSchool(id: String!, input: UpdateSchoolInput!): School!
   updateSchoolDay(input: UpdateSchoolDayInput!): SchoolDay!
   updateStudent(id: String!, input: UpdateStudentInput!): Student!
+  updateSubject(code: String, id: String, input: UpdateSubjectInput, name: String): Subject!
   updateTeacherWorkload(input: UpdateTeacherWorkloadInput!): User!
   updateTimetableEntry(input: UpdateTimetableEntryInput!): TimetableMutationResult!
   updateTotalSchoolDays(days: Int!, termId: String!): Term!
@@ -1020,6 +1021,12 @@ input UpdateStudentInput {
   passportPhotoUrl: String
   stateOfOrigin: String
   status: StudentStatus
+}
+
+input UpdateSubjectInput {
+  code: String
+  id: String!
+  name: String
 }
 
 input UpdateTeacherWorkloadInput {
