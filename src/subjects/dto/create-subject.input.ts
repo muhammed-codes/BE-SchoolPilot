@@ -1,9 +1,15 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 @InputType()
 export class CreateSubjectInput {
-  @Field()
+  @Field(() => String)
   @IsNotEmpty()
-  name: string;
+  @IsString()
+  name!: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  code?: string;
 }
