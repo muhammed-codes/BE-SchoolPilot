@@ -51,7 +51,7 @@ export class TeacherAvailability extends BaseEntity {
   @Column({ type: 'varchar', default: ApprovalStatus.PENDING })
   approvalStatus!: ApprovalStatus;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'text', nullable: true })
   notes?: string | null;
 }

@@ -13,7 +13,7 @@ export class Subject extends BaseEntity {
   @Column({ type: 'uuid' })
   schoolId!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'varchar', nullable: true })
   code?: string;
 }

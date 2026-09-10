@@ -36,11 +36,11 @@ export class NonTeachingSlot extends BaseEntity {
   @JoinColumn({ name: 'periodId' })
   period?: Period | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'varchar', nullable: true })
   startTime?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'varchar', nullable: true })
   endTime?: string | null;
 }

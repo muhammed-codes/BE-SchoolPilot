@@ -40,7 +40,7 @@ export class UpdateRoomInput {
   @IsUUID()
   id!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   name?: string;
@@ -72,7 +72,7 @@ export class UpdateSchoolDayInput {
   @IsBoolean()
   isTeachingDay!: boolean;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   dayName?: string;
@@ -107,17 +107,17 @@ export class UpdatePeriodInput {
   @IsUUID()
   id!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   name?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   startTime?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   endTime?: string;
@@ -167,12 +167,12 @@ export class CreateNonTeachingSlotInput {
   @IsUUID()
   periodId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   startTime?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   endTime?: string;
@@ -184,7 +184,7 @@ export class UpdateNonTeachingSlotInput {
   @IsUUID()
   id!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   name?: string;
@@ -201,12 +201,12 @@ export class UpdateNonTeachingSlotInput {
   @IsOptional()
   periodId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   startTime?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   endTime?: string;
@@ -277,7 +277,7 @@ export class SubmitTeacherAvailabilityInput {
   @Field(() => AvailabilityStatus)
   status!: AvailabilityStatus;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   notes?: string;
@@ -305,7 +305,7 @@ export class AdminSetTeacherAvailabilityInput {
   @Field(() => ApprovalStatus, { defaultValue: ApprovalStatus.APPROVED })
   approvalStatus!: ApprovalStatus;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   notes?: string;
@@ -320,7 +320,7 @@ export class ReviewTeacherAvailabilityInput {
   @Field(() => ApprovalStatus)
   approvalStatus!: ApprovalStatus;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   notes?: string;

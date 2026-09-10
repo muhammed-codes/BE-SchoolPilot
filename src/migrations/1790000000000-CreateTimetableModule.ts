@@ -4,6 +4,17 @@ export class CreateTimetableModule1790000000000 implements MigrationInterface {
   name = 'CreateTimetableModule1790000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // 0. Ensure timetable resource enum exists
+    await queryRunner.query(`
+      DO $$
+      BEGIN
+        ALTER TYPE "role_permissions_resource_enum" ADD VALUE IF NOT EXISTS 'timetable';
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+        WHEN undefined_object THEN null;
+      END $$;
+    `);
+
     // 1. Add extra columns to existing tables
     await queryRunner.query(`
       ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "maxPeriodsPerDay" int DEFAULT 6;

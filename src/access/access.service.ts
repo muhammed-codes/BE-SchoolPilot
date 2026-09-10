@@ -16,7 +16,21 @@ export class AccessService implements OnModuleInit {
    * On module init, seed global default permissions (schoolId = null) for ALL roles,
    * and repair existing rows if necessary.
    */
-  onModuleInit() {
+  async onModuleInit() {
+    try {
+      await this.permissionRepo.query(`
+        DO $$
+        BEGIN
+          ALTER TYPE "role_permissions_resource_enum" ADD VALUE IF NOT EXISTS 'timetable';
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+          WHEN undefined_object THEN null;
+        END $$;
+      `);
+    } catch {
+      // Safe fallback
+    }
+
     this.seedGlobalDefaultPermissions()
       .then(() => this.repairExistingPermissions())
       .catch((err) =>

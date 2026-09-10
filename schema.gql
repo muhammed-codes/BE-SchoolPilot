@@ -2,6 +2,15 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+input AdminSetTeacherAvailabilityInput {
+  approvalStatus: ApprovalStatus! = APPROVED
+  dayOfWeek: Int!
+  notes: String
+  periodId: String!
+  status: AvailabilityStatus!
+  teacherId: String!
+}
+
 enum AppResource {
   ATTENDANCE
   CLASSES
@@ -10,7 +19,22 @@ enum AppResource {
   SETTINGS
   STUDENTS
   SUBJECTS
+  TIMETABLE
   USERS
+}
+
+enum ApprovalStatus {
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+input AssignClassSubjectInput {
+  classId: String!
+  isDoublePeriod: Boolean! = false
+  periodsPerWeek: Int! = 4
+  subjectId: String!
+  teacherId: String
 }
 
 enum AttendanceStatus {
@@ -32,10 +56,26 @@ type AuthResponse {
   user: User!
 }
 
+enum AvailabilitySource {
+  ADMIN_SET
+  SELF_SUBMITTED
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  UNAVAILABLE
+}
+
 type BulkImportResult {
   failed: [FailedRow!]!
   imported: Int!
   students: [Student!]!
+}
+
+type ChildTimetableResult {
+  classEntity: ClassEntity
+  entries: [TimetableEntry!]!
+  student: Student!
 }
 
 type ClassEntity {
@@ -67,6 +107,14 @@ type ClassSubject {
   updatedAt: DateTime!
 }
 
+input CloneClassTimetableInput {
+  allowOverride: Boolean! = false
+  copyTeachers: Boolean! = true
+  sourceClassId: String!
+  targetClassId: String!
+  termId: String!
+}
+
 type ComponentScore {
   component: ScoreComponent!
   score: Float!
@@ -77,9 +125,59 @@ input ComponentScoreInput {
   score: Float!
 }
 
+enum ConflictSeverity {
+  BLOCKING
+  WARNING
+}
+
+enum ConflictType {
+  CLASS_DUPLICATE_SLOT
+  EMPTY_PERIOD
+  MISSING_ASSIGNMENT
+  ROOM_DOUBLE_BOOKED
+  TEACHER_DOUBLE_BOOKED
+  TEACHER_OVERLOAD
+  TEACHER_UNAVAILABLE
+}
+
+type ConflictViolation {
+  classId: String
+  dayOfWeek: Int
+  message: String!
+  periodId: String
+  roomId: String
+  severity: ConflictSeverity!
+  teacherId: String
+  type: ConflictType!
+}
+
+input CopyDayLayoutInput {
+  allowOverride: Boolean! = false
+  classId: String
+  fromDayOfWeek: Int!
+  termId: String!
+  toDayOfWeek: Int!
+}
+
 input CreateClassInput {
   classTeacherId: String
   name: String!
+}
+
+input CreateNonTeachingSlotInput {
+  dayOfWeek: Int
+  endTime: String
+  name: String!
+  periodId: String
+  startTime: String
+  type: NonTeachingSlotType! = BREAK
+}
+
+input CreatePeriodInput {
+  endTime: String!
+  name: String!
+  orderIndex: Int! = 1
+  startTime: String!
 }
 
 input CreateResultSheetInput {
@@ -87,6 +185,12 @@ input CreateResultSheetInput {
   gradingSystem: GradingSystem!
   scoreComponents: [ScoreComponentConfigInput!]!
   termId: String!
+}
+
+input CreateRoomInput {
+  capacity: Int! = 30
+  name: String!
+  type: RoomType! = CLASSROOM
 }
 
 input CreateSchoolInput {
@@ -132,6 +236,18 @@ input CreateTermInput {
   startDate: DateTime!
 }
 
+input CreateTimetableEntryInput {
+  allowOverride: Boolean! = false
+  classId: String!
+  dayOfWeek: Int!
+  isDoublePeriod: Boolean! = false
+  periodId: String!
+  roomId: String
+  subjectId: String!
+  teacherId: String!
+  termId: String!
+}
+
 input CreateUserInput {
   email: String!
   firstName: String!
@@ -154,6 +270,12 @@ type DashboardOverview {
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
 scalar DateTime
+
+input ExportTimetablePdfInput {
+  targetId: String
+  termId: String!
+  viewType: TimetableExportView!
+}
 
 type FailedRow {
   reason: String!
@@ -206,8 +328,10 @@ type Mutation {
   activateTerm(termId: String!): Term!
   adminResetPassword(newPassword: String!, userId: String!): Boolean!
   adminResetSchoolPassword(newPassword: String!, schoolId: String!): Boolean!
+  adminSetTeacherAvailability(input: AdminSetTeacherAvailabilityInput!): TeacherAvailability!
   approveResult(resultSheetId: String!): ResultSheet!
   archiveResultSheet(resultSheetId: String!): ResultSheet!
+  assignClassSubject(input: AssignClassSubjectInput!): ClassSubject!
   assignClassTeacher(classId: String!, teacherId: String!): ClassEntity!
   assignSubjectTeacher(classId: String!, subjectId: String!, teacherId: String!): ClassSubject!
   assignSubjectsToClass(classId: String!, subjectIds: [String!]!): ClassEntity!
@@ -215,21 +339,33 @@ type Mutation {
   bulkImportStudents(students: [CreateStudentInput!]!): BulkImportResult!
   changePassword(newPassword: String!, oldPassword: String!): Boolean!
   clockAction(photo: String!): StaffAttendance!
+  cloneClassTimetable(input: CloneClassTimetableInput!): [TimetableMutationResult!]!
   closeTerm(termId: String!): Term!
+  copyDayLayout(input: CopyDayLayoutInput!): [TimetableMutationResult!]!
   createClass(input: CreateClassInput!): ClassEntity!
+  createNonTeachingSlot(input: CreateNonTeachingSlotInput!): NonTeachingSlot!
+  createPeriod(input: CreatePeriodInput!): Period!
   createResultSheet(input: CreateResultSheetInput!): ResultSheet!
+  createRoom(input: CreateRoomInput!): Room!
   createSchool(input: CreateSchoolInput!): School!
   createSession(input: CreateSessionInput!): Session!
   createStudent(input: CreateStudentInput!): Student!
   createSubject(name: String!): Subject!
   createTerm(input: CreateTermInput!): Term!
+  createTimetableEntry(input: CreateTimetableEntryInput!): TimetableMutationResult!
   createUser(input: CreateUserInput!): User!
   deactivateSchool(id: String!): School!
   deactivateUser(id: String!): User!
+  deleteNonTeachingSlot(id: String!): Boolean!
+  deletePeriod(id: String!): Boolean!
+  deleteRoom(id: String!): Boolean!
   deleteSubject(id: String!): Boolean!
+  deleteTimetableEntry(id: String!): Boolean!
   forgotPassword(input: ForgotPasswordInput!): Boolean!
   generateBulkReportCards(resultSheetId: String!): String!
   generateReportCard(studentResultId: String!): String!
+  initDefaultPeriods: [Period!]!
+  initDefaultSchoolDays: [SchoolDay!]!
   linkParent(parentUserId: String!, studentId: String!): Student!
   login(input: LoginInput!): AuthResponse!
   logout: Boolean!
@@ -242,9 +378,12 @@ type Mutation {
   regenerateQrCode(schoolId: String!): School!
   register(input: RegisterInput!): AuthResponse!
   registerSchool(input: RegisterSchoolInput!): AuthResponse!
+  removeClassSubjectAssignment(id: String!): Boolean!
+  reorderPeriods(items: [ReorderPeriodItem!]!): [Period!]!
   resendVerificationEmail(email: String!): Boolean!
   resetPassword(input: ResetPasswordInput!): Boolean!
   returnResult(reason: String!, resultSheetId: String!): ResultSheet!
+  reviewTeacherAvailability(input: ReviewTeacherAvailabilityInput!): TeacherAvailability!
   saveClassTeacherRemark(remark: String!, studentResultId: String!): StudentResult!
   savePrincipalRemark(remark: String!, studentResultId: String!): StudentResult!
   saveSubjectScores(input: SaveSubjectScoresInput!): [SubjectScore!]!
@@ -252,13 +391,21 @@ type Mutation {
   singleUpload(file: Upload!, folder: String!): UploadResult!
   submitForAdminReview(resultSheetId: String!): ResultSheet!
   submitForPrincipalApproval(resultSheetId: String!): ResultSheet!
+  submitMyAvailability(input: SubmitTeacherAvailabilityInput!): TeacherAvailability!
   unarchiveResultSheet(resultSheetId: String!): ResultSheet!
   unlinkParent(parentUserId: String!, studentId: String!): Boolean!
   unlockTerm(termId: String!): Term!
+  updateClassSubjectAssignment(input: UpdateClassSubjectAssignmentInput!): ClassSubject!
   updateExpoPushToken(token: String!): Boolean!
+  updateNonTeachingSlot(input: UpdateNonTeachingSlotInput!): NonTeachingSlot!
+  updatePeriod(input: UpdatePeriodInput!): Period!
   updateRolePermission(input: UpdatePermissionInput!): RolePermission!
+  updateRoom(input: UpdateRoomInput!): Room!
   updateSchool(id: String!, input: UpdateSchoolInput!): School!
+  updateSchoolDay(input: UpdateSchoolDayInput!): SchoolDay!
   updateStudent(id: String!, input: UpdateStudentInput!): Student!
+  updateTeacherWorkload(input: UpdateTeacherWorkloadInput!): User!
+  updateTimetableEntry(input: UpdateTimetableEntryInput!): TimetableMutationResult!
   updateTotalSchoolDays(days: Int!, termId: String!): Term!
   updateUser(id: String!, input: UpdateUserInput!): User!
   uploadAvatar(imageUrl: String!): User!
@@ -273,6 +420,27 @@ enum NamePrefix {
   MISS
   MR
   MRS
+}
+
+type NonTeachingSlot {
+  createdAt: DateTime!
+  dayOfWeek: Int
+  endTime: String
+  id: ID!
+  name: String!
+  period: Period
+  periodId: String
+  schoolId: String!
+  startTime: String
+  type: NonTeachingSlotType!
+  updatedAt: DateTime!
+}
+
+enum NonTeachingSlotType {
+  ASSEMBLY
+  BREAK
+  EXTRACURRICULAR
+  OTHER
 }
 
 type PaginatedClassEntity {
@@ -294,6 +462,18 @@ type PaginatedUser {
   page: Int!
   total: Int!
   totalPages: Int!
+}
+
+type Period {
+  createdAt: DateTime!
+  endTime: String!
+  id: ID!
+  isActive: Boolean!
+  name: String!
+  orderIndex: Int!
+  schoolId: String!
+  startTime: String!
+  updatedAt: DateTime!
 }
 
 type PlatformStats {
@@ -321,22 +501,32 @@ type Query {
   allRolePermissions: [RolePermission!]!
   archivedResultSheets(status: ResultStatus): [ResultSheet!]!
   archivedStudents: [Student!]!
+  childTimetable(studentId: String!, termId: String): ChildTimetableResult!
   classAttendance(classId: String!, date: String!): [StudentAttendance!]!
   classById(id: String!): ClassEntity!
+  classSubjectAssignments(classId: String!): [ClassSubject!]!
   dashboardOverview: DashboardOverview!
+  exportTimetablePdf(input: ExportTimetablePdfInput!): TimetablePdfResult!
   me: User!
+  myAvailabilities: [TeacherAvailability!]!
   myChildren: [Student!]!
+  myChildrenTimetables(termId: String): [ChildTimetableResult!]!
   myClasses: [ClassEntity!]!
   myPermissions: [RolePermission!]!
   mySchool: School!
   mySubjectScores(resultSheetId: String!): [SubjectScore!]!
+  myTimetable(termId: String): TeacherTimetableResult!
+  nonTeachingSlots: [NonTeachingSlot!]!
   pendingPrincipalApprovals: [ResultSheet!]!
+  periods: [Period!]!
   platformStats: PlatformStats!
   resultSheet(id: String!): ResultSheet!
   resultSheetsByClass(classId: String!, termId: String!): [ResultSheet!]!
   resultStats: ResultStats!
+  rooms: [Room!]!
   school(id: String!): School!
   schoolClasses(limit: Int! = 20, page: Int! = 1): PaginatedClassEntity!
+  schoolDays: [SchoolDay!]!
   schoolResultSheets(status: ResultStatus): [ResultSheet!]!
   schoolSubjects: [Subject!]!
   schoolTeachers: [User!]!
@@ -351,7 +541,9 @@ type Query {
   studentAttendanceSummary(studentId: String!, termId: String!): AttendanceSummary!
   studentResult(studentId: String!, termId: String!): StudentResult
   studentsByClass(classId: String!): [Student!]!
+  teacherAvailabilities(approvalStatus: ApprovalStatus, teacherId: String): [TeacherAvailability!]!
   termsBySession(sessionId: String!): [Term!]!
+  timetableEntries(classId: String, roomId: String, teacherId: String, termId: String!): [TimetableEntry!]!
   unmarkedClasses(date: String!): [ClassEntity!]!
   user(id: String!): User!
 }
@@ -378,6 +570,11 @@ input RegisterSchoolInput {
   schoolName: String!
   schoolPhone: String
   schoolType: String = "basic"
+}
+
+input ReorderPeriodItem {
+  id: String!
+  orderIndex: Int!
 }
 
 input ResetPasswordInput {
@@ -418,6 +615,12 @@ enum ResultStatus {
   SCORES_ENTERED
 }
 
+input ReviewTeacherAvailabilityInput {
+  approvalStatus: ApprovalStatus!
+  id: String!
+  notes: String
+}
+
 type RolePermission {
   canCreate: Boolean!
   canDelete: Boolean!
@@ -429,6 +632,27 @@ type RolePermission {
   role: UserRole!
   schoolId: String
   updatedAt: DateTime!
+}
+
+type Room {
+  capacity: Int!
+  createdAt: DateTime!
+  id: ID!
+  isActive: Boolean!
+  name: String!
+  schoolId: String!
+  type: RoomType!
+  updatedAt: DateTime!
+}
+
+enum RoomType {
+  CLASSROOM
+  HALL
+  LAB
+  LIBRARY
+  OTHER
+  OUTDOOR
+  WORKSHOP
 }
 
 input SaveSubjectScoresInput {
@@ -453,6 +677,17 @@ type School {
   schoolType: String!
   stampUrl: String
   uniqueQrCode: String!
+  updatedAt: DateTime!
+}
+
+type SchoolDay {
+  createdAt: DateTime!
+  dayName: String!
+  dayOfWeek: Int!
+  id: ID!
+  isTeachingDay: Boolean!
+  orderIndex: Int!
+  schoolId: String!
   updatedAt: DateTime!
 }
 
@@ -618,6 +853,35 @@ type SubjectScore {
   updatedAt: DateTime!
 }
 
+input SubmitTeacherAvailabilityInput {
+  dayOfWeek: Int!
+  notes: String
+  periodId: String!
+  status: AvailabilityStatus!
+}
+
+type TeacherAvailability {
+  approvalStatus: ApprovalStatus!
+  createdAt: DateTime!
+  dayOfWeek: Int!
+  id: ID!
+  notes: String
+  period: Period!
+  periodId: String!
+  schoolId: String!
+  source: AvailabilitySource!
+  status: AvailabilityStatus!
+  teacher: User!
+  teacherId: String!
+  updatedAt: DateTime!
+}
+
+type TeacherTimetableResult {
+  assignedClass: ClassEntity
+  entries: [TimetableEntry!]!
+  isClassTeacher: Boolean!
+}
+
 type Term {
   createdAt: DateTime!
   currentWeek: Int!
@@ -639,12 +903,91 @@ enum TermStatus {
   CLOSED
 }
 
+type TimetableEntry {
+  classEntity: ClassEntity!
+  classId: String!
+  createdAt: DateTime!
+  dayOfWeek: Int!
+  id: ID!
+  isDoublePeriod: Boolean!
+  period: Period!
+  periodId: String!
+  room: Room
+  roomId: String
+  schoolId: String!
+  subject: Subject!
+  subjectId: String!
+  teacher: User!
+  teacherId: String!
+  term: Term!
+  termId: String!
+  updatedAt: DateTime!
+}
+
+enum TimetableExportView {
+  CLASS
+  ROOM
+  SCHOOL
+  TEACHER
+}
+
+type TimetableMutationResult {
+  entry: TimetableEntry
+  success: Boolean!
+  violations: [ConflictViolation!]!
+}
+
+type TimetablePdfResult {
+  html: String!
+  title: String!
+}
+
+input UpdateClassSubjectAssignmentInput {
+  id: String!
+  isDoublePeriod: Boolean
+  periodsPerWeek: Int
+  teacherId: String
+}
+
+input UpdateNonTeachingSlotInput {
+  dayOfWeek: Int
+  endTime: String
+  id: String!
+  name: String
+  periodId: String
+  startTime: String
+  type: NonTeachingSlotType
+}
+
+input UpdatePeriodInput {
+  endTime: String
+  id: String!
+  isActive: Boolean
+  name: String
+  orderIndex: Int
+  startTime: String
+}
+
 input UpdatePermissionInput {
   canCreate: Boolean
   canDelete: Boolean
   canRead: Boolean
   canUpdate: Boolean
   id: ID!
+}
+
+input UpdateRoomInput {
+  capacity: Int
+  id: String!
+  isActive: Boolean
+  name: String
+  type: RoomType
+}
+
+input UpdateSchoolDayInput {
+  dayName: String
+  id: String!
+  isTeachingDay: Boolean!
 }
 
 input UpdateSchoolInput {
@@ -677,6 +1020,23 @@ input UpdateStudentInput {
   passportPhotoUrl: String
   stateOfOrigin: String
   status: StudentStatus
+}
+
+input UpdateTeacherWorkloadInput {
+  maxPeriodsPerDay: Int!
+  maxPeriodsPerWeek: Int!
+  teacherId: String!
+}
+
+input UpdateTimetableEntryInput {
+  allowOverride: Boolean! = false
+  dayOfWeek: Int
+  id: String!
+  isDoublePeriod: Boolean
+  periodId: String
+  roomId: String
+  subjectId: String
+  teacherId: String
 }
 
 input UpdateUserInput {
