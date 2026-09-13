@@ -28,4 +28,8 @@ export class Period extends BaseEntity {
   @Field(() => Boolean)
   @Column({ default: true })
   isActive!: boolean;
+
+  @Field(() => Int, { nullable: true })
+  @Column({ type: 'int', nullable: true })
+  dayOfWeek?: number | null;
 }

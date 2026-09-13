@@ -25,4 +25,12 @@ export class SchoolDay extends BaseEntity {
   @Field(() => Int)
   @Column({ type: 'int', default: 1 })
   orderIndex!: number;
+
+  @Field(() => String, { defaultValue: '08:00' })
+  @Column({ default: '08:00' })
+  openingTime!: string;
+
+  @Field(() => String, { defaultValue: '15:00' })
+  @Column({ default: '15:00' })
+  closingTime!: string;
 }
