@@ -47,7 +47,7 @@ export class TeacherAvailability extends BaseEntity {
   @Column({ type: 'varchar', default: AvailabilitySource.SELF_SUBMITTED })
   source!: AvailabilitySource;
 
-  @Field(() => ApprovalStatus)
+  @Field(() => ApprovalStatus, { defaultValue: ApprovalStatus.PENDING })
   @Column({ type: 'varchar', default: ApprovalStatus.PENDING })
   approvalStatus!: ApprovalStatus;
 

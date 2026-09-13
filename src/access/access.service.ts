@@ -361,14 +361,24 @@ export class AccessService implements OnModuleInit {
         }
       });
 
-      if (updates.length > 0) {
-        return Promise.all(updates).then(() => {
+      const schoolIds = Array.from(
+        new Set(
+          allPermissions
+            .map((p) => p.schoolId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
+      const seedPromises = schoolIds.map((sId) =>
+        this.seedDefaultPermissions(sId),
+      );
+
+      return Promise.all([...updates, ...seedPromises]).then(() => {
+        if (updates.length > 0) {
           console.log(
             `Repaired ${updates.length} existing permission records.`,
           );
-        });
-      }
-      return Promise.resolve();
+        }
+      });
     });
   };
 }
