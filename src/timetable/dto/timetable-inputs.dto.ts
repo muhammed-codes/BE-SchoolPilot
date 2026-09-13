@@ -8,6 +8,8 @@ import {
   IsUUID,
   Min,
   Max,
+  IsEnum,
+  IsArray,
 } from 'class-validator';
 import {
   RoomType,
@@ -31,7 +33,9 @@ export class CreateRoomInput {
   capacity!: number;
 
   @Field(() => RoomType, { defaultValue: RoomType.CLASSROOM })
-  type!: RoomType;
+  @IsOptional()
+  @IsEnum(RoomType)
+  type?: RoomType;
 }
 
 @InputType()
@@ -53,6 +57,7 @@ export class UpdateRoomInput {
 
   @Field(() => RoomType, { nullable: true })
   @IsOptional()
+  @IsEnum(RoomType)
   type?: RoomType;
 
   @Field(() => Boolean, { nullable: true })
@@ -76,6 +81,16 @@ export class UpdateSchoolDayInput {
   @IsOptional()
   @IsString()
   dayName?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  openingTime?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  closingTime?: string;
 }
 
 // ── Period Inputs ───────────────────────────────────────────────────────────
@@ -99,6 +114,11 @@ export class CreatePeriodInput {
   @Field(() => Int, { defaultValue: 1 })
   @IsNumber()
   orderIndex!: number;
+
+  @Field(() => Int, { nullable: true })
+  @IsOptional()
+  @IsNumber()
+  dayOfWeek?: number | null;
 }
 
 @InputType()
@@ -131,6 +151,11 @@ export class UpdatePeriodInput {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @Field(() => Int, { nullable: true })
+  @IsOptional()
+  @IsNumber()
+  dayOfWeek?: number | null;
 }
 
 @InputType()
@@ -153,7 +178,9 @@ export class CreateNonTeachingSlotInput {
   name!: string;
 
   @Field(() => NonTeachingSlotType, { defaultValue: NonTeachingSlotType.BREAK })
-  type!: NonTeachingSlotType;
+  @IsOptional()
+  @IsEnum(NonTeachingSlotType)
+  type?: NonTeachingSlotType;
 
   @Field(() => Int, { nullable: true })
   @IsOptional()
@@ -191,6 +218,7 @@ export class UpdateNonTeachingSlotInput {
 
   @Field(() => NonTeachingSlotType, { nullable: true })
   @IsOptional()
+  @IsEnum(NonTeachingSlotType)
   type?: NonTeachingSlotType;
 
   @Field(() => Int, { nullable: true })
@@ -275,6 +303,7 @@ export class SubmitTeacherAvailabilityInput {
   periodId!: string;
 
   @Field(() => AvailabilityStatus)
+  @IsEnum(AvailabilityStatus)
   status!: AvailabilityStatus;
 
   @Field(() => String, { nullable: true })
@@ -300,10 +329,13 @@ export class AdminSetTeacherAvailabilityInput {
   periodId!: string;
 
   @Field(() => AvailabilityStatus)
+  @IsEnum(AvailabilityStatus)
   status!: AvailabilityStatus;
 
   @Field(() => ApprovalStatus, { defaultValue: ApprovalStatus.APPROVED })
-  approvalStatus!: ApprovalStatus;
+  @IsOptional()
+  @IsEnum(ApprovalStatus)
+  approvalStatus?: ApprovalStatus;
 
   @Field(() => String, { nullable: true })
   @IsOptional()
@@ -318,6 +350,7 @@ export class ReviewTeacherAvailabilityInput {
   id!: string;
 
   @Field(() => ApprovalStatus)
+  @IsEnum(ApprovalStatus)
   approvalStatus!: ApprovalStatus;
 
   @Field(() => String, { nullable: true })
@@ -482,12 +515,36 @@ export class UpdateTeacherWorkloadInput {
 }
 
 @InputType()
+export class UpdateTeachersWorkloadInput {
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsArray()
+  teacherIds?: string[];
+
+  @Field(() => Boolean, { nullable: true, defaultValue: false })
+  @IsOptional()
+  @IsBoolean()
+  applyToAll?: boolean;
+
+  @Field(() => Int)
+  @IsNumber()
+  @Min(1)
+  maxPeriodsPerDay!: number;
+
+  @Field(() => Int)
+  @IsNumber()
+  @Min(1)
+  maxPeriodsPerWeek!: number;
+}
+
+@InputType()
 export class ExportTimetablePdfInput {
   @Field(() => String)
   @IsUUID()
   termId!: string;
 
   @Field(() => TimetableExportView)
+  @IsEnum(TimetableExportView)
   viewType!: TimetableExportView;
 
   @Field(() => String, { nullable: true })

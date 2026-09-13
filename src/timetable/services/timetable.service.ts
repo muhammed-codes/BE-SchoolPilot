@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere } from 'typeorm';
@@ -45,6 +47,7 @@ import {
   CopyDayLayoutInput,
   CloneClassTimetableInput,
   UpdateTeacherWorkloadInput,
+  UpdateTeachersWorkloadInput,
   ExportTimetablePdfInput,
 } from '../dto/timetable-inputs.dto';
 import {
@@ -60,7 +63,7 @@ import {
 } from '../templates/timetable-pdf.template';
 
 @Injectable()
-export class TimetableService {
+export class TimetableService implements OnModuleInit {
   constructor(
     @InjectRepository(Room)
     private readonly roomRepo: Repository<Room>,
@@ -92,6 +95,25 @@ export class TimetableService {
     private readonly schoolRepo: Repository<School>,
     private readonly conflictValidator: ConflictValidatorService,
   ) {}
+
+  async onModuleInit() {
+    await this.ensureTableColumns();
+  }
+
+  private hasEnsuredColumns = false;
+  private async ensureTableColumns(): Promise<void> {
+    if (this.hasEnsuredColumns) return;
+    try {
+      await this.schoolDayRepo.query(`
+        ALTER TABLE "school_days" ADD COLUMN IF NOT EXISTS "openingTime" varchar NOT NULL DEFAULT '08:00';
+        ALTER TABLE "school_days" ADD COLUMN IF NOT EXISTS "closingTime" varchar NOT NULL DEFAULT '15:00';
+        ALTER TABLE "periods" ADD COLUMN IF NOT EXISTS "dayOfWeek" int NULL;
+      `);
+      this.hasEnsuredColumns = true;
+    } catch (err) {
+      console.warn('Could not auto-add timetable columns:', err);
+    }
+  }
 
   // ══════════════════════════════════════════════════════════════════════════
   // ROOMS CRUD
@@ -128,6 +150,7 @@ export class TimetableService {
   // SCHOOL DAYS
   // ══════════════════════════════════════════════════════════════════════════
   async getSchoolDays(schoolId: string): Promise<SchoolDay[]> {
+    await this.ensureTableColumns();
     let days = await this.schoolDayRepo.find({
       where: { schoolId },
       order: { orderIndex: 'ASC' },
@@ -141,24 +164,64 @@ export class TimetableService {
   }
 
   async initDefaultSchoolDays(schoolId: string): Promise<SchoolDay[]> {
+    await this.ensureTableColumns();
     const defaultDays = [
-      { dayOfWeek: 1, dayName: 'Monday', isTeachingDay: true, orderIndex: 1 },
-      { dayOfWeek: 2, dayName: 'Tuesday', isTeachingDay: true, orderIndex: 2 },
+      {
+        dayOfWeek: 1,
+        dayName: 'Monday',
+        isTeachingDay: true,
+        orderIndex: 1,
+        openingTime: '08:00',
+        closingTime: '15:00',
+      },
+      {
+        dayOfWeek: 2,
+        dayName: 'Tuesday',
+        isTeachingDay: true,
+        orderIndex: 2,
+        openingTime: '08:00',
+        closingTime: '15:00',
+      },
       {
         dayOfWeek: 3,
         dayName: 'Wednesday',
         isTeachingDay: true,
         orderIndex: 3,
+        openingTime: '08:00',
+        closingTime: '15:00',
       },
-      { dayOfWeek: 4, dayName: 'Thursday', isTeachingDay: true, orderIndex: 4 },
-      { dayOfWeek: 5, dayName: 'Friday', isTeachingDay: true, orderIndex: 5 },
+      {
+        dayOfWeek: 4,
+        dayName: 'Thursday',
+        isTeachingDay: true,
+        orderIndex: 4,
+        openingTime: '08:00',
+        closingTime: '15:00',
+      },
+      {
+        dayOfWeek: 5,
+        dayName: 'Friday',
+        isTeachingDay: true,
+        orderIndex: 5,
+        openingTime: '08:00',
+        closingTime: '15:00',
+      },
       {
         dayOfWeek: 6,
         dayName: 'Saturday',
         isTeachingDay: false,
         orderIndex: 6,
+        openingTime: '08:00',
+        closingTime: '13:00',
       },
-      { dayOfWeek: 7, dayName: 'Sunday', isTeachingDay: false, orderIndex: 7 },
+      {
+        dayOfWeek: 7,
+        dayName: 'Sunday',
+        isTeachingDay: false,
+        orderIndex: 7,
+        openingTime: '08:00',
+        closingTime: '13:00',
+      },
     ];
 
     const entities = defaultDays.map((d) =>
@@ -177,13 +240,65 @@ export class TimetableService {
     if (!day) throw new NotFoundException('School day not found');
     day.isTeachingDay = input.isTeachingDay;
     if (input.dayName) day.dayName = input.dayName;
+    if (input.openingTime) day.openingTime = input.openingTime;
+    if (input.closingTime) day.closingTime = input.closingTime;
     return this.schoolDayRepo.save(day);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
   // PERIODS
   // ══════════════════════════════════════════════════════════════════════════
+  private async validatePeriodTime(
+    schoolId: string,
+    startTime: string,
+    endTime: string,
+    dayOfWeek?: number | null,
+    excludePeriodId?: string,
+  ): Promise<void> {
+    if (startTime >= endTime) {
+      throw new BadRequestException('Start time must be before end time.');
+    }
+
+    // 1. Check against school operating hours
+    const days = await this.getSchoolDays(schoolId);
+    const activeDays = days.filter((d) => d.isTeachingDay);
+    const targetDays = dayOfWeek
+      ? activeDays.filter((d) => d.dayOfWeek === dayOfWeek)
+      : activeDays;
+
+    for (const day of targetDays) {
+      const open = day.openingTime || '08:00';
+      const close = day.closingTime || '15:00';
+      if (startTime < open || endTime > close) {
+        throw new BadRequestException(
+          `Period time (${startTime} – ${endTime}) must be between school opening (${open}) and closing (${close}) time for ${day.dayName}.`,
+        );
+      }
+    }
+
+    // 2. Check overlap with existing periods for that day
+    const allPeriods = await this.periodRepo.find({
+      where: { schoolId, isActive: true },
+    });
+
+    const candidatePeriods = allPeriods.filter((p) => {
+      if (excludePeriodId && p.id === excludePeriodId) return false;
+      if (dayOfWeek && p.dayOfWeek && p.dayOfWeek !== dayOfWeek) return false;
+      return true;
+    });
+
+    for (const p of candidatePeriods) {
+      // Overlap condition: startTime < p.endTime && endTime > p.startTime
+      if (startTime < p.endTime && endTime > p.startTime) {
+        throw new BadRequestException(
+          `The time frame is already chosen for this day (${p.name}: ${p.startTime} – ${p.endTime}).`,
+        );
+      }
+    }
+  }
+
   async getPeriods(schoolId: string): Promise<Period[]> {
+    await this.ensureTableColumns();
     let periods = await this.periodRepo.find({
       where: { schoolId },
       order: { orderIndex: 'ASC' },
@@ -197,6 +312,7 @@ export class TimetableService {
   }
 
   async initDefaultPeriods(schoolId: string): Promise<Period[]> {
+    await this.ensureTableColumns();
     const defaultSlots = [
       { name: 'Period 1', startTime: '08:00', endTime: '08:45', orderIndex: 1 },
       { name: 'Period 2', startTime: '08:45', endTime: '09:30', orderIndex: 2 },
@@ -217,6 +333,14 @@ export class TimetableService {
     input: CreatePeriodInput,
     schoolId: string,
   ): Promise<Period> {
+    await this.ensureTableColumns();
+    await this.validatePeriodTime(
+      schoolId,
+      input.startTime,
+      input.endTime,
+      input.dayOfWeek,
+    );
+
     const period = this.periodRepo.create({
       ...input,
       schoolId,
@@ -233,6 +357,19 @@ export class TimetableService {
       where: { id: input.id, schoolId },
     });
     if (!period) throw new NotFoundException('Period not found');
+
+    const newStart = input.startTime ?? period.startTime;
+    const newEnd = input.endTime ?? period.endTime;
+    const newDay = input.dayOfWeek !== undefined ? input.dayOfWeek : period.dayOfWeek;
+
+    await this.validatePeriodTime(
+      schoolId,
+      newStart,
+      newEnd,
+      newDay,
+      period.id,
+    );
+
     Object.assign(period, input);
     return this.periodRepo.save(period);
   }
@@ -387,6 +524,40 @@ export class TimetableService {
     return this.userRepo.save(teacher);
   }
 
+  async updateTeachersWorkload(
+    input: UpdateTeachersWorkloadInput,
+    schoolId: string,
+  ): Promise<User[]> {
+    let teachers: User[] = [];
+    if (
+      input.applyToAll ||
+      !input.teacherIds ||
+      input.teacherIds.length === 0
+    ) {
+      const teachingRoles = [
+        UserRole.CLASS_TEACHER,
+        UserRole.SUBJECT_TEACHER,
+        UserRole.HEAD_TEACHER,
+      ];
+      teachers = await this.userRepo.find({
+        where: { schoolId },
+      });
+      teachers = teachers.filter((u) => teachingRoles.includes(u.role));
+    } else {
+      teachers = await this.userRepo.find({
+        where: { schoolId },
+      });
+      teachers = teachers.filter((t) => input.teacherIds!.includes(t.id));
+    }
+
+    for (const teacher of teachers) {
+      teacher.maxPeriodsPerDay = input.maxPeriodsPerDay;
+      teacher.maxPeriodsPerWeek = input.maxPeriodsPerWeek;
+    }
+
+    return this.userRepo.save(teachers);
+  }
+
   // ══════════════════════════════════════════════════════════════════════════
   // TEACHER AVAILABILITY
   // ══════════════════════════════════════════════════════════════════════════
@@ -422,7 +593,14 @@ export class TimetableService {
       });
     }
 
-    return this.availabilityRepo.save(record);
+    const saved = await this.availabilityRepo.save(record);
+    const loaded = await this.availabilityRepo.findOne({
+      where: { id: saved.id },
+      relations: ['teacher', 'period'],
+    });
+    const result = loaded || saved;
+    result.approvalStatus = result.approvalStatus || ApprovalStatus.PENDING;
+    return result;
   }
 
   async adminSetTeacherAvailability(
@@ -438,9 +616,11 @@ export class TimetableService {
       },
     });
 
+    const approvalStatus = input.approvalStatus || ApprovalStatus.APPROVED;
+
     if (record) {
       record.status = input.status;
-      record.approvalStatus = input.approvalStatus;
+      record.approvalStatus = approvalStatus;
       record.source = AvailabilitySource.ADMIN_SET;
       record.notes = input.notes || record.notes;
     } else {
@@ -450,13 +630,20 @@ export class TimetableService {
         dayOfWeek: input.dayOfWeek,
         periodId: input.periodId,
         status: input.status,
-        approvalStatus: input.approvalStatus,
+        approvalStatus: approvalStatus,
         source: AvailabilitySource.ADMIN_SET,
         notes: input.notes,
       });
     }
 
-    return this.availabilityRepo.save(record);
+    const saved = await this.availabilityRepo.save(record);
+    const loaded = await this.availabilityRepo.findOne({
+      where: { id: saved.id },
+      relations: ['teacher', 'period'],
+    });
+    const result = loaded || saved;
+    result.approvalStatus = result.approvalStatus || approvalStatus;
+    return result;
   }
 
   async reviewTeacherAvailability(
@@ -469,10 +656,18 @@ export class TimetableService {
     });
     if (!record) throw new NotFoundException('Availability record not found');
 
-    record.approvalStatus = input.approvalStatus;
+    record.approvalStatus = input.approvalStatus || ApprovalStatus.PENDING;
     if (input.notes) record.notes = input.notes;
 
-    return this.availabilityRepo.save(record);
+    const saved = await this.availabilityRepo.save(record);
+    const loaded = await this.availabilityRepo.findOne({
+      where: { id: saved.id },
+      relations: ['teacher', 'period'],
+    });
+    const result = loaded || saved;
+    result.approvalStatus =
+      result.approvalStatus || input.approvalStatus || ApprovalStatus.PENDING;
+    return result;
   }
 
   async getTeacherAvailabilities(
@@ -484,10 +679,14 @@ export class TimetableService {
     if (teacherId) where.teacherId = teacherId;
     if (approvalStatus) where.approvalStatus = approvalStatus;
 
-    return this.availabilityRepo.find({
+    const list = await this.availabilityRepo.find({
       where,
       relations: ['teacher', 'period'],
       order: { dayOfWeek: 'ASC' },
+    });
+    return list.map((item) => {
+      item.approvalStatus = item.approvalStatus || ApprovalStatus.PENDING;
+      return item;
     });
   }
 
@@ -495,10 +694,14 @@ export class TimetableService {
     teacherId: string,
     schoolId: string,
   ): Promise<TeacherAvailability[]> {
-    return this.availabilityRepo.find({
+    const list = await this.availabilityRepo.find({
       where: { schoolId, teacherId },
       relations: ['period'],
       order: { dayOfWeek: 'ASC' },
+    });
+    return list.map((item) => {
+      item.approvalStatus = item.approvalStatus || ApprovalStatus.PENDING;
+      return item;
     });
   }
 
@@ -538,7 +741,27 @@ export class TimetableService {
     input: CreateTimetableEntryInput,
     schoolId: string,
   ): Promise<TimetableMutationResult> {
-    // 1. Run conflict validation
+    // 1. If double period, resolve consecutive next period
+    let nextPeriod: Period | null = null;
+    if (input.isDoublePeriod) {
+      const allPeriods = await this.periodRepo.find({
+        where: { schoolId, isActive: true },
+        order: { orderIndex: 'ASC' },
+      });
+      const curPeriod = allPeriods.find((p) => p.id === input.periodId);
+      if (!curPeriod) {
+        throw new NotFoundException('Period not found');
+      }
+      nextPeriod =
+        allPeriods.find((p) => p.orderIndex > curPeriod.orderIndex) || null;
+      if (!nextPeriod) {
+        throw new BadRequestException(
+          'Cannot assign a double period on the last period of the day.',
+        );
+      }
+    }
+
+    // 2. Run conflict validation on primary slot
     const violations = await this.conflictValidator.validateSlot({
       schoolId,
       termId: input.termId,
@@ -552,6 +775,23 @@ export class TimetableService {
       allowOverride: input.allowOverride,
     });
 
+    // If double period, also validate second consecutive slot
+    if (input.isDoublePeriod && nextPeriod) {
+      const nextViolations = await this.conflictValidator.validateSlot({
+        schoolId,
+        termId: input.termId,
+        classId: input.classId,
+        subjectId: input.subjectId,
+        teacherId: input.teacherId,
+        roomId: input.roomId,
+        dayOfWeek: input.dayOfWeek,
+        periodId: nextPeriod.id,
+        isDoublePeriod: true,
+        allowOverride: input.allowOverride,
+      });
+      violations.push(...nextViolations);
+    }
+
     const hasBlocking = violations.some(
       (v) => v.severity === ConflictSeverity.BLOCKING,
     );
@@ -564,7 +804,7 @@ export class TimetableService {
       };
     }
 
-    // 2. Save slot
+    // 3. Save first slot
     const entity = this.entryRepo.create({
       schoolId,
       termId: input.termId,
@@ -578,6 +818,23 @@ export class TimetableService {
     });
 
     const saved = await this.entryRepo.save(entity);
+
+    // Save second slot so it takes 2 boxes
+    if (input.isDoublePeriod && nextPeriod) {
+      const secondEntity = this.entryRepo.create({
+        schoolId,
+        termId: input.termId,
+        classId: input.classId,
+        subjectId: input.subjectId,
+        teacherId: input.teacherId,
+        roomId: input.roomId,
+        dayOfWeek: input.dayOfWeek,
+        periodId: nextPeriod.id,
+        isDoublePeriod: true,
+      });
+      await this.entryRepo.save(secondEntity);
+    }
+
     const loaded = await this.entryRepo.findOne({
       where: { id: saved.id },
       relations: [
@@ -640,7 +897,7 @@ export class TimetableService {
     if (hasBlocking) {
       return {
         success: false,
-        entry: null,
+        entry: existing,
         violations,
       };
     }
@@ -673,8 +930,40 @@ export class TimetableService {
   }
 
   async deleteTimetableEntry(id: string, schoolId: string): Promise<boolean> {
-    const existing = await this.entryRepo.findOne({ where: { id, schoolId } });
+    const existing = await this.entryRepo.findOne({
+      where: { id, schoolId },
+      relations: ['period'],
+    });
     if (!existing) throw new NotFoundException('Timetable entry not found');
+
+    // If double period, also delete adjacent partner slot if present
+    if (existing.isDoublePeriod) {
+      const curOrder = existing.period?.orderIndex;
+      const partnerEntries = await this.entryRepo.find({
+        where: {
+          schoolId,
+          termId: existing.termId,
+          classId: existing.classId,
+          subjectId: existing.subjectId,
+          teacherId: existing.teacherId,
+          dayOfWeek: existing.dayOfWeek,
+          isDoublePeriod: true,
+        },
+        relations: ['period'],
+      });
+
+      for (const partner of partnerEntries) {
+        if (
+          partner.id !== existing.id &&
+          partner.period &&
+          curOrder !== undefined &&
+          Math.abs(partner.period.orderIndex - curOrder) === 1
+        ) {
+          await this.entryRepo.remove(partner);
+        }
+      }
+    }
+
     await this.entryRepo.remove(existing);
     return true;
   }

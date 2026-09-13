@@ -32,6 +32,7 @@ import {
   CopyDayLayoutInput,
   CloneClassTimetableInput,
   UpdateTeacherWorkloadInput,
+  UpdateTeachersWorkloadInput,
   ExportTimetablePdfInput,
 } from '../dto/timetable-inputs.dto';
 import {
@@ -98,7 +99,12 @@ export class TimetableResolver {
   // ══════════════════════════════════════════════════════════════════════════
   @Query(() => [SchoolDay])
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(...ADMIN_ROLES, UserRole.CLASS_TEACHER, UserRole.SUBJECT_TEACHER)
+  @Roles(
+    ...ADMIN_ROLES,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+    UserRole.PARENT,
+  )
   schoolDays(@CurrentUser() user: { schoolId: string }) {
     return this.timetableService.getSchoolDays(user.schoolId);
   }
@@ -267,6 +273,16 @@ export class TimetableResolver {
     @CurrentUser() user: { schoolId: string },
   ) {
     return this.timetableService.updateTeacherWorkload(input, user.schoolId);
+  }
+
+  @Mutation(() => [User])
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...ADMIN_ROLES)
+  updateTeachersWorkload(
+    @Args('input') input: UpdateTeachersWorkloadInput,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.timetableService.updateTeachersWorkload(input, user.schoolId);
   }
 
   // ══════════════════════════════════════════════════════════════════════════

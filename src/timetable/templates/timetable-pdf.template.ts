@@ -262,7 +262,6 @@ export function renderTimetableHtml(data: TimetablePdfRenderData): string {
                     <div class="slot-item">
                       <div class="slot-subject">
                         ${it.subjectName}
-                        ${it.isDoublePeriod ? '<span class="badge-double">2X</span>' : ''}
                       </div>
                       <div class="slot-details">
                         ${it.className ? `<span>${it.className}</span> • ` : ''}
