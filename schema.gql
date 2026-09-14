@@ -134,6 +134,7 @@ enum ConflictType {
   CLASS_DUPLICATE_SLOT
   EMPTY_PERIOD
   MISSING_ASSIGNMENT
+  ROOM_CAPACITY_EXCEEDED
   ROOM_DOUBLE_BOOKED
   TEACHER_DOUBLE_BOOKED
   TEACHER_OVERLOAD
@@ -189,7 +190,7 @@ input CreateResultSheetInput {
 }
 
 input CreateRoomInput {
-  capacity: Int! = 30
+  capacity: Int
   name: String!
   type: RoomType! = CLASSROOM
 }
@@ -639,7 +640,7 @@ type RolePermission {
 }
 
 type Room {
-  capacity: Int!
+  capacity: Int
   createdAt: DateTime!
   id: ID!
   isActive: Boolean!

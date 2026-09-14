@@ -27,10 +27,11 @@ export class CreateRoomInput {
   @IsString()
   name!: string;
 
-  @Field(() => Int, { defaultValue: 30 })
+  @Field(() => Int, { nullable: true })
+  @IsOptional()
   @IsNumber()
   @Min(1)
-  capacity!: number;
+  capacity?: number;
 
   @Field(() => RoomType, { defaultValue: RoomType.CLASSROOM })
   @IsOptional()

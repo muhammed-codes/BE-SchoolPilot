@@ -9,6 +9,7 @@ import { Subject } from '../../subjects/entities/subject.entity';
 import { Room } from '../entities/room.entity';
 import { Period } from '../entities/period.entity';
 import { ClassSubject } from '../../classes/entities/class-subject.entity';
+import { Student } from '../../students/entities/student.entity';
 import {
   ConflictSeverity,
   ConflictType,
@@ -50,6 +51,8 @@ export class ConflictValidatorService {
     private readonly periodRepo: Repository<Period>,
     @InjectRepository(ClassSubject)
     private readonly classSubjectRepo: Repository<ClassSubject>,
+    @InjectRepository(Student)
+    private readonly studentRepo: Repository<Student>,
   ) {}
 
   /**
@@ -84,7 +87,59 @@ export class ConflictValidatorService {
     const periodName = period?.name || 'this period';
     const roomName = room?.name || 'Selected room';
 
-    // 1. Teacher Double-Booked Check
+    // 1. Teacher Overload Check (Checked FIRST: max periods per day and week)
+    const maxPerDay = teacher?.maxPeriodsPerDay ?? 6;
+    const maxPerWeek = teacher?.maxPeriodsPerWeek ?? 25;
+    const slotsToAdd = params.isDoublePeriod ? 2 : 1;
+
+    // Count teacher's existing slots today
+    const dailySlots = await this.entryRepo.count({
+      where: {
+        schoolId,
+        termId,
+        teacherId,
+        dayOfWeek,
+        ...(entryId ? { id: Not(entryId) } : {}),
+      },
+    });
+
+    if (dailySlots + slotsToAdd > maxPerDay) {
+      violations.push({
+        type: ConflictType.TEACHER_OVERLOAD,
+        severity: allowOverride
+          ? ConflictSeverity.WARNING
+          : ConflictSeverity.BLOCKING,
+        message: `${teacherName} exceeds maximum periods per day (limit: ${maxPerDay}, scheduled: ${dailySlots}, attempting to add: ${slotsToAdd}).`,
+        dayOfWeek,
+        periodId,
+        teacherId,
+      });
+    }
+
+    // Count teacher's existing slots this week
+    const weeklySlots = await this.entryRepo.count({
+      where: {
+        schoolId,
+        termId,
+        teacherId,
+        ...(entryId ? { id: Not(entryId) } : {}),
+      },
+    });
+
+    if (weeklySlots + slotsToAdd > maxPerWeek) {
+      violations.push({
+        type: ConflictType.TEACHER_OVERLOAD,
+        severity: allowOverride
+          ? ConflictSeverity.WARNING
+          : ConflictSeverity.BLOCKING,
+        message: `${teacherName} exceeds maximum periods per week (limit: ${maxPerWeek}, scheduled: ${weeklySlots}, attempting to add: ${slotsToAdd}).`,
+        dayOfWeek,
+        periodId,
+        teacherId,
+      });
+    }
+
+    // 2. Teacher Double-Booked Check
     const teacherConflict = await this.entryRepo.findOne({
       where: {
         schoolId,
@@ -111,7 +166,7 @@ export class ConflictValidatorService {
       });
     }
 
-    // 2. Room Double-Booked Check
+    // 3. Room Double-Booked Check
     if (roomId) {
       const roomConflict = await this.entryRepo.findOne({
         where: {
@@ -138,9 +193,34 @@ export class ConflictValidatorService {
           classId: roomConflict.classId,
         });
       }
+
+      // 4. Room Capacity Check vs Class Enrolled Student Count
+      if (room && room.capacity != null && room.capacity > 0) {
+        const studentCount = await this.studentRepo.count({
+          where: {
+            schoolId,
+            currentClassId: classId,
+            isArchived: false,
+          },
+        });
+
+        if (studentCount > room.capacity) {
+          violations.push({
+            type: ConflictType.ROOM_CAPACITY_EXCEEDED,
+            severity: allowOverride
+              ? ConflictSeverity.WARNING
+              : ConflictSeverity.BLOCKING,
+            message: `Room "${room.name}" capacity (${room.capacity} students) is insufficient for ${className} (${studentCount} students enrolled).`,
+            dayOfWeek,
+            periodId,
+            roomId,
+            classId,
+          });
+        }
+      }
     }
 
-    // 3. Class Duplicate Assignment Check (same class, same day/period, another subject)
+    // 5. Class Duplicate Assignment Check (same class, same day/period, another subject)
     const classConflict = await this.entryRepo.findOne({
       where: {
         schoolId,
@@ -166,7 +246,7 @@ export class ConflictValidatorService {
       });
     }
 
-    // 4. Teacher Availability Check (approved unavailable slot)
+    // 6. Teacher Availability Check (approved unavailable slot)
     const availability = await this.availabilityRepo.findOne({
       where: {
         schoolId,
@@ -185,57 +265,6 @@ export class ConflictValidatorService {
           ? ConflictSeverity.WARNING
           : ConflictSeverity.BLOCKING,
         message: `${teacherName} has approved unavailable status for this slot.`,
-        dayOfWeek,
-        periodId,
-        teacherId,
-      });
-    }
-
-    // 5. Teacher Overload Check (max periods per day and week)
-    const maxPerDay = teacher?.maxPeriodsPerDay ?? 6;
-    const maxPerWeek = teacher?.maxPeriodsPerWeek ?? 25;
-
-    // Count teacher's existing slots today
-    const dailySlots = await this.entryRepo.count({
-      where: {
-        schoolId,
-        termId,
-        teacherId,
-        dayOfWeek,
-        ...(entryId ? { id: Not(entryId) } : {}),
-      },
-    });
-
-    if (dailySlots + 1 > maxPerDay) {
-      violations.push({
-        type: ConflictType.TEACHER_OVERLOAD,
-        severity: allowOverride
-          ? ConflictSeverity.WARNING
-          : ConflictSeverity.BLOCKING,
-        message: `${teacherName} exceeds maximum periods per day (limit: ${maxPerDay}, scheduled: ${dailySlots + 1}).`,
-        dayOfWeek,
-        periodId,
-        teacherId,
-      });
-    }
-
-    // Count teacher's existing slots this week
-    const weeklySlots = await this.entryRepo.count({
-      where: {
-        schoolId,
-        termId,
-        teacherId,
-        ...(entryId ? { id: Not(entryId) } : {}),
-      },
-    });
-
-    if (weeklySlots + 1 > maxPerWeek) {
-      violations.push({
-        type: ConflictType.TEACHER_OVERLOAD,
-        severity: allowOverride
-          ? ConflictSeverity.WARNING
-          : ConflictSeverity.BLOCKING,
-        message: `${teacherName} exceeds maximum periods per week (limit: ${maxPerWeek}, scheduled: ${weeklySlots + 1}).`,
         dayOfWeek,
         periodId,
         teacherId,

@@ -14,9 +14,9 @@ export class Room extends BaseEntity {
   @Column()
   name!: string;
 
-  @Field(() => Int)
-  @Column({ type: 'int', default: 30 })
-  capacity!: number;
+  @Field(() => Int, { nullable: true })
+  @Column({ type: 'int', nullable: true })
+  capacity?: number | null;
 
   @Field(() => RoomType)
   @Column({ type: 'varchar', default: RoomType.CLASSROOM })

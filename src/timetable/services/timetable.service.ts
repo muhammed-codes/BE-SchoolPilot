@@ -108,6 +108,7 @@ export class TimetableService implements OnModuleInit {
         ALTER TABLE "school_days" ADD COLUMN IF NOT EXISTS "openingTime" varchar NOT NULL DEFAULT '08:00';
         ALTER TABLE "school_days" ADD COLUMN IF NOT EXISTS "closingTime" varchar NOT NULL DEFAULT '15:00';
         ALTER TABLE "periods" ADD COLUMN IF NOT EXISTS "dayOfWeek" int NULL;
+        ALTER TABLE "rooms" ALTER COLUMN "capacity" DROP NOT NULL;
       `);
       this.hasEnsuredColumns = true;
     } catch (err) {
