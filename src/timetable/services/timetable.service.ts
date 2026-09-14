@@ -151,16 +151,10 @@ export class TimetableService implements OnModuleInit {
   // ══════════════════════════════════════════════════════════════════════════
   async getSchoolDays(schoolId: string): Promise<SchoolDay[]> {
     await this.ensureTableColumns();
-    let days = await this.schoolDayRepo.find({
+    return this.schoolDayRepo.find({
       where: { schoolId },
       order: { orderIndex: 'ASC' },
     });
-
-    if (days.length === 0) {
-      days = await this.initDefaultSchoolDays(schoolId);
-    }
-
-    return days;
   }
 
   async initDefaultSchoolDays(schoolId: string): Promise<SchoolDay[]> {
@@ -299,16 +293,10 @@ export class TimetableService implements OnModuleInit {
 
   async getPeriods(schoolId: string): Promise<Period[]> {
     await this.ensureTableColumns();
-    let periods = await this.periodRepo.find({
+    return this.periodRepo.find({
       where: { schoolId },
       order: { orderIndex: 'ASC' },
     });
-
-    if (periods.length === 0) {
-      periods = await this.initDefaultPeriods(schoolId);
-    }
-
-    return periods;
   }
 
   async initDefaultPeriods(schoolId: string): Promise<Period[]> {
