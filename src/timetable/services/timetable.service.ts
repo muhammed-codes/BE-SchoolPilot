@@ -6,7 +6,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere } from 'typeorm';
+import { Repository, FindOptionsWhere, In, Not } from 'typeorm';
 import { Room } from '../entities/room.entity';
 import { SchoolDay } from '../entities/school-day.entity';
 import { Period } from '../entities/period.entity';
@@ -534,20 +534,20 @@ export class TimetableService implements OnModuleInit {
       !input.teacherIds ||
       input.teacherIds.length === 0
     ) {
-      const teachingRoles = [
-        UserRole.CLASS_TEACHER,
-        UserRole.SUBJECT_TEACHER,
-        UserRole.HEAD_TEACHER,
-      ];
       teachers = await this.userRepo.find({
-        where: { schoolId },
+        where: { schoolId, role: Not(UserRole.PARENT) },
       });
-      teachers = teachers.filter((u) => teachingRoles.includes(u.role));
     } else {
       teachers = await this.userRepo.find({
-        where: { schoolId },
+        where: {
+          schoolId,
+          id: In(input.teacherIds),
+        },
       });
-      teachers = teachers.filter((t) => input.teacherIds!.includes(t.id));
+    }
+
+    if (teachers.length === 0) {
+      throw new NotFoundException('No matching teachers found to update');
     }
 
     for (const teacher of teachers) {
