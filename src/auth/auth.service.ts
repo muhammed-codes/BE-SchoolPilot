@@ -88,7 +88,12 @@ export class AuthService {
   login = (input: LoginInput) => {
     return this.validateUser(input.email, input.password).then((user) => {
       this.logger.log(`Successful login for user: ${input.email}`);
-      return this.generateTokens(user).then((tokens) => ({ ...tokens, user }));
+      const mustChangePassword = input.password === 'Password@321';
+      return this.generateTokens(user).then((tokens) => ({
+        ...tokens,
+        user,
+        mustChangePassword,
+      }));
     });
   };
 

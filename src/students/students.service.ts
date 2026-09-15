@@ -20,7 +20,6 @@ import { UserRole, StudentStatus } from '../common/enums';
 import { ClassesService } from '../classes/classes.service';
 import { SchoolsService } from '../schools/schools.service';
 import { User } from '../users/entities/user.entity';
-import { School } from '../schools/entities/school.entity';
 import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcrypt';
 
@@ -131,13 +130,6 @@ export class StudentsService {
                 .save(Student, student)
                 .then(async (savedStudent) => {
                   if (input.guardians && input.guardians.length > 0) {
-                    const school = await manager.findOne(School, {
-                      where: { id: schoolId },
-                    });
-                    const schoolName = school?.name || 'School';
-                    const studentName =
-                      `${savedStudent.firstName} ${savedStudent.lastName}`.trim();
-
                     for (const g of input.guardians) {
                       if (!g.email || !g.email.trim()) continue;
                       const email = g.email.trim().toLowerCase();
@@ -145,18 +137,14 @@ export class StudentsService {
                       let parentUser = await manager.findOne(User, {
                         where: { email, schoolId },
                       });
-                      let isNewParent = false;
-                      let tempPassword = '';
 
                       if (!parentUser) {
                         const [first, ...rest] = (g.name || 'Parent')
                           .trim()
                           .split(' ');
                         const last = rest.join(' ') || first;
-                        tempPassword =
-                          Math.random().toString(36).slice(-8) + 'Aa1!';
                         const hashedPassword = await bcrypt.hash(
-                          tempPassword,
+                          'Password@321',
                           10,
                         );
                         parentUser = await manager.save(
@@ -172,7 +160,6 @@ export class StudentsService {
                             isActive: true,
                           }),
                         );
-                        isNewParent = true;
                       }
 
                       const exists = await manager.findOne(StudentParent, {
@@ -188,18 +175,6 @@ export class StudentsService {
                             studentId: savedStudent.id,
                             parentId: parentUser.id,
                           }),
-                        );
-                      }
-
-                      if (isNewParent && tempPassword) {
-                        const parentName =
-                          `${parentUser.firstName} ${parentUser.lastName}`.trim();
-                        void this.mailService.sendWelcomeParentEmail(
-                          email,
-                          parentName,
-                          studentName,
-                          schoolName,
-                          tempPassword,
                         );
                       }
                     }
@@ -304,17 +279,6 @@ export class StudentsService {
 
             // 3. Provision or link parents for all guardians with emails
             if (input.guardians && input.guardians.length > 0) {
-              const student = await this.studentsRepository.findOne({
-                where: { id },
-              });
-              const school = await this.dataSource
-                .getRepository(School)
-                .findOne({ where: { id: schoolId } });
-              const schoolName = school?.name || 'School';
-              const studentName = student
-                ? `${student.firstName} ${student.lastName}`.trim()
-                : 'Student';
-
               for (const g of input.guardians) {
                 if (!g.email || !g.email.trim()) continue;
                 const email = g.email.trim().toLowerCase();
@@ -322,16 +286,13 @@ export class StudentsService {
                 let parentUser = await userRepo.findOne({
                   where: { email, schoolId },
                 });
-                let isNewParent = false;
-                let tempPassword = '';
 
                 if (!parentUser) {
                   const [first, ...rest] = (g.name || 'Parent')
                     .trim()
                     .split(' ');
                   const last = rest.join(' ') || first;
-                  tempPassword = Math.random().toString(36).slice(-8) + 'Aa1!';
-                  const hashedPassword = await bcrypt.hash(tempPassword, 10);
+                  const hashedPassword = await bcrypt.hash('Password@321', 10);
                   const newParent = userRepo.create({
                     firstName: first,
                     lastName: last,
@@ -343,7 +304,6 @@ export class StudentsService {
                     isActive: true,
                   });
                   parentUser = await userRepo.save(newParent);
-                  isNewParent = true;
                 } else if (phone && parentUser.phone !== phone) {
                   parentUser.phone = phone;
                   await userRepo.save(parentUser);
@@ -359,18 +319,6 @@ export class StudentsService {
                         studentId: id,
                         parentId: parentUser.id,
                       }),
-                    );
-                  }
-
-                  if (isNewParent && tempPassword) {
-                    const parentName =
-                      `${parentUser.firstName} ${parentUser.lastName}`.trim();
-                    void this.mailService.sendWelcomeParentEmail(
-                      email,
-                      parentName,
-                      studentName,
-                      schoolName,
-                      tempPassword,
                     );
                   }
                 }

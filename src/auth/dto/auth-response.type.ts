@@ -12,6 +12,9 @@ export class AuthResponse {
   @Field(() => User, { nullable: true })
   user?: User;
 
+  @Field(() => Boolean, { nullable: true, defaultValue: false })
+  mustChangePassword?: boolean;
+
   @Field(() => Boolean, { nullable: true, defaultValue: true })
   success?: boolean;
 

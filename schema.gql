@@ -53,6 +53,7 @@ type AttendanceSummary {
 type AuthResponse {
   accessToken: String
   message: String
+  mustChangePassword: Boolean
   refreshToken: String
   success: Boolean
   user: User
