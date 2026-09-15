@@ -15,7 +15,7 @@ export class ReceiptTemplate extends BaseEntity {
   name!: string;
 
   @Field(() => String, { nullable: true })
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   thumbnailUrl!: string | null;
 
   /** Maps to a template file key — same pattern as report-card-template */
