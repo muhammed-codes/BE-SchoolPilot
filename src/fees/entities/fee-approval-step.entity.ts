@@ -36,7 +36,7 @@ export class FeeApprovalStep extends BaseEntity {
 
   /** Role string when approverType = ROLE (e.g. 'bursar') */
   @Field(() => String, { nullable: true })
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', length: 50, nullable: true })
   approverRole!: string | null;
 
   @Field(() => FeeApprovalConfig)
