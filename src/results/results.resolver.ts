@@ -88,11 +88,27 @@ export class ResultsResolver {
   studentResult(
     @Args('studentId') studentId: string,
     @Args('termId') termId: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
     return this.resultsService.getStudentResult(
       studentId,
       termId,
+      user.schoolId,
+      user.sub,
+      user.role,
+    );
+  }
+
+  @Query(() => [StudentResult])
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, 'canRead')
+  myChildResults(
+    @Args('studentId') studentId: string,
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+  ) {
+    return this.resultsService.getMyChildResults(
+      studentId,
+      user.sub,
       user.schoolId,
     );
   }

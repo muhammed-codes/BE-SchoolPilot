@@ -12,6 +12,7 @@ import { ClassEntity } from '../classes/entities/class.entity';
 import { School } from '../schools/entities/school.entity';
 import { User } from '../users/entities/user.entity';
 import { Term } from '../terms/entities/term.entity';
+import { StudentParent } from '../students/entities/student-parent.entity';
 import {
   MarkAttendanceInput,
   ManualStaffAttendanceInput,
@@ -37,6 +38,8 @@ export class AttendanceService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Term)
     private readonly termRepo: Repository<Term>,
+    @InjectRepository(StudentParent)
+    private readonly studentParentRepo: Repository<StudentParent>,
     private readonly uploadService: UploadService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -103,10 +106,29 @@ export class AttendanceService {
     });
   };
 
-  getStudentAttendance = (studentId: string, termId: string) => {
-    return this.studentAttendanceRepo.find({
-      where: { studentId, termId },
-      order: { date: 'ASC' },
+  getStudentAttendance = (
+    studentId: string,
+    termId: string,
+    userId?: string,
+    userRole?: UserRole,
+  ) => {
+    const check =
+      userRole === UserRole.PARENT && userId
+        ? this.studentParentRepo.findOne({
+            where: { studentId, parentId: userId },
+          })
+        : Promise.resolve(true);
+
+    return check.then((link) => {
+      if (!link) {
+        throw new ForbiddenException(
+          'You do not have access to view this student attendance',
+        );
+      }
+      return this.studentAttendanceRepo.find({
+        where: { studentId, termId },
+        order: { date: 'ASC' },
+      });
     });
   };
 
@@ -177,27 +199,43 @@ export class AttendanceService {
   getStudentAttendanceSummary = (
     studentId: string,
     termId: string,
+    userId?: string,
+    userRole?: UserRole,
   ): Promise<AttendanceSummary> => {
-    return this.studentAttendanceRepo
-      .find({ where: { studentId, termId } })
-      .then((records) => {
-        let daysPresent = 0;
-        let daysAbsent = 0;
-        let daysLate = 0;
+    const check =
+      userRole === UserRole.PARENT && userId
+        ? this.studentParentRepo.findOne({
+            where: { studentId, parentId: userId },
+          })
+        : Promise.resolve(true);
 
-        records.forEach((record) => {
-          if (record.status === AttendanceStatus.PRESENT) daysPresent++;
-          if (record.status === AttendanceStatus.ABSENT) daysAbsent++;
-          if (record.status === AttendanceStatus.LATE) daysLate++;
+    return check.then((link) => {
+      if (!link) {
+        throw new ForbiddenException(
+          'You do not have access to view this student attendance',
+        );
+      }
+      return this.studentAttendanceRepo
+        .find({ where: { studentId, termId } })
+        .then((records) => {
+          let daysPresent = 0;
+          let daysAbsent = 0;
+          let daysLate = 0;
+
+          records.forEach((record) => {
+            if (record.status === AttendanceStatus.PRESENT) daysPresent++;
+            if (record.status === AttendanceStatus.ABSENT) daysAbsent++;
+            if (record.status === AttendanceStatus.LATE) daysLate++;
+          });
+
+          return {
+            daysPresent,
+            daysAbsent,
+            daysLate,
+            totalMarkedDays: records.length,
+          };
         });
-
-        return {
-          daysPresent,
-          daysAbsent,
-          daysLate,
-          totalMarkedDays: records.length,
-        };
-      });
+    });
   };
 
   clockAction = (photo: string, userId: string) => {

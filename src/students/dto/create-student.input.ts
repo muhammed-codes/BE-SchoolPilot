@@ -84,4 +84,36 @@ export class CreateStudentInput {
   @Field({ nullable: true })
   @IsOptional()
   parentPhone?: string;
+
+  @Field(() => [GuardianInput], { nullable: true })
+  @IsOptional()
+  guardians?: GuardianInput[];
 }
+
+@InputType()
+export class GuardianInput {
+  @Field()
+  @IsNotEmpty()
+  name!: string;
+
+  @Field()
+  @IsNotEmpty()
+  relationship!: string;
+
+  @Field()
+  @IsNotEmpty()
+  phone!: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  email?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  occupation?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  address?: string;
+}
+

@@ -940,17 +940,46 @@ export class ResultsService {
     };
   };
 
-  getStudentResult = (studentId: string, termId: string, schoolId: string) => {
-    return this.studentResultRepo
-      .createQueryBuilder('sr')
-      .innerJoinAndSelect('sr.resultSheet', 'rs')
-      .leftJoinAndSelect('sr.subjectScores', 'ss')
-      .where('sr.studentId = :studentId', { studentId })
-      .andWhere('rs.termId = :termId', { termId })
-      .andWhere('sr.schoolId = :schoolId', { schoolId })
-      .getOne()
-      .then((result) => {
-        if (!result) throw new NotFoundException('Student result not found');
+  getStudentResult = (
+    studentId: string,
+    termId: string,
+    schoolId: string,
+    userId?: string,
+    userRole?: UserRole,
+  ) => {
+    const parentCheck =
+      userRole === UserRole.PARENT && userId
+        ? this.studentParentRepo.findOne({
+            where: { studentId, parentId: userId },
+          })
+        : Promise.resolve(true);
+
+    return parentCheck.then((link) => {
+      if (!link) {
+        throw new ForbiddenException(
+          'You do not have access to this student result',
+        );
+      }
+
+      const qb = this.studentResultRepo
+        .createQueryBuilder('sr')
+        .innerJoinAndSelect('sr.resultSheet', 'rs')
+        .leftJoinAndSelect('rs.term', 't')
+        .leftJoinAndSelect('t.session', 'sess')
+        .leftJoinAndSelect('sr.subjectScores', 'ss')
+        .leftJoinAndSelect('ss.subject', 'sub')
+        .where('sr.studentId = :studentId', { studentId })
+        .andWhere('rs.termId = :termId', { termId })
+        .andWhere('sr.schoolId = :schoolId', { schoolId });
+
+      if (userRole === UserRole.PARENT) {
+        qb.andWhere('rs.status = :publishedStatus', {
+          publishedStatus: ResultStatus.PUBLISHED,
+        });
+      }
+
+      return qb.getOne().then((result) => {
+        if (!result) return null;
         return this.resultSheetRepo
           .findOne({ where: { id: result.resultSheetId, schoolId } })
           .then((sheet) => {
@@ -962,6 +991,50 @@ export class ResultsService {
               );
             }
             return result;
+          });
+      });
+    });
+  };
+
+  getMyChildResults = (
+    studentId: string,
+    parentUserId: string,
+    schoolId: string,
+  ) => {
+    return this.studentParentRepo
+      .findOne({ where: { studentId, parentId: parentUserId } })
+      .then((link) => {
+        if (!link) {
+          throw new ForbiddenException(
+            'You do not have access to this student result',
+          );
+        }
+
+        return this.studentResultRepo
+          .createQueryBuilder('sr')
+          .innerJoinAndSelect('sr.resultSheet', 'rs')
+          .leftJoinAndSelect('rs.term', 't')
+          .leftJoinAndSelect('t.session', 'sess')
+          .leftJoinAndSelect('sr.subjectScores', 'ss')
+          .leftJoinAndSelect('ss.subject', 'sub')
+          .where('sr.studentId = :studentId', { studentId })
+          .andWhere('sr.schoolId = :schoolId', { schoolId })
+          .andWhere('rs.status = :publishedStatus', {
+            publishedStatus: ResultStatus.PUBLISHED,
+          })
+          .orderBy('t.startDate', 'DESC')
+          .getMany()
+          .then((results) => {
+            for (const res of results) {
+              if (res.resultSheet) {
+                this.applyComputedMetrics(
+                  res.resultSheet.scoreComponents || [],
+                  [res],
+                  res.resultSheet.gradingSystem,
+                );
+              }
+            }
+            return results;
           });
       });
   };

@@ -46,8 +46,14 @@ export class AttendanceResolver {
   studentAttendance(
     @Args('studentId') studentId: string,
     @Args('termId') termId: string,
+    @CurrentUser() user: { sub: string; role: UserRole },
   ) {
-    return this.attendanceService.getStudentAttendance(studentId, termId);
+    return this.attendanceService.getStudentAttendance(
+      studentId,
+      termId,
+      user.sub,
+      user.role,
+    );
   }
 
   @Query(() => AttendanceSummary)
@@ -56,10 +62,13 @@ export class AttendanceResolver {
   studentAttendanceSummary(
     @Args('studentId') studentId: string,
     @Args('termId') termId: string,
+    @CurrentUser() user: { sub: string; role: UserRole },
   ) {
     return this.attendanceService.getStudentAttendanceSummary(
       studentId,
       termId,
+      user.sub,
+      user.role,
     );
   }
 

@@ -19,6 +19,8 @@ import { UploadService } from '../upload/upload.service';
 import { UserRole, StudentStatus } from '../common/enums';
 import { ClassesService } from '../classes/classes.service';
 import { SchoolsService } from '../schools/schools.service';
+import { User } from '../users/entities/user.entity';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class StudentsService {
@@ -122,7 +124,56 @@ export class StudentsService {
                 schoolId,
               });
 
-              return manager.save(Student, student);
+              return manager.save(Student, student).then(async (savedStudent) => {
+                if (input.guardians && input.guardians.length > 0) {
+                  for (const g of input.guardians) {
+                    if (!g.phone && !g.email) continue;
+                    const phone = g.phone?.trim();
+                    const email =
+                      g.email?.trim().toLowerCase() ||
+                      `${(phone || '').replace(/[^0-9]/g, '')}@parent.schoolpilot.app`;
+                    let parentUser = await manager.findOne(User, {
+                      where: [
+                        { email, schoolId },
+                        ...(phone ? [{ phone, schoolId }] : []),
+                      ],
+                    });
+                    if (!parentUser) {
+                      const [first, ...rest] = (g.name || 'Parent').trim().split(' ');
+                      const last = rest.join(' ') || first;
+                      const tempPassword =
+                        Math.random().toString(36).slice(-8) + 'Aa1!';
+                      const hashedPassword = await bcrypt.hash(tempPassword, 10);
+                      parentUser = await manager.save(
+                        User,
+                        manager.create(User, {
+                          firstName: first,
+                          lastName: last,
+                          email,
+                          phone,
+                          password: hashedPassword,
+                          role: UserRole.PARENT,
+                          schoolId,
+                          isActive: true,
+                        }),
+                      );
+                    }
+                    const exists = await manager.findOne(StudentParent, {
+                      where: { studentId: savedStudent.id, parentId: parentUser.id },
+                    });
+                    if (!exists) {
+                      await manager.save(
+                        StudentParent,
+                        manager.create(StudentParent, {
+                          studentId: savedStudent.id,
+                          parentId: parentUser.id,
+                        }),
+                      );
+                    }
+                  }
+                }
+                return savedStudent;
+              });
             }),
           ),
       ),
@@ -334,9 +385,17 @@ export class StudentsService {
     return this.studentParentsRepository
       .find({
         where: { parentId: parentUserId },
-        relations: ['student', 'student.currentClass'],
+        relations: [
+          'student',
+          'student.currentClass',
+          'student.currentClass.classTeacher',
+        ],
       })
-      .then((records) => records.map((r) => r.student));
+      .then((records) =>
+        records
+          .map((r) => r.student)
+          .filter((s) => s && !s.isArchived),
+      );
   }
 
   searchStudents = (query: string, schoolId: string, classIds?: string[]) => {
