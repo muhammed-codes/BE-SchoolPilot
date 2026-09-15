@@ -86,6 +86,18 @@ export class User extends BaseEntity {
   @Field(() => String, { nullable: true })
   assignedClassId?: string;
 
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  gender?: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  roleInSchool?: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  whatsappNumber?: string;
+
   @Field()
   get fullName(): string {
     return `${this.firstName} ${this.lastName}`;

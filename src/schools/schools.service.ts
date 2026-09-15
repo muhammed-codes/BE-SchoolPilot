@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -19,7 +20,7 @@ import { PaginationArgs } from '../common/pagination';
 import { UserRole } from '../common/enums';
 
 @Injectable()
-export class SchoolsService {
+export class SchoolsService implements OnModuleInit {
   constructor(
     @InjectRepository(School)
     private readonly schoolsRepository: Repository<School>,
@@ -29,6 +30,35 @@ export class SchoolsService {
     private readonly accessService: AccessService,
     private readonly dataSource: DataSource,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.ensureColumns();
+  }
+
+  private hasEnsuredColumns = false;
+  private async ensureColumns(): Promise<void> {
+    if (this.hasEnsuredColumns) return;
+    try {
+      await this.schoolsRepository.query(`
+        ALTER TABLE "schools" ADD COLUMN IF NOT EXISTS "state" varchar NULL;
+        ALTER TABLE "schools" ADD COLUMN IF NOT EXISTS "country" varchar NULL;
+        ALTER TABLE "schools" ADD COLUMN IF NOT EXISTS "schoolCapacity" varchar NULL;
+        ALTER TABLE "schools" ADD COLUMN IF NOT EXISTS "contactPersonName" varchar NULL;
+        ALTER TABLE "schools" ADD COLUMN IF NOT EXISTS "contactPersonEmail" varchar NULL;
+        ALTER TABLE "schools" ADD COLUMN IF NOT EXISTS "contactPersonPhone" varchar NULL;
+        ALTER TABLE "schools" ADD COLUMN IF NOT EXISTS "contactPersonRole" varchar NULL;
+        ALTER TABLE "schools" ADD COLUMN IF NOT EXISTS "whatsappNumber" varchar NULL;
+        ALTER TABLE "schools" ADD COLUMN IF NOT EXISTS "verificationStatus" varchar NOT NULL DEFAULT 'PENDING';
+
+        ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "gender" varchar NULL;
+        ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "roleInSchool" varchar NULL;
+        ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "whatsappNumber" varchar NULL;
+      `);
+      this.hasEnsuredColumns = true;
+    } catch (err) {
+      console.warn('Could not auto-add school verification columns:', err);
+    }
+  }
 
   private normalizeSchoolCode = (schoolCode?: string) => {
     const normalized = schoolCode?.trim().toUpperCase();
@@ -72,30 +102,42 @@ export class SchoolsService {
         }
 
         return this.dataSource.transaction(async (manager) => {
-          // 1. Create the school
+          // 1. Create the school (inactive pending Super Admin verification)
           const school = manager.create(School, {
             name: input.schoolName,
             schoolType: input.schoolType || 'basic',
             schoolCode: this.normalizeSchoolCode(input.schoolCode),
-            address: input.schoolAddress,
-            phone: input.schoolPhone,
-            email: input.schoolEmail,
+            address: input.schoolAddress || input.state,
+            phone: input.schoolPhone || input.adminPhone,
+            email: input.schoolEmail || input.adminEmail,
+            state: input.state,
+            country: input.country || 'Nigeria',
+            schoolCapacity: input.schoolCapacity,
+            contactPersonName: `${input.adminFirstName} ${input.adminLastName}`.trim(),
+            contactPersonEmail: input.adminEmail,
+            contactPersonPhone: input.adminPhone,
+            contactPersonRole: input.roleInSchool,
+            whatsappNumber: input.whatsappNumber,
+            verificationStatus: 'PENDING',
             uniqueQrCode: uuidv4(),
-            isActive: true,
+            isActive: false, // Inactive pending Super Admin verification
           });
           const savedSchool = await manager.save(School, school);
 
-          // 2. Create the first SCHOOL_ADMIN user
+          // 2. Create the first SCHOOL_ADMIN user (inactive pending verification)
           const passwordHash = await bcrypt.hash(input.adminPassword, 12);
           const adminUser = manager.create(User, {
             firstName: input.adminFirstName,
             lastName: input.adminLastName,
             email: input.adminEmail,
             phone: input.adminPhone,
+            gender: input.gender,
+            roleInSchool: input.roleInSchool,
+            whatsappNumber: input.whatsappNumber,
             role: UserRole.SCHOOL_ADMIN,
             schoolId: savedSchool.id,
             passwordHash,
-            isActive: true,
+            isActive: false, // Inactive until verified
             isEmailVerified: false,
           });
           const savedUser = await manager.save(User, adminUser);
@@ -181,16 +223,28 @@ export class SchoolsService {
     });
   };
 
-  deactivateSchool = (id: string) => {
-    return this.schoolsRepository
-      .update(id, { isActive: false })
-      .then(() => this.findById(id));
+  deactivateSchool = async (id: string) => {
+    await this.schoolsRepository.update(id, {
+      isActive: false,
+      verificationStatus: 'SUSPENDED',
+    });
+    await this.usersRepository.update(
+      { schoolId: id, role: UserRole.SCHOOL_ADMIN },
+      { isActive: false },
+    );
+    return this.findById(id);
   };
 
-  activateSchool = (id: string) => {
-    return this.schoolsRepository
-      .update(id, { isActive: true })
-      .then(() => this.findById(id));
+  activateSchool = async (id: string) => {
+    await this.schoolsRepository.update(id, {
+      isActive: true,
+      verificationStatus: 'APPROVED',
+    });
+    await this.usersRepository.update(
+      { schoolId: id, role: UserRole.SCHOOL_ADMIN },
+      { isActive: true },
+    );
+    return this.findById(id);
   };
 
   regenerateQrCode = (id: string) => {

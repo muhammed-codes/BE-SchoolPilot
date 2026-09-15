@@ -14,6 +14,9 @@ import { MailService } from '../mail/mail.service';
 import { RegisterInput } from './dto/register.input';
 import { LoginInput } from './dto/login.input';
 import { User } from '../users/entities/user.entity';
+import { School } from '../schools/entities/school.entity';
+import { UserRole } from '../common/enums';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +27,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly mailService: MailService,
+    private readonly dataSource: DataSource,
   ) {}
 
   private generateVerificationToken = (): { raw: string; hashed: string } => {
@@ -183,6 +187,32 @@ export class AuthService {
             );
             throw new UnauthorizedException('Invalid credentials');
           }
+
+          if (user.role !== UserRole.SUPER_ADMIN && user.schoolId) {
+            return this.dataSource
+              .getRepository(School)
+              .findOne({ where: { id: user.schoolId } })
+              .then((school) => {
+                if (school && !school.isActive) {
+                  this.logger.warn(
+                    `Login blocked: School ${school.name} (${school.id}) is pending verification / inactive`,
+                  );
+                  throw new ForbiddenException(
+                    'Your school application is pending Super Admin review and verification. You will receive an email once approved.',
+                  );
+                }
+                if (!user.isActive) {
+                  this.logger.warn(
+                    `Login blocked: User ${user.email} (${user.id}) is inactive`,
+                  );
+                  throw new ForbiddenException(
+                    'Your account is currently inactive. Please contact platform support or your school administrator.',
+                  );
+                }
+                return user;
+              });
+          }
+
           return user;
         });
     });

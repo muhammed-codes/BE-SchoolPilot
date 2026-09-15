@@ -15,11 +15,54 @@ import {
  */
 @InputType()
 export class RegisterSchoolInput {
+  // ── Contact Person Details ──────────────────────────────────────────────────
+
+  @Field(() => String)
+  @IsNotEmpty({ message: 'First name is required' })
+  adminFirstName: string;
+
+  @Field(() => String)
+  @IsNotEmpty({ message: 'Last name is required' })
+  adminLastName: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  gender?: string;
+
+  @Field(() => String)
+  @IsEmail({}, { message: 'Invalid admin email address' })
+  @IsNotEmpty({ message: 'Admin email is required' })
+  adminEmail: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  roleInSchool?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  adminPhone?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  whatsappNumber?: string;
+
   // ── School Details ──────────────────────────────────────────────────────────
 
   @Field(() => String)
   @IsNotEmpty({ message: 'School name is required' })
   schoolName: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  state?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  country?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  schoolCapacity?: string;
 
   @Field(() => String, { nullable: true, defaultValue: 'basic' })
   @IsOptional()
@@ -45,27 +88,10 @@ export class RegisterSchoolInput {
   @IsEmail({}, { message: 'Invalid school email address' })
   schoolEmail?: string;
 
-  // ── First Admin Account ─────────────────────────────────────────────────────
-
-  @Field(() => String)
-  @IsNotEmpty({ message: 'Admin first name is required' })
-  adminFirstName: string;
-
-  @Field(() => String)
-  @IsNotEmpty({ message: 'Admin last name is required' })
-  adminLastName: string;
-
-  @Field(() => String)
-  @IsEmail({}, { message: 'Invalid admin email address' })
-  @IsNotEmpty({ message: 'Admin email is required' })
-  adminEmail: string;
+  // ── Security Credentials ────────────────────────────────────────────────────
 
   @Field(() => String)
   @IsString()
   @MinLength(8, { message: 'Password must be at least 8 characters' })
   adminPassword: string;
-
-  @Field(() => String, { nullable: true })
-  @IsOptional()
-  adminPhone?: string;
 }

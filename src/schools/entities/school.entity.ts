@@ -55,6 +55,42 @@ export class School extends BaseEntity {
   @Column({ default: true })
   isActive!: boolean;
 
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  state?: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  country?: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  schoolCapacity?: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  contactPersonName?: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  contactPersonEmail?: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  contactPersonPhone?: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  contactPersonRole?: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  whatsappNumber?: string;
+
+  @Field({ nullable: true })
+  @Column({ default: 'PENDING' })
+  verificationStatus?: string;
+
   @Field()
   @Column({ unique: true })
   uniqueQrCode!: string;

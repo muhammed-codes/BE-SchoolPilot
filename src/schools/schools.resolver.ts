@@ -93,17 +93,19 @@ export class SchoolsResolver {
 
   /**
    * Public school self-registration.
-   * Creates the school + first SCHOOL_ADMIN, then returns tokens for immediate login.
+   * Creates the school + first SCHOOL_ADMIN (inactive pending super-admin verification).
+   * Does NOT return active tokens, requiring verification before workspace access.
    */
   @Mutation(() => AuthResponse)
   registerSchool(@Args('input') input: RegisterSchoolInput) {
-    return this.schoolsService.registerSchool(input).then(({ user }) =>
-      this.generateTokens(user).then(({ accessToken, refreshToken }) => ({
-        accessToken,
-        refreshToken,
-        user,
-      })),
-    );
+    return this.schoolsService.registerSchool(input).then(({ user }) => ({
+      success: true,
+      message:
+        'Application submitted successfully. Awaiting Super Admin review and verification.',
+      user,
+      accessToken: null,
+      refreshToken: null,
+    }));
   }
 
   // ─── Authenticated Queries ──────────────────────────────────────────────────

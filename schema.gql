@@ -51,9 +51,11 @@ type AttendanceSummary {
 }
 
 type AuthResponse {
-  accessToken: String!
-  refreshToken: String!
-  user: User!
+  accessToken: String
+  message: String
+  refreshToken: String
+  success: Boolean
+  user: User
 }
 
 enum AvailabilitySource {
@@ -569,12 +571,18 @@ input RegisterSchoolInput {
   adminLastName: String!
   adminPassword: String!
   adminPhone: String
+  country: String
+  gender: String
+  roleInSchool: String
   schoolAddress: String
+  schoolCapacity: String
   schoolCode: String
   schoolEmail: String
   schoolName: String!
   schoolPhone: String
   schoolType: String = "basic"
+  state: String
+  whatsappNumber: String
 }
 
 input ReorderPeriodItem {
@@ -669,6 +677,11 @@ input SaveSubjectScoresInput {
 
 type School {
   address: String
+  contactPersonEmail: String
+  contactPersonName: String
+  contactPersonPhone: String
+  contactPersonRole: String
+  country: String
   createdAt: DateTime!
   defaultReportTemplate: String
   email: String
@@ -677,12 +690,16 @@ type School {
   logoUrl: String
   name: String!
   phone: String
+  schoolCapacity: String
   schoolCode: String
   schoolStartTime: String
   schoolType: String!
   stampUrl: String
+  state: String
   uniqueQrCode: String!
   updatedAt: DateTime!
+  verificationStatus: String
+  whatsappNumber: String
 }
 
 type SchoolDay {
@@ -1089,6 +1106,7 @@ type User {
   expoPushToken: String
   firstName: String!
   fullName: String!
+  gender: String
   id: ID!
   isActive: Boolean!
   isClassTeacher: Boolean
@@ -1099,9 +1117,11 @@ type User {
   namePrefix: NamePrefix
   phone: String
   role: UserRole!
+  roleInSchool: String
   schoolId: String
   staffId: String
   updatedAt: DateTime!
+  whatsappNumber: String
 }
 
 enum UserRole {
