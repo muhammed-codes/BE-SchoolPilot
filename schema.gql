@@ -313,6 +313,13 @@ input GuardianInput {
   relationship: String!
 }
 
+enum GuardianRelationship {
+  FATHER
+  GUARDIAN
+  MOTHER
+  OTHER
+}
+
 input LoginInput {
   email: String!
   password: String!
@@ -831,8 +838,10 @@ input StudentAttendanceRecordInput {
 type StudentParent {
   createdAt: DateTime!
   id: ID!
+  isPrimaryContact: Boolean!
   parent: User!
   parentId: String!
+  relationship: GuardianRelationship
   student: Student!
   studentId: String!
   updatedAt: DateTime!
@@ -1149,6 +1158,7 @@ type User {
 }
 
 enum UserRole {
+  BURSAR
   CLASS_TEACHER
   HEAD_TEACHER
   PARENT

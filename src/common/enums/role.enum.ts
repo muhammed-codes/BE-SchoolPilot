@@ -8,6 +8,7 @@ export enum UserRole {
   HEAD_TEACHER = 'head_teacher',
   CLASS_TEACHER = 'class_teacher',
   SUBJECT_TEACHER = 'subject_teacher',
+  BURSAR = 'bursar',
   PARENT = 'parent',
 }
 

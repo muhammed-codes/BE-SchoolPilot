@@ -22,6 +22,7 @@ import { MailModule } from './mail/mail.module';
 import { AccessModule } from './access/access.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { TimetableModule } from './timetable/timetable.module';
+import { FeesModule } from './fees/fees.module';
 
 @Module({
   imports: [
@@ -111,6 +112,7 @@ import { TimetableModule } from './timetable/timetable.module';
     AccessModule,
     DashboardModule,
     TimetableModule,
+    FeesModule,
   ],
   controllers: [AppController],
   providers: [

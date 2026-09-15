@@ -13,6 +13,7 @@ export const LEADERSHIP_ROLES: UserRole[] = [
 
 export const SCHOOL_STAFF_ROLES: UserRole[] = [
   UserRole.SCHOOL_ADMIN,
+  UserRole.BURSAR,
   ...LEADERSHIP_ROLES,
   ...TEACHER_ROLES,
 ];
