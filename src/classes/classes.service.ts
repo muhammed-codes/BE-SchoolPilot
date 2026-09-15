@@ -136,9 +136,9 @@ export class ClassesService {
       .andWhere('student.isArchived = :isArchived', { isArchived: false })
       .andWhere('student.currentClassId IN (:...classIds)', { classIds })
       .groupBy('student.currentClassId')
-      .getRawMany()
+      .getRawMany<{ classId: string; totalNoOfStudents: string | number }>()
       .then((rawCounts) => {
-        const countsMap = new Map(
+        const countsMap = new Map<string, number>(
           rawCounts.map((row) => [row.classId, Number(row.totalNoOfStudents)]),
         );
         classes.forEach((c) => {

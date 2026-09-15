@@ -6,7 +6,6 @@ import { Subject } from './entities/subject.entity';
 import { UpdateSubjectInput } from './dto/update-subject.input';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission } from '../common/decorators';
-import { UserRole } from '../common/enums';
 
 @Resolver(() => Subject)
 export class SubjectsResolver {

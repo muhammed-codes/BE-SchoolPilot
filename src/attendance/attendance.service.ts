@@ -399,7 +399,7 @@ export class AttendanceService {
   markAttendanceWithQr = (token: string, userId: string, schoolId: string) => {
     const secret = this.configService.getOrThrow<string>('JWT_ACCESS_SECRET');
     return this.jwtService
-      .verifyAsync(token, { secret })
+      .verifyAsync<{ schoolId?: string; purpose?: string }>(token, { secret })
       .catch(() => {
         throw new BadRequestException('QR Code has expired, please scan again');
       })

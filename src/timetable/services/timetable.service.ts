@@ -349,7 +349,8 @@ export class TimetableService implements OnModuleInit {
 
     const newStart = input.startTime ?? period.startTime;
     const newEnd = input.endTime ?? period.endTime;
-    const newDay = input.dayOfWeek !== undefined ? input.dayOfWeek : period.dayOfWeek;
+    const newDay =
+      input.dayOfWeek !== undefined ? input.dayOfWeek : period.dayOfWeek;
 
     await this.validatePeriodTime(
       schoolId,

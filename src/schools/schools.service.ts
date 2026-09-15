@@ -113,7 +113,8 @@ export class SchoolsService implements OnModuleInit {
             state: input.state,
             country: input.country || 'Nigeria',
             schoolCapacity: input.schoolCapacity,
-            contactPersonName: `${input.adminFirstName} ${input.adminLastName}`.trim(),
+            contactPersonName:
+              `${input.adminFirstName} ${input.adminLastName}`.trim(),
             contactPersonEmail: input.adminEmail,
             contactPersonPhone: input.adminPhone,
             contactPersonRole: input.roleInSchool,

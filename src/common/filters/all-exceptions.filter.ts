@@ -28,10 +28,10 @@ export class AllExceptionsFilter implements GqlExceptionFilter {
 
     if (host.getType<GqlContextType>() === 'graphql') {
       const gqlHost = GqlArgumentsHost.create(host);
-      const ctx = gqlHost.getContext();
-      const req = ctx.req;
-      const requestPath = req ? req.url : 'GraphQL';
-      const requestIp = req ? req.ip : 'unknown';
+      const ctx = gqlHost.getContext<{ req?: { url?: string; ip?: string } }>();
+      const req = ctx?.req;
+      const requestPath = req?.url || 'GraphQL';
+      const requestIp = req?.ip || 'unknown';
 
       this.logger.error(
         `GraphQL Error - Path: ${requestPath} - IP: ${requestIp} - Status: ${status} - Message: ${message}`,
@@ -43,8 +43,10 @@ export class AllExceptionsFilter implements GqlExceptionFilter {
 
     // Handle standard HTTP errors
     const ctx = host.switchToHttp();
-    const response = ctx.getResponse();
-    const request = ctx.getRequest();
+    const response = ctx.getResponse<{
+      status?: (s: number) => { json: (body: unknown) => void };
+    }>();
+    const request = ctx.getRequest<{ url?: string; ip?: string }>();
 
     this.logger.error(
       `HTTP Error - Path: ${request?.url} - IP: ${request?.ip} - Status: ${status} - Message: ${message}`,

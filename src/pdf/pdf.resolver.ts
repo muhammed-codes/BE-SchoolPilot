@@ -1,7 +1,6 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { PdfService } from './pdf.service';
-import { BulkPDFResult } from './dto/pdf.dto';
 import { JwtAuthGuard, RolesGuard } from '../common/guards';
 import { CurrentUser } from '../common/decorators';
 import { UserRole } from '../common/enums';

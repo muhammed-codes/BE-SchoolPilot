@@ -4,8 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { GraphQLUpload } from 'graphql-upload-ts';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { SchoolsModule } from './schools/schools.module';
@@ -23,7 +22,6 @@ import { MailModule } from './mail/mail.module';
 import { AccessModule } from './access/access.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { TimetableModule } from './timetable/timetable.module';
-import { GqlThrottlerGuard } from './common/guards/gql-throttler.guard';
 
 @Module({
   imports: [
@@ -89,7 +87,7 @@ import { GqlThrottlerGuard } from './common/guards/gql-throttler.guard';
       driver: ApolloDriver,
       autoSchemaFile: process.env.VERCEL ? true : 'schema.gql',
       sortSchema: true,
-      resolvers: { Upload: require('graphql-upload-ts').GraphQLUpload },
+      resolvers: { Upload: GraphQLUpload },
       playground: true,
       introspection: true,
       csrfPrevention: true,

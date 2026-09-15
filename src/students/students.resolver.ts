@@ -4,6 +4,7 @@ import { UseGuards } from '@nestjs/common';
 
 import { StudentsService } from './students.service';
 import { Student } from './entities/student.entity';
+import { StudentParent } from './entities/student-parent.entity';
 import { CreateStudentInput } from './dto/create-student.input';
 import { UpdateStudentInput } from './dto/update-student.input';
 import { PromoteStudentsInput } from './dto/promote-students.input';
@@ -119,6 +120,16 @@ export class StudentsResolver {
       parentUserId,
       user.schoolId,
     );
+  }
+
+  @Query(() => [StudentParent])
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, 'canRead')
+  studentParents(
+    @Args('studentId') studentId: string,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.studentsService.getParentsByStudent(studentId, user.schoolId);
   }
 
   @Mutation(() => Student)

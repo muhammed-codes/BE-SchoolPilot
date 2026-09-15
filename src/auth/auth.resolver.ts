@@ -1,6 +1,5 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards, ForbiddenException } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { RegisterInput } from './dto/register.input';
@@ -8,7 +7,7 @@ import { ForgotPasswordInput } from './dto/forgot-password.input';
 import { ResetPasswordInput } from './dto/reset-password.input';
 import { LoginInput } from './dto/login.input';
 import { AuthResponse } from './dto/auth-response.type';
-import { GqlThrottlerGuard, JwtAuthGuard } from '../common/guards';
+import { JwtAuthGuard } from '../common/guards';
 import { CurrentUser } from '../common/decorators';
 
 // @UseGuards(GqlThrottlerGuard)
@@ -84,7 +83,7 @@ export class AuthResolver {
   }
 
   private extractSubFromRefreshToken = (token: string): string => {
-    const payload = this.jwtService.decode(token);
+    const payload = this.jwtService.decode<{ sub?: string }>(token);
 
     if (!payload?.sub) {
       throw new ForbiddenException('Invalid refresh token');

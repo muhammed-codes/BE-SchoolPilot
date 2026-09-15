@@ -221,6 +221,7 @@ input CreateStudentInput {
   dateOfBirth: String
   firstName: String!
   gender: Gender!
+  guardians: [GuardianInput!]
   lastName: String!
   lga: String
   medicalInfo: String
@@ -300,6 +301,15 @@ enum GradingSystem {
   LETTER
   PERCENTAGE
   WAEC
+}
+
+input GuardianInput {
+  address: String
+  email: String
+  name: String!
+  occupation: String
+  phone: String!
+  relationship: String!
 }
 
 input LoginInput {
@@ -516,6 +526,7 @@ type Query {
   exportTimetablePdf(input: ExportTimetablePdfInput!): TimetablePdfResult!
   me: User!
   myAvailabilities: [TeacherAvailability!]!
+  myChildResults(studentId: String!): [StudentResult!]!
   myChildren: [Student!]!
   myChildrenTimetables(termId: String): [ChildTimetableResult!]!
   myClasses: [ClassEntity!]!
@@ -546,6 +557,7 @@ type Query {
   student(id: String!): Student
   studentAttendance(studentId: String!, termId: String!): [StudentAttendance!]!
   studentAttendanceSummary(studentId: String!, termId: String!): AttendanceSummary!
+  studentParents(studentId: String!): [StudentParent!]!
   studentResult(studentId: String!, termId: String!): StudentResult
   studentsByClass(classId: String!): [Student!]!
   teacherAvailabilities(approvalStatus: ApprovalStatus, teacherId: String): [TeacherAvailability!]!
@@ -815,6 +827,16 @@ input StudentAttendanceRecordInput {
   studentId: String!
 }
 
+type StudentParent {
+  createdAt: DateTime!
+  id: ID!
+  parent: User!
+  parentId: String!
+  student: Student!
+  studentId: String!
+  updatedAt: DateTime!
+}
+
 type StudentResult {
   ca1: Float
   ca2: Float
@@ -1037,6 +1059,7 @@ input UpdateStudentInput {
   dateOfBirth: String
   firstName: String
   gender: Gender
+  guardians: [GuardianInput!]
   lastName: String
   lga: String
   medicalInfo: String

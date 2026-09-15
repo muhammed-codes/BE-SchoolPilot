@@ -26,7 +26,9 @@ export class CreateStudentInput {
 
   @Field({ nullable: true })
   @IsOptional()
-  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Transform(({ value }: { value: unknown }) =>
+    value === '' ? undefined : (value as string | undefined),
+  )
   @IsDateString()
   dateOfBirth?: string;
 
@@ -53,7 +55,9 @@ export class CreateStudentInput {
 
   @Field({ nullable: true })
   @IsOptional()
-  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Transform(({ value }: { value: unknown }) =>
+    value === '' ? undefined : (value as string | undefined),
+  )
   @IsDateString()
   dateOfAdmission?: string;
 
@@ -116,4 +120,3 @@ export class GuardianInput {
   @IsOptional()
   address?: string;
 }
-

@@ -12,32 +12,40 @@ export class GqlThrottlerGuard extends ThrottlerGuard {
   } {
     if (context.getType() === 'http') {
       const http = context.switchToHttp();
-      return { req: http.getRequest(), res: http.getResponse() };
+      return {
+        req: http.getRequest<Record<string, unknown>>(),
+        res: http.getResponse<Record<string, unknown>>(),
+      };
     }
 
     const ctx = GqlExecutionContext.create(context);
-    const contextMap = ctx.getContext();
-    const req = contextMap.req;
-    const res = contextMap.res || { header: () => undefined };
+    const contextMap = ctx.getContext<{
+      req?: Record<string, unknown>;
+      res?: Record<string, unknown>;
+    }>();
+    const req = contextMap?.req || {};
+    const res = contextMap?.res || { header: () => undefined };
     return { req, res };
   }
 
-  protected async throwThrottlingException(
+  protected throwThrottlingException(
     context: ExecutionContext,
-    throttlerLimitDetail: any,
+    throttlerLimitDetail: unknown,
   ): Promise<void> {
     let ip = 'unknown';
 
     if (context.getType() === 'http') {
       const http = context.switchToHttp();
-      ip = http.getRequest().ip || 'unknown';
+      ip = http.getRequest<{ ip?: string }>()?.ip || 'unknown';
     } else {
       const ctx = GqlExecutionContext.create(context);
-      const req = ctx.getContext().req;
+      const req = ctx.getContext<{ req?: { ip?: string } }>()?.req;
       ip = req?.ip || 'unknown';
     }
 
-    this.logger.warn(`Rate limit exceeded for IP: ${ip}`);
+    this.logger.warn(
+      `Rate limit exceeded for IP: ${ip} detail: ${JSON.stringify(throttlerLimitDetail)}`,
+    );
     throw new ThrottlerException(
       'Rate limit exceeded. Please try again later.',
     );

@@ -473,13 +473,12 @@ export class ResultsService {
         return sr;
       });
 
-      const savePromises: Promise<any>[] = [
-        this.studentResultRepo.save(updates),
-      ];
-      if (subjectScoreUpdates.length > 0) {
-        savePromises.push(this.subjectScoreRepo.save(subjectScoreUpdates));
-      }
-      return Promise.all(savePromises).then(([savedUpdates]) => savedUpdates);
+      return this.studentResultRepo.save(updates).then(async (savedUpdates) => {
+        if (subjectScoreUpdates.length > 0) {
+          await this.subjectScoreRepo.save(subjectScoreUpdates);
+        }
+        return savedUpdates;
+      });
     });
   };
 
@@ -685,17 +684,14 @@ export class ResultsService {
               }
             });
 
-            const savePromises: Promise<any>[] = [
-              this.studentResultRepo.save(studentResults),
-            ];
-            if (subjectScoreUpdates.length > 0) {
-              savePromises.push(
-                this.subjectScoreRepo.save(subjectScoreUpdates),
-              );
-            }
-            return Promise.all(savePromises).then(
-              ([savedResults]) => savedResults,
-            );
+            return this.studentResultRepo
+              .save(studentResults)
+              .then(async (savedResults) => {
+                if (subjectScoreUpdates.length > 0) {
+                  await this.subjectScoreRepo.save(subjectScoreUpdates);
+                }
+                return savedResults;
+              });
           });
       });
   };

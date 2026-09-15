@@ -9,7 +9,6 @@ import { UpdateUserInput } from './dto/update-user.input';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission, Roles } from '../common/decorators';
 import { UserRole } from '../common/enums';
-import { SCHOOL_STAFF_ROLES } from '../common/constants/roles.constant';
 import { PaginationArgs, createPaginatedType } from '../common/pagination';
 
 const PaginatedUser = createPaginatedType(User);
