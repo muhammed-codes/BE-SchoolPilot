@@ -128,7 +128,8 @@ export class FeesResolver {
   @UseGuards(JwtAuthGuard, RolesGuard)
   feeStructures(
     @Args('sessionId') sessionId: string,
-    @Args('termId', { nullable: true }) termId: string | undefined,
+    @Args('termId', { type: () => String, nullable: true })
+    termId: string | undefined,
     @CurrentUser() user: AuthUser,
   ) {
     return this.feesService.getFeeStructures(user.schoolId, sessionId, termId);
@@ -168,8 +169,10 @@ export class FeesResolver {
   @UseGuards(JwtAuthGuard, RolesGuard)
   feeOverrides(
     @CurrentUser() user: AuthUser,
-    @Args('feeStructureId', { nullable: true }) feeStructureId?: string,
-    @Args('studentId', { nullable: true }) studentId?: string,
+    @Args('feeStructureId', { type: () => String, nullable: true })
+    feeStructureId?: string,
+    @Args('studentId', { type: () => String, nullable: true })
+    studentId?: string,
   ) {
     return this.feesService.getOverrides(
       user.schoolId,
@@ -215,7 +218,8 @@ export class FeesResolver {
   @UseGuards(JwtAuthGuard, RolesGuard)
   resolvedBankAccounts(
     @CurrentUser() user: AuthUser,
-    @Args('feeCategoryId', { nullable: true }) feeCategoryId?: string,
+    @Args('feeCategoryId', { type: () => String, nullable: true })
+    feeCategoryId?: string,
   ) {
     return this.feesService.resolveBankAccountsForCategory(
       user.schoolId,
@@ -248,8 +252,10 @@ export class FeesResolver {
   classInvoices(
     @Args('classId') classId: string,
     @CurrentUser() user: AuthUser,
-    @Args('sessionId', { nullable: true }) sessionId?: string,
-    @Args('termId', { nullable: true }) termId?: string,
+    @Args('sessionId', { type: () => String, nullable: true })
+    sessionId?: string,
+    @Args('termId', { type: () => String, nullable: true })
+    termId?: string,
   ) {
     return this.feesService.getClassInvoicesForStaff(
       user.sub,
@@ -358,7 +364,8 @@ export class FeesResolver {
   createReceiptTemplate(
     @Args('name') name: string,
     @Args('templateKey') templateKey: string,
-    @Args('thumbnailUrl', { nullable: true }) thumbnailUrl: string | undefined,
+    @Args('thumbnailUrl', { type: () => String, nullable: true })
+    thumbnailUrl: string | undefined,
     @CurrentUser() user: AuthUser,
   ) {
     return this.feesService.createReceiptTemplate(

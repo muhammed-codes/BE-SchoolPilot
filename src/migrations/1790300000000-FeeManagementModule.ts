@@ -4,9 +4,15 @@ export class FeeManagementModule1790300000000 implements MigrationInterface {
   name = 'FeeManagementModule1790300000000';
 
   async up(queryRunner: QueryRunner): Promise<void> {
-    // ─── 1. Add BURSAR to user_role enum ─────────────────────────────────────
+    // ─── 1. Add BURSAR to user_role/role_permissions enums and FEES to resource enum ──
     await queryRunner.query(
       `ALTER TYPE "public"."users_role_enum" ADD VALUE IF NOT EXISTS 'bursar'`,
+    );
+    await queryRunner.query(
+      `ALTER TYPE "role_permissions_role_enum" ADD VALUE IF NOT EXISTS 'bursar'`,
+    );
+    await queryRunner.query(
+      `ALTER TYPE "role_permissions_resource_enum" ADD VALUE IF NOT EXISTS 'fees'`,
     );
 
     // ─── 2. Extend student_parents with relationship + isPrimaryContact ──────

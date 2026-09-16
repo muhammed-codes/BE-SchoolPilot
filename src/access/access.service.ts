@@ -18,24 +18,33 @@ export class AccessService implements OnModuleInit {
    */
   async onModuleInit() {
     try {
-      await this.permissionRepo.query(`
-        DO $$
-        BEGIN
-          ALTER TYPE "role_permissions_resource_enum" ADD VALUE IF NOT EXISTS 'timetable';
-        EXCEPTION
-          WHEN duplicate_object THEN null;
-          WHEN undefined_object THEN null;
-        END $$;
-      `);
+      await this.permissionRepo.query(
+        `ALTER TYPE "role_permissions_resource_enum" ADD VALUE IF NOT EXISTS 'timetable'`,
+      );
     } catch {
-      // Safe fallback
+      // Safe fallback if type doesn't exist yet or already has value
+    }
+    try {
+      await this.permissionRepo.query(
+        `ALTER TYPE "role_permissions_resource_enum" ADD VALUE IF NOT EXISTS 'fees'`,
+      );
+    } catch {
+      // Safe fallback if type doesn't exist yet or already has value
+    }
+    try {
+      await this.permissionRepo.query(
+        `ALTER TYPE "role_permissions_role_enum" ADD VALUE IF NOT EXISTS 'bursar'`,
+      );
+    } catch {
+      // Safe fallback if type doesn't exist yet or already has value
     }
 
-    this.seedGlobalDefaultPermissions()
-      .then(() => this.repairExistingPermissions())
-      .catch((err) =>
-        console.error('Error initializing permissions in AccessService:', err),
-      );
+    try {
+      await this.seedGlobalDefaultPermissions();
+      await this.repairExistingPermissions();
+    } catch (err) {
+      console.error('Error initializing permissions in AccessService:', err);
+    }
   }
 
   /**

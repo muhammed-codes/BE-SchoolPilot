@@ -14,6 +14,7 @@ input AdminSetTeacherAvailabilityInput {
 enum AppResource {
   ATTENDANCE
   CLASSES
+  FEES
   ID_CARDS
   RESULTS
   SETTINGS
@@ -23,10 +24,32 @@ enum AppResource {
   USERS
 }
 
+enum ApprovalMode {
+  ALL_REQUIRED_SEQUENTIAL
+  SINGLE_APPROVER
+}
+
 enum ApprovalStatus {
   APPROVED
   PENDING
   REJECTED
+}
+
+input ApprovalStepInput {
+  approverId: String
+  approverRole: String
+  approverType: ApproverType!
+  sequenceOrder: Int!
+}
+
+input ApproveShareInput {
+  allocations: [PaymentAllocationInput!]
+  shareId: String!
+}
+
+enum ApproverType {
+  ROLE
+  SPECIFIC_STAFF
 }
 
 input AssignClassSubjectInput {
@@ -67,6 +90,22 @@ enum AvailabilitySource {
 enum AvailabilityStatus {
   AVAILABLE
   UNAVAILABLE
+}
+
+input BulkCreateFeeStructureInput {
+  amount: Int!
+  classIds: [String!]!
+  feeCategoryId: String!
+  sessionId: String!
+  termId: String
+}
+
+input BulkCreateOverrideInput {
+  feeStructureId: String!
+  overrideAmount: Int!
+  reason: String
+  studentIds: [String!]!
+  type: FeeOverrideType
 }
 
 type BulkImportResult {
@@ -163,9 +202,29 @@ input CopyDayLayoutInput {
   toDayOfWeek: Int!
 }
 
+input CreateBankAccountInput {
+  accountName: String!
+  accountNumber: String!
+  bankName: String!
+  feeCategoryId: String
+}
+
 input CreateClassInput {
   classTeacherId: String
   name: String!
+}
+
+input CreateFeeCategoryInput {
+  name: String!
+  recurrence: FeeRecurrence
+}
+
+input CreateFeeStructureInput {
+  amount: Int!
+  classId: String
+  feeCategoryId: String!
+  sessionId: String!
+  termId: String
 }
 
 input CreateNonTeachingSlotInput {
@@ -288,6 +347,68 @@ type FailedRow {
   row: Int!
 }
 
+type FeeApprovalConfig {
+  createdAt: DateTime!
+  createdBy: String
+  feeCategoryId: String
+  id: ID!
+  mode: ApprovalMode!
+  schoolId: String!
+  steps: [FeeApprovalStep!]
+  updatedAt: DateTime!
+}
+
+type FeeApprovalStep {
+  approvalConfig: FeeApprovalConfig!
+  approvalConfigId: String!
+  approverId: String
+  approverRole: String
+  approverType: ApproverType!
+  createdAt: DateTime!
+  id: ID!
+  sequenceOrder: Int!
+  updatedAt: DateTime!
+}
+
+type FeeCategory {
+  createdAt: DateTime!
+  createdBy: String
+  id: ID!
+  isActive: Boolean!
+  name: String!
+  recurrence: FeeRecurrence!
+  schoolId: String!
+  updatedAt: DateTime!
+}
+
+enum FeeOverrideType {
+  ADJUSTMENT
+  DISCOUNT
+  SCHOLARSHIP
+  WAIVER
+}
+
+enum FeeRecurrence {
+  ONE_TIME
+  PER_SESSION
+  PER_TERM
+}
+
+type FeeStructure {
+  amount: Int!
+  classId: String
+  createdAt: DateTime!
+  createdBy: String
+  feeCategory: FeeCategory!
+  feeCategoryId: String!
+  id: ID!
+  isActive: Boolean!
+  schoolId: String!
+  sessionId: String!
+  termId: String
+  updatedAt: DateTime!
+}
+
 input ForgotPasswordInput {
   email: String!
 }
@@ -295,6 +416,17 @@ input ForgotPasswordInput {
 enum Gender {
   FEMALE
   MALE
+}
+
+input GenerateInvoicesInput {
+  forceRegenerate: Boolean
+  sessionId: String!
+  termId: String
+}
+
+type GenerateInvoicesResult {
+  generated: Int!
+  skipped: Int!
 }
 
 enum GradingSystem {
@@ -318,6 +450,12 @@ enum GuardianRelationship {
   GUARDIAN
   MOTHER
   OTHER
+}
+
+enum InvoiceStatus {
+  OPEN
+  PAID
+  PARTIALLY_PAID
 }
 
 input LoginInput {
@@ -351,6 +489,7 @@ type Mutation {
   adminResetPassword(newPassword: String!, userId: String!): Boolean!
   adminResetSchoolPassword(newPassword: String!, schoolId: String!): Boolean!
   adminSetTeacherAvailability(input: AdminSetTeacherAvailabilityInput!): TeacherAvailability!
+  approvePaymentShare(input: ApproveShareInput!): PaymentSubmissionStudentShare!
   approveResult(resultSheetId: String!): ResultSheet!
   archiveResultSheet(resultSheetId: String!): ResultSheet!
   assignClassSubject(input: AssignClassSubjectInput!): ClassSubject!
@@ -358,15 +497,21 @@ type Mutation {
   assignSubjectTeacher(classId: String!, subjectId: String!, teacherId: String!): ClassSubject!
   assignSubjectsToClass(classId: String!, subjectIds: [String!]!): ClassEntity!
   assignUserToSchool(schoolId: String!, userId: String!): User!
+  bulkCreateFeeOverrides(input: BulkCreateOverrideInput!): [StudentFeeOverride!]!
+  bulkCreateFeeStructures(input: BulkCreateFeeStructureInput!): [FeeStructure!]!
   bulkImportStudents(students: [CreateStudentInput!]!): BulkImportResult!
   changePassword(newPassword: String!, oldPassword: String!): Boolean!
   clockAction(photo: String!): StaffAttendance!
   cloneClassTimetable(input: CloneClassTimetableInput!): [TimetableMutationResult!]!
   closeTerm(termId: String!): Term!
   copyDayLayout(input: CopyDayLayoutInput!): [TimetableMutationResult!]!
+  createBankAccount(input: CreateBankAccountInput!): SchoolBankAccount!
   createClass(input: CreateClassInput!): ClassEntity!
+  createFeeCategory(input: CreateFeeCategoryInput!): FeeCategory!
+  createFeeStructure(input: CreateFeeStructureInput!): FeeStructure!
   createNonTeachingSlot(input: CreateNonTeachingSlotInput!): NonTeachingSlot!
   createPeriod(input: CreatePeriodInput!): Period!
+  createReceiptTemplate(name: String!, templateKey: String!, thumbnailUrl: String): ReceiptTemplate!
   createResultSheet(input: CreateResultSheetInput!): ResultSheet!
   createRoom(input: CreateRoomInput!): Room!
   createSchool(input: CreateSchoolInput!): School!
@@ -376,6 +521,7 @@ type Mutation {
   createTerm(input: CreateTermInput!): Term!
   createTimetableEntry(input: CreateTimetableEntryInput!): TimetableMutationResult!
   createUser(input: CreateUserInput!): User!
+  deactivateFeeStructure(id: String!): Boolean!
   deactivateSchool(id: String!): School!
   deactivateUser(id: String!): User!
   deleteNonTeachingSlot(id: String!): Boolean!
@@ -385,6 +531,7 @@ type Mutation {
   deleteTimetableEntry(id: String!): Boolean!
   forgotPassword(input: ForgotPasswordInput!): Boolean!
   generateBulkReportCards(resultSheetId: String!): String!
+  generateInvoices(input: GenerateInvoicesInput!): GenerateInvoicesResult!
   generateReportCard(studentResultId: String!): String!
   initDefaultPeriods: [Period!]!
   initDefaultSchoolDays: [SchoolDay!]!
@@ -400,7 +547,9 @@ type Mutation {
   regenerateQrCode(schoolId: String!): School!
   register(input: RegisterInput!): AuthResponse!
   registerSchool(input: RegisterSchoolInput!): AuthResponse!
+  rejectPaymentShare(input: RejectShareInput!): PaymentSubmissionStudentShare!
   removeClassSubjectAssignment(id: String!): Boolean!
+  removeFeeOverride(id: String!): Boolean!
   reorderPeriods(items: [ReorderPeriodItem!]!): [Period!]!
   resendVerificationEmail(email: String!): Boolean!
   resetPassword(input: ResetPasswordInput!): Boolean!
@@ -410,15 +559,20 @@ type Mutation {
   savePrincipalRemark(remark: String!, studentResultId: String!): StudentResult!
   saveSubjectScores(input: SaveSubjectScoresInput!): [SubjectScore!]!
   saveTeacherRemark(remark: String!, subjectScoreId: String!): SubjectScore!
+  setDefaultReceiptTemplate(id: String!): ReceiptTemplate
   singleUpload(file: Upload!, folder: String!): UploadResult!
   submitForAdminReview(resultSheetId: String!): ResultSheet!
   submitForPrincipalApproval(resultSheetId: String!): ResultSheet!
   submitMyAvailability(input: SubmitTeacherAvailabilityInput!): TeacherAvailability!
+  submitPaymentBatch(input: SubmitPaymentBatchInput!): PaymentSubmissionBatch!
   unarchiveResultSheet(resultSheetId: String!): ResultSheet!
   unlinkParent(parentUserId: String!, studentId: String!): Boolean!
   unlockTerm(termId: String!): Term!
+  updateBankAccount(id: String!, input: UpdateBankAccountInput!): SchoolBankAccount!
   updateClassSubjectAssignment(input: UpdateClassSubjectAssignmentInput!): ClassSubject!
   updateExpoPushToken(token: String!): Boolean!
+  updateFeeCategory(id: String!, input: UpdateFeeCategoryInput!): FeeCategory!
+  updateFeeStructureAmount(amount: Int!, id: String!): FeeStructure!
   updateNonTeachingSlot(input: UpdateNonTeachingSlotInput!): NonTeachingSlot!
   updatePeriod(input: UpdatePeriodInput!): Period!
   updateRolePermission(input: UpdatePermissionInput!): RolePermission!
@@ -437,6 +591,8 @@ type Mutation {
   uploadSchoolLogo(imageUrl: String!, schoolId: String!): School!
   uploadSchoolStamp(imageUrl: String!, schoolId: String!): School!
   uploadUserAvatar(imageUrl: String!, userId: String!): User!
+  upsertApprovalConfig(input: UpsertApprovalConfigInput!): FeeApprovalConfig!
+  upsertStaffFeeVisibility(input: UpdateVisibilityConfigInput!): StaffFeeVisibilityConfig!
   verifyEmail(token: String!): Boolean!
 }
 
@@ -488,6 +644,66 @@ type PaginatedUser {
   totalPages: Int!
 }
 
+type PaymentAllocation {
+  allocatedAt: DateTime!
+  allocatedBy: String!
+  amount: Int!
+  createdAt: DateTime!
+  id: ID!
+  studentInvoiceItemId: String
+  studentShare: PaymentSubmissionStudentShare!
+  studentShareId: String!
+  updatedAt: DateTime!
+}
+
+input PaymentAllocationInput {
+  amount: Int!
+  studentInvoiceItemId: String
+}
+
+enum PaymentShareStatus {
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+input PaymentStudentShareInput {
+  allocations: [PaymentAllocationInput!]
+  amount: Int!
+  studentId: String!
+}
+
+type PaymentSubmissionBatch {
+  bankAccount: SchoolBankAccount
+  bankAccountId: String
+  createdAt: DateTime!
+  id: ID!
+  note: String
+  parentId: String!
+  proofType: String!
+  proofUrl: String!
+  schoolId: String!
+  shares: [PaymentSubmissionStudentShare!]
+  submittedAt: DateTime!
+  totalAmount: Int!
+  updatedAt: DateTime!
+}
+
+type PaymentSubmissionStudentShare {
+  allocations: [PaymentAllocation!]
+  amount: Int!
+  batch: PaymentSubmissionBatch!
+  batchId: String!
+  createdAt: DateTime!
+  finalizedAt: String
+  finalizedBy: String
+  id: ID!
+  rejectionReason: String
+  status: PaymentShareStatus!
+  studentId: String!
+  updatedAt: DateTime!
+}
+
 type Period {
   createdAt: DateTime!
   dayOfWeek: Int
@@ -523,29 +739,42 @@ type PromotionResult {
 type Query {
   activeStaffQrCode: String!
   activeTerm: Term!
+  allFeeCategories: [FeeCategory!]!
   allRolePermissions: [RolePermission!]!
+  approvalConfigs: [FeeApprovalConfig!]!
   archivedResultSheets(status: ResultStatus): [ResultSheet!]!
   archivedStudents: [Student!]!
+  bankAccounts: [SchoolBankAccount!]!
   childTimetable(studentId: String!, termId: String): ChildTimetableResult!
   classAttendance(classId: String!, date: String!): [StudentAttendance!]!
   classById(id: String!): ClassEntity!
+  classInvoices(classId: String!, sessionId: String, termId: String): [StudentInvoice!]!
   classSubjectAssignments(classId: String!): [ClassSubject!]!
   dashboardOverview: DashboardOverview!
   exportTimetablePdf(input: ExportTimetablePdfInput!): TimetablePdfResult!
+  feeCategories: [FeeCategory!]!
+  feeOverrides(feeStructureId: String, studentId: String): [StudentFeeOverride!]!
+  feeStructures(sessionId: String!, termId: String): [FeeStructure!]!
   me: User!
   myAvailabilities: [TeacherAvailability!]!
   myChildResults(studentId: String!): [StudentResult!]!
   myChildren: [Student!]!
   myChildrenTimetables(termId: String): [ChildTimetableResult!]!
   myClasses: [ClassEntity!]!
+  myPaymentSubmissions: [PaymentSubmissionBatch!]!
   myPermissions: [RolePermission!]!
   mySchool: School!
+  myStudentInvoices(studentId: String!): [StudentInvoice!]!
   mySubjectScores(resultSheetId: String!): [SubjectScore!]!
   myTimetable(termId: String): TeacherTimetableResult!
   nonTeachingSlots: [NonTeachingSlot!]!
+  paymentReceipt(shareId: String!): Receipt
+  pendingApprovalQueue: [PaymentSubmissionStudentShare!]!
   pendingPrincipalApprovals: [ResultSheet!]!
   periods: [Period!]!
   platformStats: PlatformStats!
+  receiptTemplates: [ReceiptTemplate!]!
+  resolvedBankAccounts(feeCategoryId: String): [SchoolBankAccount!]!
   resultSheet(id: String!): ResultSheet!
   resultSheetsByClass(classId: String!, termId: String!): [ResultSheet!]!
   resultStats: ResultStats!
@@ -562,6 +791,7 @@ type Query {
   sessions: [Session!]!
   staffAttendanceHistory(from: String!, to: String!, userId: String!): [StaffAttendance!]!
   staffAttendanceLog(date: String!): [StaffAttendance!]!
+  staffFeeVisibilityConfigs: [StaffFeeVisibilityConfig!]!
   student(id: String!): Student
   studentAttendance(studentId: String!, termId: String!): [StudentAttendance!]!
   studentAttendanceSummary(studentId: String!, termId: String!): AttendanceSummary!
@@ -573,6 +803,29 @@ type Query {
   timetableEntries(classId: String, roomId: String, teacherId: String, termId: String!): [TimetableEntry!]!
   unmarkedClasses(date: String!): [ClassEntity!]!
   user(id: String!): User!
+}
+
+type Receipt {
+  createdAt: DateTime!
+  generatedAt: DateTime!
+  id: ID!
+  serialNumber: String!
+  studentShareId: String!
+  template: ReceiptTemplate
+  templateId: String
+  updatedAt: DateTime!
+}
+
+type ReceiptTemplate {
+  createdAt: DateTime!
+  id: ID!
+  isActive: Boolean!
+  isDefault: Boolean!
+  name: String!
+  schoolId: String!
+  templateKey: String!
+  thumbnailUrl: String
+  updatedAt: DateTime!
 }
 
 input RegisterInput {
@@ -603,6 +856,11 @@ input RegisterSchoolInput {
   schoolType: String = "basic"
   state: String
   whatsappNumber: String
+}
+
+input RejectShareInput {
+  reason: String!
+  shareId: String!
 }
 
 input ReorderPeriodItem {
@@ -722,6 +980,20 @@ type School {
   whatsappNumber: String
 }
 
+type SchoolBankAccount {
+  accountName: String!
+  accountNumber: String!
+  bankName: String!
+  createdAt: DateTime!
+  createdBy: String
+  feeCategory: FeeCategory
+  feeCategoryId: String
+  id: ID!
+  isActive: Boolean!
+  schoolId: String!
+  updatedAt: DateTime!
+}
+
 type SchoolDay {
   closingTime: String!
   createdAt: DateTime!
@@ -784,6 +1056,16 @@ type StaffAttendance {
   userId: String!
 }
 
+type StaffFeeVisibilityConfig {
+  canViewPaymentRecords: Boolean!
+  createdAt: DateTime!
+  id: ID!
+  role: String!
+  schoolId: String!
+  updatedAt: DateTime!
+  updatedBy: String
+}
+
 type Student {
   address: String
   admissionClass: ClassEntity
@@ -833,6 +1115,50 @@ type StudentAttendance {
 input StudentAttendanceRecordInput {
   status: AttendanceStatus!
   studentId: String!
+}
+
+type StudentFeeOverride {
+  createdAt: DateTime!
+  createdBy: String
+  feeStructure: FeeStructure!
+  feeStructureId: String!
+  id: ID!
+  overrideAmount: Int!
+  reason: String
+  schoolId: String!
+  studentId: String!
+  type: FeeOverrideType!
+  updatedAt: DateTime!
+}
+
+type StudentInvoice {
+  balance: Int!
+  createdAt: DateTime!
+  dueDate: String
+  generatedAt: DateTime!
+  id: ID!
+  items: [StudentInvoiceItem!]
+  schoolId: String!
+  sessionId: String!
+  status: InvoiceStatus!
+  studentId: String!
+  termId: String
+  totalAmount: Int!
+  totalPaid: Int!
+  updatedAt: DateTime!
+}
+
+type StudentInvoiceItem {
+  amount: Int!
+  amountPaid: Int!
+  balance: Int!
+  createdAt: DateTime!
+  description: String!
+  feeCategoryId: String!
+  id: ID!
+  invoice: StudentInvoice!
+  studentInvoiceId: String!
+  updatedAt: DateTime!
 }
 
 type StudentParent {
@@ -907,6 +1233,15 @@ type SubjectScore {
   teacherRemark: String
   totalScore: Float
   updatedAt: DateTime!
+}
+
+input SubmitPaymentBatchInput {
+  bankAccountId: String
+  note: String
+  proofType: String!
+  proofUrl: String!
+  shares: [PaymentStudentShareInput!]!
+  totalAmount: Int!
 }
 
 input SubmitTeacherAvailabilityInput {
@@ -998,11 +1333,25 @@ type TimetablePdfResult {
   title: String!
 }
 
+input UpdateBankAccountInput {
+  accountName: String
+  accountNumber: String
+  bankName: String
+  feeCategoryId: String
+  isActive: Boolean
+}
+
 input UpdateClassSubjectAssignmentInput {
   id: String!
   isDoublePeriod: Boolean
   periodsPerWeek: Int
   teacherId: String
+}
+
+input UpdateFeeCategoryInput {
+  isActive: Boolean
+  name: String
+  recurrence: FeeRecurrence
 }
 
 input UpdateNonTeachingSlotInput {
@@ -1121,6 +1470,11 @@ input UpdateUserInput {
   role: UserRole
 }
 
+input UpdateVisibilityConfigInput {
+  canViewPaymentRecords: Boolean!
+  role: String!
+}
+
 """The `Upload` scalar type represents a file upload."""
 scalar Upload
 
@@ -1129,6 +1483,12 @@ type UploadResult {
   pdfPrivateUrl: String
   publicId: String!
   url: String!
+}
+
+input UpsertApprovalConfigInput {
+  feeCategoryId: String
+  mode: ApprovalMode!
+  steps: [ApprovalStepInput!]!
 }
 
 type User {
