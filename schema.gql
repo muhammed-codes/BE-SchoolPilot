@@ -753,7 +753,7 @@ type Query {
   dashboardOverview: DashboardOverview!
   exportTimetablePdf(input: ExportTimetablePdfInput!): TimetablePdfResult!
   feeCategories: [FeeCategory!]!
-  feeOverrides(feeStructureId: String, studentId: String): [StudentFeeOverride!]!
+  feeOverrides(classId: String, feeStructureId: String, sessionId: String, studentId: String, termId: String): [StudentFeeOverride!]!
   feeStructures(sessionId: String!, termId: String): [FeeStructure!]!
   me: User!
   myAvailabilities: [TeacherAvailability!]!
@@ -1126,6 +1126,7 @@ type StudentFeeOverride {
   overrideAmount: Int!
   reason: String
   schoolId: String!
+  student: Student
   studentId: String!
   type: FeeOverrideType!
   updatedAt: DateTime!

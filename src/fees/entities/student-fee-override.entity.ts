@@ -2,6 +2,7 @@ import { ObjectType, Field, Int, registerEnumType } from '@nestjs/graphql';
 import { Entity, Column, Index, ManyToOne, JoinColumn, Unique } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { FeeStructure } from './fee-structure.entity';
+import { Student } from '../../students/entities/student.entity';
 
 export enum FeeOverrideType {
   DISCOUNT = 'DISCOUNT',
@@ -54,4 +55,9 @@ export class StudentFeeOverride extends BaseEntity {
   @ManyToOne(() => FeeStructure, { eager: false })
   @JoinColumn({ name: 'feeStructureId' })
   feeStructure!: FeeStructure;
+
+  @Field(() => Student, { nullable: true })
+  @ManyToOne(() => Student, { eager: false })
+  @JoinColumn({ name: 'studentId' })
+  student?: Student;
 }

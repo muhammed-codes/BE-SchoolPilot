@@ -173,11 +173,20 @@ export class FeesResolver {
     feeStructureId?: string,
     @Args('studentId', { type: () => String, nullable: true })
     studentId?: string,
+    @Args('sessionId', { type: () => String, nullable: true })
+    sessionId?: string,
+    @Args('termId', { type: () => String, nullable: true })
+    termId?: string,
+    @Args('classId', { type: () => String, nullable: true })
+    classId?: string,
   ) {
     return this.feesService.getOverrides(
       user.schoolId,
       feeStructureId,
       studentId,
+      sessionId,
+      termId,
+      classId,
     );
   }
 

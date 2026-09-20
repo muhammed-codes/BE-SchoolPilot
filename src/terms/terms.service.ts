@@ -82,11 +82,22 @@ export class TermsService {
       .findOne({ where: { id: termId, schoolId } })
       .then((term) => {
         if (!term) throw new NotFoundException('Term not found in your school');
-        // Close any currently active term for this school
-        return this.termsRepository
-          .update(
-            { schoolId, status: TermStatus.ACTIVE },
-            { status: TermStatus.CLOSED },
+        // The session the active term belongs to becomes the active session,
+        // and all other sessions are deactivated
+        return this.sessionsRepository
+          .update({ schoolId }, { isActive: false })
+          .then(() =>
+            this.sessionsRepository.update(
+              { id: term.sessionId, schoolId },
+              { isActive: true },
+            ),
+          )
+          // Close any currently active term for this school
+          .then(() =>
+            this.termsRepository.update(
+              { schoolId, status: TermStatus.ACTIVE },
+              { status: TermStatus.CLOSED },
+            ),
           )
           .then(() =>
             this.termsRepository

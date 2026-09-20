@@ -45,6 +45,7 @@ import { Student } from '../students/entities/student.entity';
 import { User } from '../users/entities/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { StudentParent } from '../students/entities/student-parent.entity';
+import { UserRole } from '../common/enums';
 
 import {
   CreateFeeCategoryInput,
@@ -251,15 +252,34 @@ export class FeesService {
     );
   }
 
-  getOverrides(schoolId: string, feeStructureId?: string, studentId?: string) {
-    return this.overrideRepo.find({
-      where: {
-        schoolId,
-        ...(feeStructureId ? { feeStructureId } : {}),
-        ...(studentId ? { studentId } : {}),
-      },
-      relations: ['feeStructure', 'feeStructure.feeCategory'],
-    });
+  getOverrides(
+    schoolId: string,
+    feeStructureId?: string,
+    studentId?: string,
+    sessionId?: string,
+    termId?: string,
+    classId?: string,
+    userId?: string,
+  ) {
+    const hasAnyFilter =
+      feeStructureId || studentId || sessionId || termId || classId;
+    if (!hasAnyFilter) {
+      return Promise.resolve([] as StudentFeeOverride[]);
+    }
+    const qb = this.overrideRepo.createQueryBuilder('o');
+    qb.innerJoinAndSelect('o.feeStructure', 'fs');
+    qb.innerJoinAndSelect('fs.feeCategory', 'fc');
+    qb.innerJoinAndSelect('o.student', 'st');
+    qb.leftJoinAndSelect('fs.classEntity', 'cls');
+    qb.where('o.schoolId = :schoolId', { schoolId });
+    if (userId) qb.andWhere('o.studentId = :userId', { userId });
+    if (feeStructureId) qb.andWhere('o.feeStructureId = :feeStructureId', { feeStructureId });
+    if (studentId) qb.andWhere('o.studentId = :studentId', { studentId });
+    if (sessionId) qb.andWhere('fs.sessionId = :sessionId', { sessionId });
+    if (termId) qb.andWhere('fs.termId = :termId', { termId });
+    if (classId) qb.andWhere('fs.classId = :classId', { classId });
+    qb.orderBy('o.createdAt', 'DESC');
+    return qb.getMany();
   }
 
   removeOverride(id: string, schoolId: string) {
@@ -1101,6 +1121,18 @@ export class FeesService {
     sessionId?: string,
     termId?: string,
   ) {
+    // Finance-owning roles always have full access to payment records —
+    // the staff visibility config only gates teaching/leadership staff, so a
+    // school admin never needs a config row to be present.
+    const isFinanceOwner =
+      userRole === UserRole.SCHOOL_ADMIN ||
+      userRole === UserRole.BURSAR ||
+      userRole === UserRole.SUPER_ADMIN;
+
+    if (isFinanceOwner) {
+      return this.getClassInvoices(classId, schoolId, sessionId, termId);
+    }
+
     return this.visibilityRepo
       .findOne({ where: { schoolId, role: userRole } })
       .then((cfg) => {
