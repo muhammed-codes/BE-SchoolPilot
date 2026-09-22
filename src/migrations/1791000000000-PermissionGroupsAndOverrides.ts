@@ -4,6 +4,9 @@ export class PermissionGroupsAndOverrides1791000000000 implements MigrationInter
   name = 'PermissionGroupsAndOverrides1791000000000';
 
   async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TYPE "public"."role_permissions_resource_enum" ADD VALUE IF NOT EXISTS 'access'`,
+    );
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "permission_groups" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),

@@ -120,7 +120,9 @@ export class AccessService implements OnModuleInit {
     if (!schoolId) return [];
 
     const rolePermissions = await this.getPermissionsByRole(role, schoolId);
-    const assignments = await this.userGroupRepo.find({ where: { userId, schoolId } });
+    const assignments = await this.userGroupRepo.find({
+      where: { userId, schoolId },
+    });
     const groupPermissions = assignments.length
       ? await this.groupPermissionRepo.find({
           where: {
@@ -129,44 +131,63 @@ export class AccessService implements OnModuleInit {
           },
         })
       : [];
-    const overrides = await this.userPermissionRepo.find({ where: { userId, schoolId } });
+    const overrides = await this.userPermissionRepo.find({
+      where: { userId, schoolId },
+    });
 
     return resources.flatMap((resource) =>
       actions.map((action) => {
-        const rolePermission = rolePermissions.find((permission) => permission.resource === resource);
+        const rolePermission = rolePermissions.find(
+          (permission) => permission.resource === resource,
+        );
         const legacyAction = {
           [PermissionAction.CREATE]: 'canCreate',
           [PermissionAction.READ]: 'canRead',
           [PermissionAction.UPDATE]: 'canUpdate',
           [PermissionAction.DELETE]: 'canDelete',
         }[action] as keyof RolePermission | undefined;
-        const roleAllowed = legacyAction ? rolePermission?.[legacyAction] === true : false;
+        const roleAllowed = legacyAction
+          ? rolePermission?.[legacyAction] === true
+          : false;
         const groupAllowed = groupPermissions.some(
-          (permission) => permission.resource === resource && permission.action === action,
+          (permission) =>
+            permission.resource === resource && permission.action === action,
         );
         const override = overrides.find(
-          (permission) => permission.resource === resource && permission.action === action,
+          (permission) =>
+            permission.resource === resource && permission.action === action,
         );
         return {
           resource,
           action,
-          allowed: override?.effect === PermissionEffect.DENY
-            ? false
-            : override?.effect === PermissionEffect.GRANT || roleAllowed || groupAllowed,
+          allowed:
+            override?.effect === PermissionEffect.DENY
+              ? false
+              : override?.effect === PermissionEffect.GRANT ||
+                roleAllowed ||
+                groupAllowed,
         };
       }),
     );
   }
 
   private async assertSchoolUser(userId: string, schoolId: string) {
-    const user = await this.userRepo.findOne({ where: { id: userId, schoolId } });
-    if (!user) throw new ForbiddenException('User does not belong to this school');
+    const user = await this.userRepo.findOne({
+      where: { id: userId, schoolId },
+    });
+    if (!user)
+      throw new ForbiddenException('User does not belong to this school');
     return user;
   }
 
   private async assertSchoolGroup(groupId: string, schoolId: string) {
-    const group = await this.groupRepo.findOne({ where: { id: groupId, schoolId } });
-    if (!group) throw new ForbiddenException('Permission group does not belong to this school');
+    const group = await this.groupRepo.findOne({
+      where: { id: groupId, schoolId },
+    });
+    if (!group)
+      throw new ForbiddenException(
+        'Permission group does not belong to this school',
+      );
     return group;
   }
 
@@ -183,7 +204,12 @@ export class AccessService implements OnModuleInit {
   }
 
   async updatePermissionGroup(
-    input: { id: string; name?: string; description?: string; isActive?: boolean },
+    input: {
+      id: string;
+      name?: string;
+      description?: string;
+      isActive?: boolean;
+    },
     schoolId: string,
   ) {
     await this.assertSchoolGroup(input.id, schoolId);
@@ -199,9 +225,13 @@ export class AccessService implements OnModuleInit {
 
   async deletePermissionGroup(groupId: string, schoolId: string) {
     await this.assertSchoolGroup(groupId, schoolId);
-    const assignments = await this.userGroupRepo.count({ where: { groupId, schoolId } });
+    const assignments = await this.userGroupRepo.count({
+      where: { groupId, schoolId },
+    });
     if (assignments > 0) {
-      throw new ForbiddenException('Remove staff assignments before deleting this group');
+      throw new ForbiddenException(
+        'Remove staff assignments before deleting this group',
+      );
     }
     await this.groupPermissionRepo.delete({ groupId, schoolId });
     await this.groupRepo.delete({ id: groupId, schoolId });
@@ -230,15 +260,27 @@ export class AccessService implements OnModuleInit {
       this.groupPermissionRepo.find({ where: { groupId, schoolId } }),
     );
 
-  async assignPermissionGroup(userId: string, groupId: string, schoolId: string) {
+  async assignPermissionGroup(
+    userId: string,
+    groupId: string,
+    schoolId: string,
+  ) {
     await this.assertSchoolUser(userId, schoolId);
     await this.assertSchoolGroup(groupId, schoolId);
-    const existing = await this.userGroupRepo.findOne({ where: { userId, groupId } });
+    const existing = await this.userGroupRepo.findOne({
+      where: { userId, groupId },
+    });
     if (existing) return existing;
-    return this.userGroupRepo.save(this.userGroupRepo.create({ userId, groupId, schoolId }));
+    return this.userGroupRepo.save(
+      this.userGroupRepo.create({ userId, groupId, schoolId }),
+    );
   }
 
-  async removePermissionGroup(userId: string, groupId: string, schoolId: string) {
+  async removePermissionGroup(
+    userId: string,
+    groupId: string,
+    schoolId: string,
+  ) {
     await this.assertSchoolUser(userId, schoolId);
     await this.assertSchoolGroup(groupId, schoolId);
     await this.userGroupRepo.delete({ userId, groupId, schoolId });
@@ -267,7 +309,9 @@ export class AccessService implements OnModuleInit {
       existing.effect = input.effect;
       return this.userPermissionRepo.save(existing);
     }
-    return this.userPermissionRepo.save(this.userPermissionRepo.create({ ...input, schoolId }));
+    return this.userPermissionRepo.save(
+      this.userPermissionRepo.create({ ...input, schoolId }),
+    );
   }
 
   async removeUserPermission(
@@ -277,7 +321,12 @@ export class AccessService implements OnModuleInit {
     schoolId: string,
   ) {
     await this.assertSchoolUser(userId, schoolId);
-    await this.userPermissionRepo.delete({ userId, schoolId, resource, action });
+    await this.userPermissionRepo.delete({
+      userId,
+      schoolId,
+      resource,
+      action,
+    });
     return true;
   }
 

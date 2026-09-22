@@ -32,7 +32,8 @@ export class AccessResolver {
     user: { role: UserRole; schoolId?: string },
     requestedSchoolId?: string,
   ) {
-    const schoolId = user.role === UserRole.SUPER_ADMIN ? requestedSchoolId : user.schoolId;
+    const schoolId =
+      user.role === UserRole.SUPER_ADMIN ? requestedSchoolId : user.schoolId;
     if (!schoolId) throw new Error('A school scope is required');
     return schoolId;
   }
@@ -43,8 +44,14 @@ export class AccessResolver {
   }
 
   @Query(() => [EffectivePermission], { name: 'myEffectivePermissions' })
-  myEffectivePermissions(@CurrentUser() user: { sub: string; role: UserRole; schoolId?: string }) {
-    return this.accessService.getEffectivePermissions(user.sub, user.role, user.schoolId);
+  myEffectivePermissions(
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId?: string },
+  ) {
+    return this.accessService.getEffectivePermissions(
+      user.sub,
+      user.role,
+      user.schoolId,
+    );
   }
 
   @Query(() => [RolePermission], { name: 'allRolePermissions' })
@@ -82,17 +89,24 @@ export class AccessResolver {
     @CurrentUser() user: { role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
-    return this.accessService.getPermissionGroups(this.schoolIdFor(user, schoolId));
+    return this.accessService.getPermissionGroups(
+      this.schoolIdFor(user, schoolId),
+    );
   }
 
-  @Query(() => [PermissionGroupPermission], { name: 'permissionGroupPermissions' })
+  @Query(() => [PermissionGroupPermission], {
+    name: 'permissionGroupPermissions',
+  })
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   permissionGroupPermissions(
     @Args('groupId') groupId: string,
     @CurrentUser() user: { role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
-    return this.accessService.getPermissionGroupPermissions(groupId, this.schoolIdFor(user, schoolId));
+    return this.accessService.getPermissionGroupPermissions(
+      groupId,
+      this.schoolIdFor(user, schoolId),
+    );
   }
 
   @Query(() => [UserPermissionGroup], { name: 'userPermissionGroups' })
@@ -102,7 +116,10 @@ export class AccessResolver {
     @CurrentUser() user: { role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
-    return this.accessService.getUserPermissionGroups(userId, this.schoolIdFor(user, schoolId));
+    return this.accessService.getUserPermissionGroups(
+      userId,
+      this.schoolIdFor(user, schoolId),
+    );
   }
 
   @Query(() => [UserPermission], { name: 'userPermissionOverrides' })
@@ -112,7 +129,10 @@ export class AccessResolver {
     @CurrentUser() user: { role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
-    return this.accessService.getUserPermissionOverrides(userId, this.schoolIdFor(user, schoolId));
+    return this.accessService.getUserPermissionOverrides(
+      userId,
+      this.schoolIdFor(user, schoolId),
+    );
   }
 
   @Mutation(() => PermissionGroup)
@@ -121,7 +141,10 @@ export class AccessResolver {
     @Args('input') input: CreatePermissionGroupInput,
     @CurrentUser() user: { role: UserRole; schoolId?: string },
   ) {
-    return this.accessService.createPermissionGroup(input, this.schoolIdFor(user, input.schoolId));
+    return this.accessService.createPermissionGroup(
+      input,
+      this.schoolIdFor(user, input.schoolId),
+    );
   }
 
   @Mutation(() => PermissionGroup)
@@ -131,7 +154,10 @@ export class AccessResolver {
     @CurrentUser() user: { role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
-    return this.accessService.updatePermissionGroup(input, this.schoolIdFor(user, schoolId));
+    return this.accessService.updatePermissionGroup(
+      input,
+      this.schoolIdFor(user, schoolId),
+    );
   }
 
   @Mutation(() => Boolean)
@@ -141,7 +167,10 @@ export class AccessResolver {
     @CurrentUser() user: { role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
-    return this.accessService.deletePermissionGroup(groupId, this.schoolIdFor(user, schoolId));
+    return this.accessService.deletePermissionGroup(
+      groupId,
+      this.schoolIdFor(user, schoolId),
+    );
   }
 
   @Mutation(() => [PermissionGroupPermission])
@@ -166,7 +195,11 @@ export class AccessResolver {
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
     const scope = this.schoolIdFor(user, schoolId);
-    return this.accessService.assignPermissionGroup(input.userId, input.groupId, scope);
+    return this.accessService.assignPermissionGroup(
+      input.userId,
+      input.groupId,
+      scope,
+    );
   }
 
   @Mutation(() => Boolean)
@@ -191,7 +224,10 @@ export class AccessResolver {
     @CurrentUser() user: { role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
-    return this.accessService.setUserPermission(input, this.schoolIdFor(user, schoolId));
+    return this.accessService.setUserPermission(
+      input,
+      this.schoolIdFor(user, schoolId),
+    );
   }
 
   @Mutation(() => Boolean)

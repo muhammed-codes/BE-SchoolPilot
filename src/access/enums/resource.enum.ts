@@ -11,6 +11,7 @@ export enum AppResource {
   ID_CARDS = 'id_cards',
   TIMETABLE = 'timetable',
   FEES = 'fees',
+  ACCESS = 'access',
 }
 
 registerEnumType(AppResource, { name: 'AppResource' });
