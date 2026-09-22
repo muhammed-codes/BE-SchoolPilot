@@ -908,7 +908,7 @@ type Query {
   schoolResultSheets(status: ResultStatus): [ResultSheet!]!
   schoolSubjects: [Subject!]!
   schoolTeachers: [User!]!
-  schoolUsers(limit: Int! = 50, page: Int! = 1, role: UserRole): PaginatedUser!
+  schoolUsers(limit: Int! = 50, page: Int! = 1, role: UserRole, search: String): PaginatedUser!
   schools(limit: Int! = 50, page: Int! = 1): PaginatedSchool!
   searchStudents(query: String!): [Student!]!
   sessions: [Session!]!

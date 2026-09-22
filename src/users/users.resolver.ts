@@ -37,10 +37,16 @@ export class UsersResolver {
   @RequirePermission(AppResource.USERS, PermissionAction.READ)
   schoolUsers(
     @Args('role', { type: () => UserRole, nullable: true }) role: UserRole,
+    @Args('search', { type: () => String, nullable: true }) search: string,
     @Args() pagination: PaginationArgs,
     @CurrentUser() user: { schoolId: string },
   ) {
-    return this.usersService.findBySchool(user.schoolId, role, pagination);
+    return this.usersService.findBySchool(
+      user.schoolId,
+      role,
+      pagination,
+      search,
+    );
   }
 
   @Query(() => [User])

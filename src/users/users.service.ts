@@ -175,16 +175,28 @@ export class UsersService {
     schoolId: string,
     role?: UserRole,
     pagination?: PaginationArgs,
+    search?: string,
   ) => {
     const page = pagination?.page || 1;
     const limit = pagination?.limit || 50;
     const skip = (page - 1) * limit;
 
-    const where: { schoolId: string; role?: UserRole } = { schoolId };
-    if (role) where.role = role;
+    const queryBuilder = this.usersRepository
+      .createQueryBuilder('user')
+      .where('user.schoolId = :schoolId', { schoolId });
+    if (role) queryBuilder.andWhere('user.role = :role', { role });
+    if (search?.trim()) {
+      queryBuilder.andWhere(
+        '(user.firstName ILIKE :search OR user.lastName ILIKE :search OR user.email ILIKE :search)',
+        { search: `%${search.trim()}%` },
+      );
+    }
 
-    return this.usersRepository
-      .findAndCount({ where, skip, take: limit, order: { createdAt: 'DESC' } })
+    return queryBuilder
+      .orderBy('user.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount()
       .then(([items, total]) => ({
         items,
         total,
