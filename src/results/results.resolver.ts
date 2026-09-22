@@ -119,9 +119,13 @@ export class ResultsResolver {
   @RequirePermission(AppResource.RESULTS, 'canRead')
   mySubjectScores(
     @Args('resultSheetId') resultSheetId: string,
-    @CurrentUser() user: { sub: string },
+    @CurrentUser() user: { sub: string; schoolId: string },
   ) {
-    return this.resultsService.getMySubjectScores(user.sub, resultSheetId);
+    return this.resultsService.getMySubjectScores(
+      user.sub,
+      resultSheetId,
+      user.schoolId,
+    );
   }
 
   @Mutation(() => ResultSheet)

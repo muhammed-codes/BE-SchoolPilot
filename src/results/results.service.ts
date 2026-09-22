@@ -1035,7 +1035,16 @@ export class ResultsService {
       });
   };
 
-  getMySubjectScores = (teacherId: string, resultSheetId: string) => {
+  getMySubjectScores = async (
+    teacherId: string,
+    resultSheetId: string,
+    schoolId: string,
+  ) => {
+    const resultSheet = await this.resultSheetRepo.findOne({
+      where: { id: resultSheetId, schoolId },
+    });
+    if (!resultSheet) throw new NotFoundException('Result sheet not found');
+
     return this.subjectScoreRepo.find({
       where: { resultSheetId, enteredByUserId: teacherId },
       order: { createdAt: 'ASC' },
