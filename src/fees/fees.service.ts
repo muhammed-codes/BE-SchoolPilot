@@ -609,6 +609,37 @@ export class FeesService {
         );
 
         if (shareInput.allocations && shareInput.allocations.length > 0) {
+          const allocationItemIds = shareInput.allocations
+            .map((allocation) => allocation.studentInvoiceItemId)
+            .filter((id): id is string => !!id);
+          const allocationItems = allocationItemIds.length
+            ? await manager.find(StudentInvoiceItem, {
+                where: { id: In(allocationItemIds) },
+                relations: ['invoice'],
+              })
+            : [];
+          const validAllocationItems = new Map(
+            allocationItems
+              .filter(
+                (item) =>
+                  item.invoice?.schoolId === schoolId &&
+                  item.invoice.studentId === shareInput.studentId,
+              )
+              .map((item) => [item.id, item]),
+          );
+          if (
+            validAllocationItems.size !== new Set(allocationItemIds).size ||
+            shareInput.allocations.some(
+              (allocation) =>
+                allocation.studentInvoiceItemId &&
+                !validAllocationItems.has(allocation.studentInvoiceItemId),
+            )
+          ) {
+            throw new ForbiddenException(
+              'You can only allocate payments to invoices for the selected child',
+            );
+          }
+
           const allocationSum = shareInput.allocations.reduce(
             (s, a) => s + a.amount,
             0,
