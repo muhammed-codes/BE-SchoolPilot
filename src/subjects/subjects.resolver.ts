@@ -7,6 +7,9 @@ import { Subject } from './entities/subject.entity';
 import { UpdateSubjectInput } from './dto/update-subject.input';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission } from '../common/decorators';
+import { PaginationArgs, createPaginatedType } from '../common/pagination';
+
+const PaginatedSubject = createPaginatedType(Subject);
 
 @Resolver(() => Subject)
 export class SubjectsResolver {
@@ -47,11 +50,19 @@ export class SubjectsResolver {
     );
   }
 
-  @Query(() => [Subject])
+  @Query(() => PaginatedSubject)
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission(AppResource.SUBJECTS, PermissionAction.READ)
-  schoolSubjects(@CurrentUser() user: { schoolId: string }) {
-    return this.subjectsService.getSubjectsBySchool(user.schoolId);
+  schoolSubjects(
+    @Args() pagination: PaginationArgs,
+    @Args('search', { type: () => String, nullable: true }) search: string,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.subjectsService.getSubjectsBySchool(
+      user.schoolId,
+      pagination,
+      search,
+    );
   }
 
   @Mutation(() => Boolean)

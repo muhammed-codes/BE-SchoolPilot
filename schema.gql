@@ -708,6 +708,13 @@ type PaginatedStudent {
   totalPages: Int!
 }
 
+type PaginatedSubject {
+  items: [Subject!]!
+  page: Int!
+  total: Int!
+  totalPages: Int!
+}
+
 type PaginatedUser {
   items: [User!]!
   page: Int!
@@ -906,7 +913,7 @@ type Query {
   schoolClasses(limit: Int! = 50, page: Int! = 1, search: String): PaginatedClassEntity!
   schoolDays: [SchoolDay!]!
   schoolResultSheets(status: ResultStatus): [ResultSheet!]!
-  schoolSubjects: [Subject!]!
+  schoolSubjects(limit: Int! = 50, page: Int! = 1, search: String): PaginatedSubject!
   schoolTeachers: [User!]!
   schoolUsers(limit: Int! = 50, page: Int! = 1, role: UserRole, search: String): PaginatedUser!
   schools(limit: Int! = 50, page: Int! = 1): PaginatedSchool!

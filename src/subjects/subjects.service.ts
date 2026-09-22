@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Subject } from './entities/subject.entity';
+import { PaginationArgs } from '../common/pagination';
 
 @Injectable()
 export class SubjectsService {
@@ -129,11 +130,33 @@ export class SubjectsService {
     return this.subjectsRepository.save(subject);
   };
 
-  getSubjectsBySchool = (schoolId: string) => {
-    return this.subjectsRepository.find({
-      where: { schoolId },
-      order: { name: 'ASC' },
-    });
+  getSubjectsBySchool = (
+    schoolId: string,
+    pagination?: PaginationArgs,
+    search?: string,
+  ) => {
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 50;
+    const queryBuilder = this.subjectsRepository
+      .createQueryBuilder('subject')
+      .where('subject.schoolId = :schoolId', { schoolId });
+    if (search?.trim()) {
+      queryBuilder.andWhere(
+        '(subject.name ILIKE :search OR subject.code ILIKE :search)',
+        { search: `%${search.trim()}%` },
+      );
+    }
+    return queryBuilder
+      .orderBy('subject.name', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount()
+      .then(([items, total]) => ({
+        items,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      }));
   };
 
   deleteSubject = (id: string, schoolId: string) => {
