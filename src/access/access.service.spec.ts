@@ -79,6 +79,20 @@ describe('AccessService effective permissions', () => {
     ).resolves.toBe(false);
   });
 
+  it('does not grant Bursar finance actions outside effective permissions', async () => {
+    const service = makeService();
+
+    await expect(
+      service.hasPermission(
+        'user-a',
+        UserRole.BURSAR,
+        'school-a',
+        AppResource.FEES,
+        PermissionAction.APPROVE,
+      ),
+    ).resolves.toBe(false);
+  });
+
   it('preserves legacy role read permissions during migration', async () => {
     const service = makeService({
       rolePermissions: [
