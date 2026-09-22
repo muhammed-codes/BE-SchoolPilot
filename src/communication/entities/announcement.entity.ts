@@ -41,7 +41,7 @@ export class Announcement extends BaseEntity {
   @Column({ type: 'enum', enum: AnnouncementAudience })
   audience!: AnnouncementAudience;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })
   targetClassId!: string | null;
 
@@ -53,7 +53,7 @@ export class Announcement extends BaseEntity {
   })
   status!: AnnouncementStatus;
 
-  @Field({ nullable: true })
+  @Field(() => Date, { nullable: true })
   @Column({ type: 'timestamp', nullable: true })
   publishedAt!: Date | null;
 }
