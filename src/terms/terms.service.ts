@@ -84,26 +84,28 @@ export class TermsService {
         if (!term) throw new NotFoundException('Term not found in your school');
         // The session the active term belongs to becomes the active session,
         // and all other sessions are deactivated
-        return this.sessionsRepository
-          .update({ schoolId }, { isActive: false })
-          .then(() =>
-            this.sessionsRepository.update(
-              { id: term.sessionId, schoolId },
-              { isActive: true },
-            ),
-          )
-          // Close any currently active term for this school
-          .then(() =>
-            this.termsRepository.update(
-              { schoolId, status: TermStatus.ACTIVE },
-              { status: TermStatus.CLOSED },
-            ),
-          )
-          .then(() =>
-            this.termsRepository
-              .update({ id: termId, schoolId }, { status: TermStatus.ACTIVE })
-              .then(() => this.findTermById(termId)),
-          );
+        return (
+          this.sessionsRepository
+            .update({ schoolId }, { isActive: false })
+            .then(() =>
+              this.sessionsRepository.update(
+                { id: term.sessionId, schoolId },
+                { isActive: true },
+              ),
+            )
+            // Close any currently active term for this school
+            .then(() =>
+              this.termsRepository.update(
+                { schoolId, status: TermStatus.ACTIVE },
+                { status: TermStatus.CLOSED },
+              ),
+            )
+            .then(() =>
+              this.termsRepository
+                .update({ id: termId, schoolId }, { status: TermStatus.ACTIVE })
+                .then(() => this.findTermById(termId)),
+            )
+        );
       });
   };
 
