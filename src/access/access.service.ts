@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, Repository } from 'typeorm';
 import { RolePermission } from './entities/role-permission.entity';
@@ -301,10 +306,17 @@ export class AccessService implements OnModuleInit {
     },
     schoolId: string,
   ) {
-    await this.assertSchoolUser(input.userId, schoolId);
+    const userId = input.userId?.trim();
+    if (!userId) {
+      throw new BadRequestException(
+        'A userId is required for a permission override',
+      );
+    }
+
+    await this.assertSchoolUser(userId, schoolId);
     const existing = await this.userPermissionRepo.findOne({
       where: {
-        userId: input.userId,
+        userId,
         schoolId,
         resource: input.resource,
         action: input.action,
@@ -315,7 +327,13 @@ export class AccessService implements OnModuleInit {
       return this.userPermissionRepo.save(existing);
     }
     return this.userPermissionRepo.save(
-      this.userPermissionRepo.create({ ...input, schoolId }),
+      this.userPermissionRepo.create({
+        userId,
+        schoolId,
+        resource: input.resource,
+        action: input.action,
+        effect: input.effect,
+      }),
     );
   }
 
