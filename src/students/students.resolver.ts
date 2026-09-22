@@ -50,6 +50,16 @@ export class StudentsResolver {
   @Query(() => [Student])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
+  guardianStudents(
+    @Args('guardianId') guardianId: string,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.studentsService.getStudentsByParent(guardianId, user.schoolId);
+  }
+
+  @Query(() => [Student])
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   searchStudents(
     @Args('query') query: string,
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },

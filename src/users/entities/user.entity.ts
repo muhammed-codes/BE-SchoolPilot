@@ -98,6 +98,9 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   whatsappNumber?: string;
 
+  @Field(() => Int, { defaultValue: 0 })
+  linkedStudentsCount?: number;
+
   @Field()
   get fullName(): string {
     return `${this.firstName} ${this.lastName}`;

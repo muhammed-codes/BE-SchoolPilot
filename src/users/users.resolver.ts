@@ -1,4 +1,12 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import {
+  Resolver,
+  Query,
+  Mutation,
+  Args,
+  ResolveField,
+  Parent,
+  Int,
+} from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
 import { PermissionAction } from '../access/enums/permission-action.enum';
 import { UseGuards, ForbiddenException } from '@nestjs/common';
@@ -209,5 +217,26 @@ export class UsersResolver {
       user.role,
       user.schoolId,
     );
+  }
+
+  @Mutation(() => User)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.USERS, PermissionAction.UPDATE)
+  activateUser(
+    @Args('id') id: string,
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
+  ) {
+    return this.usersService.activateUser(
+      id,
+      user.sub,
+      user.role,
+      user.schoolId,
+    );
+  }
+
+  @ResolveField(() => Int)
+  linkedStudentsCount(@Parent() user: User) {
+    if (user.role !== UserRole.PARENT) return 0;
+    return this.usersService.getLinkedStudentsCount(user.id);
   }
 }

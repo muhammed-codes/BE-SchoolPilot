@@ -436,24 +436,29 @@ export class StudentsService {
           if (!record) {
             throw new NotFoundException('Parent link not found');
           }
-          return this.studentParentsRepository.remove(record).then(async () => {
-            const remainingCount = await this.studentParentsRepository.count({
-              where: { parentId: parentUserId },
-            });
-            if (remainingCount === 0) {
-              const userRepo = this.dataSource.getRepository(User);
-              const parentUser = await userRepo.findOne({
-                where: { id: parentUserId, role: UserRole.PARENT, schoolId },
-              });
-              if (parentUser) {
-                await userRepo.remove(parentUser);
-              }
-            }
-            return true;
-          });
+          return this.studentParentsRepository.remove(record).then(() => true);
         }),
     );
   };
+
+  getStudentsByParent(parentUserId: string, schoolId?: string) {
+    return this.studentParentsRepository
+      .find({
+        where: { parentId: parentUserId },
+        relations: [
+          'student',
+          'student.currentClass',
+          'student.currentClass.classTeacher',
+        ],
+      })
+      .then((records) =>
+        records
+          .map((r) => r.student)
+          .filter(
+            (s) => s && !s.isArchived && (!schoolId || s.schoolId === schoolId),
+          ),
+      );
+  }
 
   uploadPassportPhoto = (
     studentId: string,
@@ -489,20 +494,6 @@ export class StudentsService {
       });
   }
 
-  getStudentsByParent(parentUserId: string) {
-    return this.studentParentsRepository
-      .find({
-        where: { parentId: parentUserId },
-        relations: [
-          'student',
-          'student.currentClass',
-          'student.currentClass.classTeacher',
-        ],
-      })
-      .then((records) =>
-        records.map((r) => r.student).filter((s) => s && !s.isArchived),
-      );
-  }
 
   searchStudents = (query: string, schoolId: string, classIds?: string[]) => {
     if (classIds && classIds.length === 0) return Promise.resolve([]);

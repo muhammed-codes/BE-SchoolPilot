@@ -18,6 +18,7 @@ import { IdCardsService } from '../id-cards/id-cards.service';
 import { SchoolsService } from '../schools/schools.service';
 import { UserRole } from '../common/enums';
 import { PaginationArgs } from '../common/pagination';
+import { StudentParent } from '../students/entities/student-parent.entity';
 
 @Injectable()
 export class UsersService {
@@ -433,6 +434,36 @@ export class UsersService {
         .update(id, { isActive: false })
         .then(() => this.findById(id));
     });
+  };
+
+  activateUser = (
+    id: string,
+    requesterId: string,
+    requesterRole: string,
+    requesterSchoolId: string,
+  ) => {
+    return this.findById(id).then((user) => {
+      if (!user) throw new NotFoundException('User not found');
+
+      if (
+        (requesterRole as UserRole) === UserRole.SCHOOL_ADMIN &&
+        user.schoolId !== requesterSchoolId
+      ) {
+        throw new ForbiddenException(
+          'You can only activate users in your own school',
+        );
+      }
+
+      return this.usersRepository
+        .update(id, { isActive: true })
+        .then(() => this.findById(id));
+    });
+  };
+
+  getLinkedStudentsCount = (userId: string) => {
+    return this.usersRepository.manager
+      .getRepository(StudentParent)
+      .count({ where: { parentId: userId } });
   };
 
   findTeachersBySchool = (schoolId: string) => {
