@@ -8,6 +8,7 @@ import { CreateTermInput } from './dto/create-term.input';
 import { JwtAuthGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission } from '../common/decorators';
 import { AppResource } from '../access/enums/resource.enum';
+import { PermissionAction } from '../access/enums/permission-action.enum';
 
 @Resolver()
 export class TermsResolver {
@@ -15,21 +16,21 @@ export class TermsResolver {
 
   @Query(() => Term)
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.SETTINGS, 'canRead')
+  @RequirePermission(AppResource.SETTINGS, PermissionAction.READ)
   activeTerm(@CurrentUser() user: { schoolId: string }) {
     return this.termsService.getActiveTerm(user.schoolId);
   }
 
   @Query(() => [Session])
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.SETTINGS, 'canRead')
+  @RequirePermission(AppResource.SETTINGS, PermissionAction.READ)
   sessions(@CurrentUser() user: { schoolId: string }) {
     return this.termsService.getSessionsBySchool(user.schoolId);
   }
 
   @Query(() => [Term])
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.SETTINGS, 'canRead')
+  @RequirePermission(AppResource.SETTINGS, PermissionAction.READ)
   termsBySession(
     @Args('sessionId') sessionId: string,
     @CurrentUser() user: { schoolId: string },
@@ -39,7 +40,7 @@ export class TermsResolver {
 
   @Mutation(() => Session)
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.SETTINGS, 'canCreate')
+  @RequirePermission(AppResource.SETTINGS, PermissionAction.CREATE)
   createSession(
     @Args('input') input: CreateSessionInput,
     @CurrentUser() user: { schoolId: string },
@@ -49,7 +50,7 @@ export class TermsResolver {
 
   @Mutation(() => Term)
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.SETTINGS, 'canCreate')
+  @RequirePermission(AppResource.SETTINGS, PermissionAction.CREATE)
   createTerm(
     @Args('input') input: CreateTermInput,
     @CurrentUser() user: { schoolId: string },
@@ -59,7 +60,7 @@ export class TermsResolver {
 
   @Mutation(() => Term)
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.SETTINGS, 'canUpdate')
+  @RequirePermission(AppResource.SETTINGS, PermissionAction.UPDATE)
   activateTerm(
     @Args('termId') termId: string,
     @CurrentUser() user: { schoolId: string },
@@ -69,7 +70,7 @@ export class TermsResolver {
 
   @Mutation(() => Term)
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.SETTINGS, 'canUpdate')
+  @RequirePermission(AppResource.SETTINGS, PermissionAction.UPDATE)
   closeTerm(
     @Args('termId') termId: string,
     @CurrentUser() user: { schoolId: string },
@@ -79,7 +80,7 @@ export class TermsResolver {
 
   @Mutation(() => Term)
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.SETTINGS, 'canUpdate')
+  @RequirePermission(AppResource.SETTINGS, PermissionAction.UPDATE)
   unlockTerm(
     @Args('termId') termId: string,
     @CurrentUser() user: { schoolId: string },
@@ -89,7 +90,7 @@ export class TermsResolver {
 
   @Mutation(() => Term)
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.SETTINGS, 'canUpdate')
+  @RequirePermission(AppResource.SETTINGS, PermissionAction.UPDATE)
   updateTotalSchoolDays(
     @Args('termId') termId: string,
     @Args('days', { type: () => Int }) days: number,

@@ -1,5 +1,6 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
+import { PermissionAction } from '../access/enums/permission-action.enum';
 import { UseGuards } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { StudentAttendance } from './entities/student-attendance.entity';
@@ -25,7 +26,7 @@ export class AttendanceResolver {
 
   @Query(() => [StudentAttendance])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
+  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
   classAttendance(
     @Args('classId') classId: string,
     @Args('date') date: string,
@@ -42,7 +43,7 @@ export class AttendanceResolver {
 
   @Query(() => [StudentAttendance])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
+  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
   studentAttendance(
     @Args('studentId') studentId: string,
     @Args('termId') termId: string,
@@ -58,7 +59,7 @@ export class AttendanceResolver {
 
   @Query(() => AttendanceSummary)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
+  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
   studentAttendanceSummary(
     @Args('studentId') studentId: string,
     @Args('termId') termId: string,
@@ -74,7 +75,7 @@ export class AttendanceResolver {
 
   @Query(() => [StaffAttendance])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
+  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
   staffAttendanceLog(
     @Args('date') date: string,
     @CurrentUser() user: { schoolId: string },
@@ -84,7 +85,7 @@ export class AttendanceResolver {
 
   @Query(() => [StaffAttendance])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
+  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
   staffAttendanceHistory(
     @Args('userId') userId: string,
     @Args('from') from: string,
@@ -106,7 +107,7 @@ export class AttendanceResolver {
 
   @Query(() => [ClassEntity])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
+  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
   unmarkedClasses(
     @Args('date') date: string,
     @CurrentUser() user: { schoolId: string },
@@ -116,7 +117,7 @@ export class AttendanceResolver {
 
   @Mutation(() => [StudentAttendance])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.ATTENDANCE, 'canUpdate')
+  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.UPDATE)
   markStudentAttendance(
     @Args('input') input: MarkAttendanceInput,
     @CurrentUser() user: { sub: string; schoolId: string },
@@ -130,7 +131,7 @@ export class AttendanceResolver {
 
   @Mutation(() => StaffAttendance)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.ATTENDANCE, 'canUpdate')
+  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.UPDATE)
   clockAction(
     @Args('photo') photo: string,
     @CurrentUser() user: { sub: string },
@@ -140,7 +141,7 @@ export class AttendanceResolver {
 
   @Mutation(() => StaffAttendance)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.ATTENDANCE, 'canUpdate')
+  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.UPDATE)
   manualStaffAttendance(
     @Args('input') input: ManualStaffAttendanceInput,
     @CurrentUser() user: { sub: string; schoolId: string },
@@ -154,7 +155,7 @@ export class AttendanceResolver {
 
   @Query(() => String)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
+  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
   activeStaffQrCode(@CurrentUser() user: { schoolId: string; role: UserRole }) {
     if (
       !LEADERSHIP_ROLES.includes(user.role) &&
@@ -170,7 +171,7 @@ export class AttendanceResolver {
 
   @Mutation(() => StaffAttendance)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.ATTENDANCE, 'canRead')
+  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
   markAttendanceWithQr(
     @Args('token') token: string,
     @CurrentUser() user: { sub: string; schoolId: string },

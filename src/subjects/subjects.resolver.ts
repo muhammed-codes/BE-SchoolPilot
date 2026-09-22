@@ -1,5 +1,6 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
+import { PermissionAction } from '../access/enums/permission-action.enum';
 import { UseGuards, BadRequestException } from '@nestjs/common';
 import { SubjectsService } from './subjects.service';
 import { Subject } from './entities/subject.entity';
@@ -13,7 +14,7 @@ export class SubjectsResolver {
 
   @Mutation(() => Subject)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.SUBJECTS, 'canCreate')
+  @RequirePermission(AppResource.SUBJECTS, PermissionAction.CREATE)
   createSubject(
     @Args('name') name: string,
     @CurrentUser() user: { schoolId: string },
@@ -24,7 +25,7 @@ export class SubjectsResolver {
 
   @Mutation(() => Subject)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.SUBJECTS, 'canUpdate')
+  @RequirePermission(AppResource.SUBJECTS, PermissionAction.UPDATE)
   updateSubject(
     @CurrentUser() user: { schoolId: string },
     @Args('id', { nullable: true }) id?: string,
@@ -48,14 +49,14 @@ export class SubjectsResolver {
 
   @Query(() => [Subject])
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.SUBJECTS, 'canRead')
+  @RequirePermission(AppResource.SUBJECTS, PermissionAction.READ)
   schoolSubjects(@CurrentUser() user: { schoolId: string }) {
     return this.subjectsService.getSubjectsBySchool(user.schoolId);
   }
 
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.SUBJECTS, 'canDelete')
+  @RequirePermission(AppResource.SUBJECTS, PermissionAction.DELETE)
   deleteSubject(
     @Args('id') id: string,
     @CurrentUser() user: { schoolId: string },

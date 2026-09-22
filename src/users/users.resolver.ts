@@ -1,5 +1,6 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
+import { PermissionAction } from '../access/enums/permission-action.enum';
 import { UseGuards, ForbiddenException } from '@nestjs/common';
 
 import { UsersService } from './users.service';
@@ -19,21 +20,21 @@ export class UsersResolver {
 
   @Query(() => User)
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.USERS, 'canRead')
+  @RequirePermission(AppResource.USERS, PermissionAction.READ)
   me(@CurrentUser() user: { sub: string }) {
     return this.usersService.findById(user.sub);
   }
 
   @Query(() => User)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.USERS, 'canRead')
+  @RequirePermission(AppResource.USERS, PermissionAction.READ)
   user(@Args('id') id: string) {
     return this.usersService.findById(id);
   }
 
   @Query(() => PaginatedUser)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.USERS, 'canRead')
+  @RequirePermission(AppResource.USERS, PermissionAction.READ)
   schoolUsers(
     @Args('role', { type: () => UserRole, nullable: true }) role: UserRole,
     @Args() pagination: PaginationArgs,
@@ -44,14 +45,14 @@ export class UsersResolver {
 
   @Query(() => [User])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.USERS, 'canRead')
+  @RequirePermission(AppResource.USERS, PermissionAction.READ)
   schoolTeachers(@CurrentUser() user: { schoolId: string }) {
     return this.usersService.findTeachersBySchool(user.schoolId);
   }
 
   @Mutation(() => User)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.USERS, 'canCreate')
+  @RequirePermission(AppResource.USERS, PermissionAction.CREATE)
   createUser(
     @Args('input') input: CreateUserInput,
     @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
@@ -90,7 +91,7 @@ export class UsersResolver {
 
   @Mutation(() => User)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.USERS, 'canUpdate')
+  @RequirePermission(AppResource.USERS, PermissionAction.UPDATE)
   assignUserToSchool(
     @Args('userId') userId: string,
     @Args('schoolId') schoolId: string,
@@ -106,7 +107,7 @@ export class UsersResolver {
 
   @Mutation(() => User)
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.USERS, 'canUpdate')
+  @RequirePermission(AppResource.USERS, PermissionAction.UPDATE)
   updateUser(
     @Args('id') id: string,
     @Args('input') input: UpdateUserInput,
@@ -123,7 +124,7 @@ export class UsersResolver {
 
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.USERS, 'canUpdate')
+  @RequirePermission(AppResource.USERS, PermissionAction.UPDATE)
   changePassword(
     @Args('oldPassword') oldPassword: string,
     @Args('newPassword') newPassword: string,
@@ -134,7 +135,7 @@ export class UsersResolver {
 
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.USERS, 'canUpdate')
+  @RequirePermission(AppResource.USERS, PermissionAction.UPDATE)
   adminResetPassword(
     @Args('userId') userId: string,
     @Args('newPassword') newPassword: string,
@@ -165,7 +166,7 @@ export class UsersResolver {
 
   @Mutation(() => User)
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.USERS, 'canCreate')
+  @RequirePermission(AppResource.USERS, PermissionAction.CREATE)
   uploadAvatar(
     @Args('imageUrl') imageUrl: string,
     @CurrentUser() user: { sub: string },
@@ -175,7 +176,7 @@ export class UsersResolver {
 
   @Mutation(() => User)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.USERS, 'canCreate')
+  @RequirePermission(AppResource.USERS, PermissionAction.CREATE)
   uploadUserAvatar(
     @Args('userId') userId: string,
     @Args('imageUrl') imageUrl: string,
@@ -191,7 +192,7 @@ export class UsersResolver {
 
   @Mutation(() => User)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.USERS, 'canUpdate')
+  @RequirePermission(AppResource.USERS, PermissionAction.UPDATE)
   deactivateUser(
     @Args('id') id: string,
     @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },

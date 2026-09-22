@@ -1,5 +1,6 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
+import { PermissionAction } from '../access/enums/permission-action.enum';
 import { UseGuards } from '@nestjs/common';
 
 import { StudentsService } from './students.service';
@@ -21,7 +22,7 @@ export class StudentsResolver {
 
   @Query(() => [Student])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.STUDENTS, 'canRead')
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   studentsByClass(
     @Args('classId') classId: string,
     @CurrentUser() user: { schoolId: string },
@@ -31,21 +32,21 @@ export class StudentsResolver {
 
   @Query(() => Student, { nullable: true })
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.STUDENTS, 'canRead')
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   student(@Args('id') id: string, @CurrentUser() user: { schoolId: string }) {
     return this.studentsService.getStudentById(id, user.schoolId);
   }
 
   @Query(() => [Student])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.STUDENTS, 'canRead')
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   myChildren(@CurrentUser() user: { sub: string }) {
     return this.studentsService.getStudentsByParent(user.sub);
   }
 
   @Query(() => [Student])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.STUDENTS, 'canRead')
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   searchStudents(
     @Args('query') query: string,
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
@@ -62,7 +63,7 @@ export class StudentsResolver {
 
   @Mutation(() => Student)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.STUDENTS, 'canCreate')
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.CREATE)
   createStudent(
     @Args('input') input: CreateStudentInput,
     @CurrentUser() user: { schoolId: string },
@@ -72,7 +73,7 @@ export class StudentsResolver {
 
   @Mutation(() => Student)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.STUDENTS, 'canUpdate')
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.UPDATE)
   updateStudent(
     @Args('id') id: string,
     @Args('input') input: UpdateStudentInput,
@@ -83,7 +84,7 @@ export class StudentsResolver {
 
   @Mutation(() => BulkImportResult)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.STUDENTS, 'canCreate')
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.CREATE)
   bulkImportStudents(
     @Args('students', { type: () => [CreateStudentInput] })
     students: CreateStudentInput[],
@@ -94,7 +95,7 @@ export class StudentsResolver {
 
   @Mutation(() => Student)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.STUDENTS, 'canUpdate')
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.UPDATE)
   linkParent(
     @Args('studentId') studentId: string,
     @Args('parentUserId') parentUserId: string,
@@ -109,7 +110,7 @@ export class StudentsResolver {
 
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.STUDENTS, 'canUpdate')
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.UPDATE)
   unlinkParent(
     @Args('studentId') studentId: string,
     @Args('parentUserId') parentUserId: string,
@@ -124,7 +125,7 @@ export class StudentsResolver {
 
   @Query(() => [StudentParent])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.STUDENTS, 'canRead')
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   studentParents(
     @Args('studentId') studentId: string,
     @CurrentUser() user: { schoolId: string },
@@ -134,7 +135,7 @@ export class StudentsResolver {
 
   @Mutation(() => Student)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.STUDENTS, 'canCreate')
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.CREATE)
   uploadPassportPhoto(
     @Args('studentId') studentId: string,
     @Args('imageUrl') imageUrl: string,
@@ -149,7 +150,7 @@ export class StudentsResolver {
 
   @Mutation(() => PromotionResult)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.STUDENTS, 'canUpdate')
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.UPDATE)
   promoteStudents(
     @Args('input') input: PromoteStudentsInput,
     @CurrentUser() user: { schoolId: string },
@@ -159,7 +160,7 @@ export class StudentsResolver {
 
   @Query(() => [Student])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.STUDENTS, 'canRead')
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   archivedStudents(@CurrentUser() user: { schoolId: string }) {
     return this.studentsService.getArchivedStudents(user.schoolId);
   }

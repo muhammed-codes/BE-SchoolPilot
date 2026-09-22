@@ -5,6 +5,7 @@ import { JwtAuthGuard, PermissionGuard, RolesGuard } from '../common/guards';
 import { CurrentUser, RequirePermission } from '../common/decorators';
 import { UserRole } from '../common/enums';
 import { AppResource } from '../access/enums/resource.enum';
+import { PermissionAction } from '../access/enums/permission-action.enum';
 
 @Resolver()
 export class PdfResolver {
@@ -12,7 +13,7 @@ export class PdfResolver {
 
   @Mutation(() => String)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.RESULTS, 'canRead')
+  @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
   generateReportCard(
     @Args('studentResultId') studentResultId: string,
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
@@ -27,7 +28,7 @@ export class PdfResolver {
 
   @Mutation(() => String)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.RESULTS, 'canRead')
+  @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
   generateBulkReportCards(
     @Args('resultSheetId') resultSheetId: string,
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
