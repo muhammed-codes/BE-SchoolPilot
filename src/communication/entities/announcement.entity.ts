@@ -46,7 +46,11 @@ export class Announcement extends BaseEntity {
   targetClassId!: string | null;
 
   @Field(() => AnnouncementStatus)
-  @Column({ type: 'enum', enum: AnnouncementStatus, default: AnnouncementStatus.DRAFT })
+  @Column({
+    type: 'enum',
+    enum: AnnouncementStatus,
+    default: AnnouncementStatus.DRAFT,
+  })
   status!: AnnouncementStatus;
 
   @Field({ nullable: true })

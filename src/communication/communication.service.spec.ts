@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/require-await */
+
 import { ForbiddenException } from '@nestjs/common';
 jest.mock('../notifications/notifications.service', () => ({
   NotificationsService: class NotificationsService {},
@@ -47,16 +49,30 @@ describe('CommunicationService audience boundaries', () => {
   };
 
   it('does not expose staff-only announcements to guardians', async () => {
-    const { service, announcementRepo, studentParentRepo, studentRepo } = makeService();
+    const { service, announcementRepo, studentParentRepo, studentRepo } =
+      makeService();
     announcementRepo.find.mockResolvedValue([
-      { audience: AnnouncementAudience.SCHOOL, status: AnnouncementStatus.PUBLISHED },
-      { audience: AnnouncementAudience.STAFF, status: AnnouncementStatus.PUBLISHED },
-      { audience: AnnouncementAudience.GUARDIANS, status: AnnouncementStatus.PUBLISHED },
+      {
+        audience: AnnouncementAudience.SCHOOL,
+        status: AnnouncementStatus.PUBLISHED,
+      },
+      {
+        audience: AnnouncementAudience.STAFF,
+        status: AnnouncementStatus.PUBLISHED,
+      },
+      {
+        audience: AnnouncementAudience.GUARDIANS,
+        status: AnnouncementStatus.PUBLISHED,
+      },
     ]);
     studentParentRepo.find.mockResolvedValue([]);
     studentRepo.find.mockResolvedValue([]);
 
-    const visible = await service.listVisible('parent-a', UserRole.PARENT, 'school-a');
+    const visible = await service.listVisible(
+      'parent-a',
+      UserRole.PARENT,
+      'school-a',
+    );
 
     expect(visible).toHaveLength(2);
     expect(visible.map((item) => item.audience)).toEqual([
@@ -66,15 +82,30 @@ describe('CommunicationService audience boundaries', () => {
   });
 
   it('only exposes class announcements for the guardian linked to that class', async () => {
-    const { service, announcementRepo, studentParentRepo, studentRepo } = makeService();
+    const { service, announcementRepo, studentParentRepo, studentRepo } =
+      makeService();
     announcementRepo.find.mockResolvedValue([
-      { audience: AnnouncementAudience.CLASS, targetClassId: 'class-a', status: AnnouncementStatus.PUBLISHED },
-      { audience: AnnouncementAudience.CLASS, targetClassId: 'class-b', status: AnnouncementStatus.PUBLISHED },
+      {
+        audience: AnnouncementAudience.CLASS,
+        targetClassId: 'class-a',
+        status: AnnouncementStatus.PUBLISHED,
+      },
+      {
+        audience: AnnouncementAudience.CLASS,
+        targetClassId: 'class-b',
+        status: AnnouncementStatus.PUBLISHED,
+      },
     ]);
     studentParentRepo.find.mockResolvedValue([{ studentId: 'student-a' }]);
-    studentRepo.find.mockResolvedValue([{ id: 'student-a', schoolId: 'school-a', currentClassId: 'class-a' }]);
+    studentRepo.find.mockResolvedValue([
+      { id: 'student-a', schoolId: 'school-a', currentClassId: 'class-a' },
+    ]);
 
-    const visible = await service.listVisible('parent-a', UserRole.PARENT, 'school-a');
+    const visible = await service.listVisible(
+      'parent-a',
+      UserRole.PARENT,
+      'school-a',
+    );
 
     expect(visible).toHaveLength(1);
     expect(visible[0].targetClassId).toBe('class-a');

@@ -12,7 +12,13 @@ import { CommunicationService } from './communication.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Announcement, ClassEntity, StudentParent, Student, User]),
+    TypeOrmModule.forFeature([
+      Announcement,
+      ClassEntity,
+      StudentParent,
+      Student,
+      User,
+    ]),
     AccessModule,
     NotificationsModule,
   ],
