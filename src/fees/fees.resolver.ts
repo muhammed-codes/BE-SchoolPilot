@@ -15,7 +15,7 @@ import { Receipt } from './entities/receipt.entity';
 import { StaffFeeVisibilityConfig } from './entities/staff-fee-visibility-config.entity';
 
 import { JwtAuthGuard, PermissionGuard, RolesGuard } from '../common/guards';
-import { CurrentUser, RequirePermission } from '../common/decorators';
+import { CurrentUser, RequirePermission, Roles } from '../common/decorators';
 import { UserRole } from '../common/enums';
 import { AppResource } from '../access/enums/resource.enum';
 import { PermissionAction } from '../access/enums/permission-action.enum';
@@ -274,7 +274,12 @@ export class FeesResolver {
     @Args('studentId') studentId: string,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.feesService.getStudentInvoices(studentId, user.schoolId);
+    return this.feesService.getStudentInvoicesForUser(
+      studentId,
+      user.sub,
+      user.role,
+      user.schoolId,
+    );
   }
 
   @Query(() => [StudentInvoice])
@@ -302,6 +307,7 @@ export class FeesResolver {
 
   @Mutation(() => PaymentSubmissionBatch)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.PARENT)
   submitPaymentBatch(
     @Args('input') input: SubmitPaymentBatchInput,
     @CurrentUser() user: AuthUser,
@@ -311,6 +317,7 @@ export class FeesResolver {
 
   @Query(() => [PaymentSubmissionBatch])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.PARENT)
   myPaymentSubmissions(@CurrentUser() user: AuthUser) {
     return this.feesService.getParentSubmissions(user.sub, user.schoolId);
   }
@@ -377,8 +384,16 @@ export class FeesResolver {
   @Query(() => Receipt, { nullable: true })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermission(AppResource.FEES, 'canRead')
-  paymentReceipt(@Args('shareId') shareId: string) {
-    return this.feesService.getReceipt(shareId);
+  paymentReceipt(
+    @Args('shareId') shareId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.feesService.getReceipt(
+      shareId,
+      user.sub,
+      user.role,
+      user.schoolId,
+    );
   }
 
   @Query(() => [ReceiptTemplate])

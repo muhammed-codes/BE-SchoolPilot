@@ -181,6 +181,17 @@ export class UploadService implements OnModuleInit {
 
   constructor(private readonly configService: ConfigService) {}
 
+  private readonly getTenantFolder = (folder: string, schoolId: string) => {
+    const normalized = String(folder || '')
+      .trim()
+      .replace(/\\/g, '/')
+      .replace(/^\/+|\/+$/g, '');
+    if (!normalized || normalized.includes('..') || normalized.length > 120) {
+      throw new HttpException('Invalid upload folder', HttpStatus.BAD_REQUEST);
+    }
+    return `schoolpilot/${schoolId}/${normalized}`;
+  };
+
   private readonly validateCloudinaryConnection = (): Promise<void> => {
     return cloudinary.api.ping().then(() => undefined);
   };
@@ -211,14 +222,19 @@ export class UploadService implements OnModuleInit {
       });
   };
 
-  uploadFile = (file: UploadInput, folder: string): Promise<UploadResult> => {
+  uploadFile = (
+    file: UploadInput,
+    folder: string,
+    schoolId: string,
+  ): Promise<UploadResult> => {
+    const tenantFolder = this.getTenantFolder(folder, schoolId);
     return this.resolveFileUpload(file)
       .then(this.validateFile)
       .then(({ createReadStream }: { createReadStream: () => Readable }) => {
         return new Promise<UploadResult>((resolve, reject) => {
           const stream = createReadStream();
           const uploadStream = cloudinary.uploader.upload_stream(
-            { folder, resource_type: 'auto' },
+            { folder: tenantFolder, resource_type: 'auto' },
             (error: UploadApiErrorResponse | undefined, result) => {
               if (error) {
                 const cloudinaryError = this.getCloudinaryErrorMessage(

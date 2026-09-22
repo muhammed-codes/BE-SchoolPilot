@@ -273,7 +273,8 @@ export class FeesService {
     qb.leftJoinAndSelect('fs.classEntity', 'cls');
     qb.where('o.schoolId = :schoolId', { schoolId });
     if (userId) qb.andWhere('o.studentId = :userId', { userId });
-    if (feeStructureId) qb.andWhere('o.feeStructureId = :feeStructureId', { feeStructureId });
+    if (feeStructureId)
+      qb.andWhere('o.feeStructureId = :feeStructureId', { feeStructureId });
     if (studentId) qb.andWhere('o.studentId = :studentId', { studentId });
     if (sessionId) qb.andWhere('fs.sessionId = :sessionId', { sessionId });
     if (termId) qb.andWhere('fs.termId = :termId', { termId });
@@ -510,6 +511,23 @@ export class FeesService {
     });
   }
 
+  async getStudentInvoicesForUser(
+    studentId: string,
+    userId: string,
+    role: UserRole,
+    schoolId: string,
+  ) {
+    if (role === UserRole.PARENT) {
+      const link = await this.studentParentRepo.findOne({
+        where: { studentId, parentId: userId },
+      });
+      if (!link) {
+        throw new ForbiddenException('You do not have access to this invoice');
+      }
+    }
+    return this.getStudentInvoices(studentId, schoolId);
+  }
+
   /** Returns all invoices for students in a class — for staff visibility */
   getClassInvoices(
     classId: string,
@@ -545,6 +563,27 @@ export class FeesService {
     parentId: string,
   ) {
     return this.dataSource.transaction(async (manager) => {
+      const linkedStudents = await this.studentParentRepo.find({
+        where: { parentId },
+      });
+      const linkedStudentIds = new Set(
+        linkedStudents.map((link) => link.studentId),
+      );
+      const students = await this.studentRepo.find({
+        where: {
+          id: In(input.shares.map((share) => share.studentId)),
+          schoolId,
+        },
+      });
+      if (
+        students.length !== input.shares.length ||
+        input.shares.some((share) => !linkedStudentIds.has(share.studentId))
+      ) {
+        throw new ForbiddenException(
+          'You can only submit payments for your linked children',
+        );
+      }
+
       const batch = manager.create(PaymentSubmissionBatch, {
         schoolId,
         parentId,
@@ -962,7 +1001,22 @@ export class FeesService {
     await manager.save(Receipt, receipt);
   }
 
-  getReceipt(shareId: string) {
+  async getReceipt(
+    shareId: string,
+    userId: string,
+    role: UserRole,
+    schoolId: string,
+  ) {
+    const share = await this.shareRepo.findOne({
+      where: { id: shareId },
+      relations: ['batch'],
+    });
+    if (!share || share.batch.schoolId !== schoolId) {
+      throw new NotFoundException('Receipt not found');
+    }
+    if (role === UserRole.PARENT && share.batch.parentId !== userId) {
+      throw new ForbiddenException('You do not have access to this receipt');
+    }
     return this.receiptRepo.findOne({
       where: { studentShareId: shareId },
       relations: ['template'],
@@ -1115,7 +1169,7 @@ export class FeesService {
   /** Checks if a role has visibility, then returns class invoices or throws */
   getClassInvoicesForStaff(
     userId: string,
-    userRole: string,
+    userRole: UserRole,
     classId: string,
     schoolId: string,
     sessionId?: string,

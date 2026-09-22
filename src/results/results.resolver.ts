@@ -1,5 +1,6 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
+import { PermissionAction } from '../access/enums/permission-action.enum';
 import { UseGuards } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { ResultSheet } from './entities/result-sheet.entity';
@@ -194,7 +195,7 @@ export class ResultsResolver {
 
   @Mutation(() => ResultSheet)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.RESULTS, 'canUpdate')
+  @RequirePermission(AppResource.RESULTS, PermissionAction.APPROVE)
   approveResult(
     @Args('resultSheetId') resultSheetId: string,
     @CurrentUser() user: { sub: string; schoolId: string },
@@ -208,7 +209,7 @@ export class ResultsResolver {
 
   @Mutation(() => ResultSheet)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.RESULTS, 'canUpdate')
+  @RequirePermission(AppResource.RESULTS, PermissionAction.PUBLISH)
   publishResultSheet(
     @Args('resultSheetId') resultSheetId: string,
     @CurrentUser() user: { sub: string; schoolId: string },
@@ -301,7 +302,7 @@ export class ResultsResolver {
 
   @Mutation(() => ResultSheet)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.RESULTS, 'canUpdate')
+  @RequirePermission(AppResource.RESULTS, PermissionAction.ARCHIVE)
   archiveResultSheet(
     @Args('resultSheetId') resultSheetId: string,
     @CurrentUser() user: { schoolId: string },
@@ -311,7 +312,7 @@ export class ResultsResolver {
 
   @Mutation(() => ResultSheet)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.RESULTS, 'canUpdate')
+  @RequirePermission(AppResource.RESULTS, PermissionAction.ARCHIVE)
   unarchiveResultSheet(
     @Args('resultSheetId') resultSheetId: string,
     @CurrentUser() user: { schoolId: string },
