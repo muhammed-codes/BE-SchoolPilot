@@ -701,6 +701,13 @@ type PaginatedSchool {
   totalPages: Int!
 }
 
+type PaginatedStudent {
+  items: [Student!]!
+  page: Int!
+  total: Int!
+  totalPages: Int!
+}
+
 type PaginatedUser {
   items: [User!]!
   page: Int!
@@ -896,13 +903,13 @@ type Query {
   resultStats: ResultStats!
   rooms: [Room!]!
   school(id: String!): School!
-  schoolClasses(limit: Int! = 20, page: Int! = 1): PaginatedClassEntity!
+  schoolClasses(limit: Int! = 50, page: Int! = 1): PaginatedClassEntity!
   schoolDays: [SchoolDay!]!
   schoolResultSheets(status: ResultStatus): [ResultSheet!]!
   schoolSubjects: [Subject!]!
   schoolTeachers: [User!]!
-  schoolUsers(limit: Int! = 20, page: Int! = 1, role: UserRole): PaginatedUser!
-  schools(limit: Int! = 20, page: Int! = 1): PaginatedSchool!
+  schoolUsers(limit: Int! = 50, page: Int! = 1, role: UserRole): PaginatedUser!
+  schools(limit: Int! = 50, page: Int! = 1): PaginatedSchool!
   searchStudents(query: String!): [Student!]!
   sessions: [Session!]!
   staffAttendanceHistory(from: String!, to: String!, userId: String!): [StaffAttendance!]!
@@ -914,6 +921,7 @@ type Query {
   studentParents(studentId: String!): [StudentParent!]!
   studentResult(studentId: String!, termId: String!): StudentResult
   studentsByClass(classId: String!): [Student!]!
+  studentsPage(archived: Boolean! = false, classId: String, gender: Gender, limit: Int! = 50, page: Int! = 1, query: String! = "", status: StudentStatus): PaginatedStudent!
   teacherAvailabilities(approvalStatus: ApprovalStatus, teacherId: String): [TeacherAvailability!]!
   termsBySession(sessionId: String!): [Term!]!
   timetableEntries(classId: String, roomId: String, teacherId: String, termId: String!): [TimetableEntry!]!
