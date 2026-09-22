@@ -14,9 +14,11 @@ import { ReceiptTemplate } from './entities/receipt-template.entity';
 import { Receipt } from './entities/receipt.entity';
 import { StaffFeeVisibilityConfig } from './entities/staff-fee-visibility-config.entity';
 
-import { JwtAuthGuard, RolesGuard } from '../common/guards';
-import { CurrentUser } from '../common/decorators';
+import { JwtAuthGuard, PermissionGuard, RolesGuard } from '../common/guards';
+import { CurrentUser, RequirePermission } from '../common/decorators';
 import { UserRole } from '../common/enums';
+import { AppResource } from '../access/enums/resource.enum';
+import { PermissionAction } from '../access/enums/permission-action.enum';
 
 import {
   CreateFeeCategoryInput,
@@ -64,6 +66,7 @@ const STAFF_ROLES: UserRole[] = [
 type AuthUser = { sub: string; schoolId: string; role: UserRole };
 
 @Resolver()
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
 export class FeesResolver {
   constructor(private readonly feesService: FeesService) {}
 
@@ -71,6 +74,7 @@ export class FeesResolver {
 
   @Mutation(() => FeeCategory)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canCreate')
   createFeeCategory(
     @Args('input') input: CreateFeeCategoryInput,
     @CurrentUser() user: AuthUser,
@@ -80,18 +84,21 @@ export class FeesResolver {
 
   @Query(() => [FeeCategory])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canRead')
   feeCategories(@CurrentUser() user: AuthUser) {
     return this.feesService.getFeeCategories(user.schoolId);
   }
 
   @Query(() => [FeeCategory])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canRead')
   allFeeCategories(@CurrentUser() user: AuthUser) {
     return this.feesService.getAllFeeCategories(user.schoolId);
   }
 
   @Mutation(() => FeeCategory)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canUpdate')
   updateFeeCategory(
     @Args('id') id: string,
     @Args('input') input: UpdateFeeCategoryInput,
@@ -104,6 +111,7 @@ export class FeesResolver {
 
   @Mutation(() => FeeStructure)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canCreate')
   createFeeStructure(
     @Args('input') input: CreateFeeStructureInput,
     @CurrentUser() user: AuthUser,
@@ -113,6 +121,7 @@ export class FeesResolver {
 
   @Mutation(() => [FeeStructure])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canCreate')
   bulkCreateFeeStructures(
     @Args('input') input: BulkCreateFeeStructureInput,
     @CurrentUser() user: AuthUser,
@@ -126,6 +135,7 @@ export class FeesResolver {
 
   @Query(() => [FeeStructure])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canRead')
   feeStructures(
     @Args('sessionId') sessionId: string,
     @Args('termId', { type: () => String, nullable: true })
@@ -137,6 +147,7 @@ export class FeesResolver {
 
   @Mutation(() => FeeStructure)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canUpdate')
   updateFeeStructureAmount(
     @Args('id') id: string,
     @Args('amount', { type: () => Int }) amount: number,
@@ -147,6 +158,7 @@ export class FeesResolver {
 
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canUpdate')
   deactivateFeeStructure(
     @Args('id') id: string,
     @CurrentUser() user: AuthUser,
@@ -158,6 +170,7 @@ export class FeesResolver {
 
   @Mutation(() => [StudentFeeOverride])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canUpdate')
   bulkCreateFeeOverrides(
     @Args('input') input: BulkCreateOverrideInput,
     @CurrentUser() user: AuthUser,
@@ -167,6 +180,7 @@ export class FeesResolver {
 
   @Query(() => [StudentFeeOverride])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canRead')
   feeOverrides(
     @CurrentUser() user: AuthUser,
     @Args('feeStructureId', { type: () => String, nullable: true })
@@ -192,6 +206,7 @@ export class FeesResolver {
 
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canUpdate')
   removeFeeOverride(@Args('id') id: string, @CurrentUser() user: AuthUser) {
     return this.feesService.removeOverride(id, user.schoolId);
   }
@@ -200,6 +215,7 @@ export class FeesResolver {
 
   @Mutation(() => SchoolBankAccount)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canCreate')
   createBankAccount(
     @Args('input') input: CreateBankAccountInput,
     @CurrentUser() user: AuthUser,
@@ -209,12 +225,14 @@ export class FeesResolver {
 
   @Query(() => [SchoolBankAccount])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canRead')
   bankAccounts(@CurrentUser() user: AuthUser) {
     return this.feesService.getBankAccounts(user.schoolId);
   }
 
   @Mutation(() => SchoolBankAccount)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canUpdate')
   updateBankAccount(
     @Args('id') id: string,
     @Args('input') input: UpdateBankAccountInput,
@@ -225,6 +243,7 @@ export class FeesResolver {
 
   @Query(() => [SchoolBankAccount])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canRead')
   resolvedBankAccounts(
     @CurrentUser() user: AuthUser,
     @Args('feeCategoryId', { type: () => String, nullable: true })
@@ -240,6 +259,7 @@ export class FeesResolver {
 
   @Mutation(() => GenerateInvoicesResult)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canCreate')
   generateInvoices(
     @Args('input') input: GenerateInvoicesInput,
     @CurrentUser() user: AuthUser,
@@ -249,6 +269,7 @@ export class FeesResolver {
 
   @Query(() => [StudentInvoice])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canRead')
   myStudentInvoices(
     @Args('studentId') studentId: string,
     @CurrentUser() user: AuthUser,
@@ -258,6 +279,7 @@ export class FeesResolver {
 
   @Query(() => [StudentInvoice])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canRead')
   classInvoices(
     @Args('classId') classId: string,
     @CurrentUser() user: AuthUser,
@@ -297,12 +319,14 @@ export class FeesResolver {
 
   @Query(() => [PaymentSubmissionStudentShare])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canRead')
   pendingApprovalQueue(@CurrentUser() user: AuthUser) {
     return this.feesService.getPendingQueue(user.sub, user.role, user.schoolId);
   }
 
   @Mutation(() => PaymentSubmissionStudentShare)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, PermissionAction.APPROVE)
   approvePaymentShare(
     @Args('input') input: ApproveShareInput,
     @CurrentUser() user: AuthUser,
@@ -317,6 +341,7 @@ export class FeesResolver {
 
   @Mutation(() => PaymentSubmissionStudentShare)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, PermissionAction.APPROVE)
   rejectPaymentShare(
     @Args('input') input: RejectShareInput,
     @CurrentUser() user: AuthUser,
@@ -328,6 +353,7 @@ export class FeesResolver {
 
   @Mutation(() => FeeApprovalConfig)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, PermissionAction.CONFIGURE)
   upsertApprovalConfig(
     @Args('input') input: UpsertApprovalConfigInput,
     @CurrentUser() user: AuthUser,
@@ -341,6 +367,7 @@ export class FeesResolver {
 
   @Query(() => [FeeApprovalConfig])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canRead')
   approvalConfigs(@CurrentUser() user: AuthUser) {
     return this.feesService.getApprovalConfigs(user.schoolId);
   }
@@ -349,18 +376,21 @@ export class FeesResolver {
 
   @Query(() => Receipt, { nullable: true })
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canRead')
   paymentReceipt(@Args('shareId') shareId: string) {
     return this.feesService.getReceipt(shareId);
   }
 
   @Query(() => [ReceiptTemplate])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canRead')
   receiptTemplates(@CurrentUser() user: AuthUser) {
     return this.feesService.getReceiptTemplates(user.schoolId);
   }
 
   @Mutation(() => ReceiptTemplate, { nullable: true })
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canUpdate')
   setDefaultReceiptTemplate(
     @Args('id') id: string,
     @CurrentUser() user: AuthUser,
@@ -370,6 +400,7 @@ export class FeesResolver {
 
   @Mutation(() => ReceiptTemplate)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canCreate')
   createReceiptTemplate(
     @Args('name') name: string,
     @Args('templateKey') templateKey: string,
@@ -389,12 +420,14 @@ export class FeesResolver {
 
   @Query(() => [StaffFeeVisibilityConfig])
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, 'canRead')
   staffFeeVisibilityConfigs(@CurrentUser() user: AuthUser) {
     return this.feesService.getVisibilityConfig(user.schoolId);
   }
 
   @Mutation(() => StaffFeeVisibilityConfig)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, PermissionAction.CONFIGURE)
   upsertStaffFeeVisibility(
     @Args('input') input: UpdateVisibilityConfigInput,
     @CurrentUser() user: AuthUser,

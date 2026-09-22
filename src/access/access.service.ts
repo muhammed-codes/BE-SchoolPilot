@@ -58,6 +58,15 @@ export class AccessService implements OnModuleInit {
     if (!schoolId) return false;
 
     const normalizedAction = this.normalizeAction(action);
+    if (
+      role === UserRole.BURSAR &&
+      resource === AppResource.FEES &&
+      [PermissionAction.APPROVE, PermissionAction.CONFIGURE].includes(
+        normalizedAction,
+      )
+    ) {
+      return true;
+    }
     const legacyAction = {
       [PermissionAction.CREATE]: 'canCreate',
       [PermissionAction.READ]: 'canRead',
@@ -486,6 +495,7 @@ export class AccessService implements OnModuleInit {
         AppResource.CLASSES,
         AppResource.SUBJECTS,
         AppResource.TIMETABLE,
+        AppResource.FEES,
       ];
       return {
         canRead: parentReadRes.includes(resource),
