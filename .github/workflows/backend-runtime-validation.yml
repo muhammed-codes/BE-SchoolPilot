@@ -9,6 +9,7 @@ on:
 jobs:
   runtime-validation:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -64,11 +65,11 @@ jobs:
           pnpm run start:prod > /tmp/schoolpilot-backend.log 2>&1 &
           echo $! > /tmp/schoolpilot-backend.pid
 
-      - name: Wait for GraphQL endpoint
+      - name: Wait for backend health endpoint
         run: |
           for attempt in {1..30}; do
-            status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3001/graphql || true)
-            if [ "$status" != "000" ]; then
+            status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3001/api/health || true)
+            if [ "$status" = "200" ]; then
               exit 0
             fi
             sleep 2
@@ -88,6 +89,14 @@ jobs:
       - name: Print backend log on failure
         if: failure()
         run: cat /tmp/schoolpilot-backend.log
+
+      - name: Upload backend log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-runtime-log
+          path: /tmp/schoolpilot-backend.log
+          if-no-files-found: ignore
 
       - name: Stop backend
         if: always()
