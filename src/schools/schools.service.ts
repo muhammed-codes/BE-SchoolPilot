@@ -161,7 +161,7 @@ export class SchoolsService implements OnModuleInit {
   };
 
   findAll = (pagination: PaginationArgs) => {
-    const { page, limit } = pagination;
+    const { page, limit = 50 } = pagination;
     const skip = (page - 1) * limit;
 
     return this.schoolsRepository

@@ -13,8 +13,11 @@ import { BulkImportResult } from './dto/bulk-import-result.type';
 import { PromotionResult } from './dto/promotion-result.type';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission } from '../common/decorators';
-import { UserRole } from '../common/enums';
+import { Gender, StudentStatus, UserRole } from '../common/enums';
 import { TEACHER_ROLES } from '../common/constants/roles.constant';
+import { PaginationArgs, createPaginatedType } from '../common/pagination';
+
+const PaginatedStudent = createPaginatedType(Student);
 
 @Resolver(() => Student)
 export class StudentsResolver {
@@ -59,6 +62,36 @@ export class StudentsResolver {
       );
     }
     return this.studentsService.searchStudents(query, user.schoolId);
+  }
+
+  @Query(() => PaginatedStudent)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
+  studentsPage(
+    @Args('query', { type: () => String, defaultValue: '' }) query: string,
+    @Args('classId', { type: () => String, nullable: true }) classId: string,
+    @Args('gender', { type: () => Gender, nullable: true }) gender: Gender,
+    @Args('status', { type: () => StudentStatus, nullable: true })
+    status: StudentStatus,
+    @Args('archived', { type: () => Boolean, defaultValue: false })
+    archived: boolean,
+    @Args() pagination: PaginationArgs,
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+  ) {
+    const classIdsPromise = TEACHER_ROLES.includes(user.role)
+      ? this.studentsService.getTeacherClassIds(user.sub, user.schoolId)
+      : Promise.resolve(undefined);
+    return classIdsPromise.then((classIds) =>
+      this.studentsService.getPaginatedStudents(user.schoolId, {
+        ...pagination,
+        query,
+        classId,
+        gender,
+        status,
+        archived,
+        classIds,
+      }),
+    );
   }
 
   @Mutation(() => Student)

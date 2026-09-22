@@ -16,7 +16,7 @@ import { BulkImportResult, FailedRow } from './dto/bulk-import-result.type';
 import { PromotionResult } from './dto/promotion-result.type';
 import { UsersService } from '../users/users.service';
 import { UploadService } from '../upload/upload.service';
-import { UserRole, StudentStatus } from '../common/enums';
+import { Gender, UserRole, StudentStatus } from '../common/enums';
 import { ClassesService } from '../classes/classes.service';
 import { SchoolsService } from '../schools/schools.service';
 import { User } from '../users/entities/user.entity';
@@ -550,6 +550,69 @@ export class StudentsService {
     this.classesService
       .getTeacherClassIds(teacherId, schoolId)
       .then((classIds) => this.searchStudents(query, schoolId, classIds));
+
+  getTeacherClassIds = (teacherId: string, schoolId: string) =>
+    this.classesService.getTeacherClassIds(teacherId, schoolId);
+
+  getPaginatedStudents = async (
+    schoolId: string,
+    options: {
+      page: number;
+      limit: number;
+      query?: string;
+      classId?: string;
+      gender?: Gender;
+      status?: StudentStatus;
+      archived?: boolean;
+      classIds?: string[];
+    },
+  ) => {
+    const page = options.page || 1;
+    const limit = options.limit || 50;
+    const query = options.query?.trim();
+    const builder = this.studentsRepository
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.currentClass', 'currentClass')
+      .where('student.schoolId = :schoolId', { schoolId })
+      .andWhere('student.isArchived = :archived', {
+        archived: options.archived ?? false,
+      });
+
+    if (options.classIds) {
+      if (options.classIds.length === 0) {
+        return { items: [], total: 0, page, totalPages: 0 };
+      }
+      builder.andWhere('student.currentClassId IN (:...classIds)', {
+        classIds: options.classIds,
+      });
+    }
+    if (options.classId) {
+      builder.andWhere('student.currentClassId = :classId', {
+        classId: options.classId,
+      });
+    }
+    if (options.gender) {
+      builder.andWhere('student.gender = :gender', { gender: options.gender });
+    }
+    if (options.status) {
+      builder.andWhere('student.status = :status', { status: options.status });
+    }
+    if (query) {
+      builder.andWhere(
+        '(student.firstName ILIKE :query OR student.lastName ILIKE :query OR student.admissionNumber ILIKE :query)',
+        { query: `%${query}%` },
+      );
+    }
+
+    const [items, total] = await builder
+      .orderBy('student.firstName', 'ASC')
+      .addOrderBy('student.lastName', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return { items, total, page, totalPages: Math.ceil(total / limit) };
+  };
 
   promoteStudents = (
     input: PromoteStudentsInput,

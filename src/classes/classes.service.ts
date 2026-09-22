@@ -150,7 +150,7 @@ export class ClassesService {
 
   getClassesBySchool = (schoolId: string, pagination?: PaginationArgs) => {
     const page = pagination?.page || 1;
-    const limit = pagination?.limit || 20;
+    const limit = pagination?.limit || 50;
     const skip = (page - 1) * limit;
 
     return this.classesRepository
@@ -223,7 +223,7 @@ export class ClassesService {
     pagination?: PaginationArgs,
   ) => {
     const page = pagination?.page || 1;
-    const limit = pagination?.limit || 20;
+    const limit = pagination?.limit || 50;
     const skip = (page - 1) * limit;
 
     return this.getClassesForTeacher(teacherId, schoolId).then((all) =>

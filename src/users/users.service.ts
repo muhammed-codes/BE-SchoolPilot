@@ -177,7 +177,7 @@ export class UsersService {
     pagination?: PaginationArgs,
   ) => {
     const page = pagination?.page || 1;
-    const limit = pagination?.limit || 20;
+    const limit = pagination?.limit || 50;
     const skip = (page - 1) * limit;
 
     const where: { schoolId: string; role?: UserRole } = { schoolId };
