@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { graphqlUploadExpress } from 'graphql-upload-ts';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import type { Request, Response } from 'express';
 
 const createApp = async () => {
   const app = await NestFactory.create(AppModule);
@@ -55,7 +56,7 @@ const getServer = async () => {
   return cachedServer;
 };
 
-export default async (req, res) => {
+export default async (req: Request, res: Response) => {
   const server = await getServer();
   server(req, res);
 };

@@ -18,7 +18,12 @@ import { User } from '../users/entities/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateResultSheetInput } from './dto/create-result-sheet.input';
 import { SaveSubjectScoresInput } from './dto/save-subject-scores.input';
-import { UserRole, ResultStatus, TermStatus } from '../common/enums';
+import {
+  UserRole,
+  ResultStatus,
+  TermStatus,
+  GradingSystem,
+} from '../common/enums';
 import { calculateGrade } from './utils/grading.util';
 import { createMetricStat } from '../common/dto/metric-stat.type';
 import { ResultStats } from './dto/result-stats.type';
@@ -63,7 +68,7 @@ export class ResultsService {
   private applyComputedMetrics = (
     scoreComponents: { maxScore: number }[],
     studentResults: StudentResult[],
-    gradingSystem?: any,
+    gradingSystem?: GradingSystem,
   ) => {
     const totalMaxPerSubject = (scoreComponents || []).reduce(
       (sum, sc) => sum + sc.maxScore,
