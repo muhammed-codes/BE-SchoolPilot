@@ -903,7 +903,7 @@ type Query {
   resultStats: ResultStats!
   rooms: [Room!]!
   school(id: String!): School!
-  schoolClasses(limit: Int! = 50, page: Int! = 1): PaginatedClassEntity!
+  schoolClasses(limit: Int! = 50, page: Int! = 1, search: String): PaginatedClassEntity!
   schoolDays: [SchoolDay!]!
   schoolResultSheets(status: ResultStatus): [ResultSheet!]!
   schoolSubjects: [Subject!]!

@@ -47,6 +47,7 @@ export class ClassesResolver {
   @RequirePermission(AppResource.CLASSES, PermissionAction.READ)
   schoolClasses(
     @Args() pagination: PaginationArgs,
+    @Args('search', { type: () => String, nullable: true }) search: string,
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
     if (TEACHER_ROLES.includes(user.role)) {
@@ -56,7 +57,11 @@ export class ClassesResolver {
         pagination,
       );
     }
-    return this.classesService.getClassesBySchool(user.schoolId, pagination);
+    return this.classesService.getClassesBySchool(
+      user.schoolId,
+      pagination,
+      search,
+    );
   }
 
   @Query(() => [ClassEntity])

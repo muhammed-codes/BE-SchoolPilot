@@ -148,19 +148,33 @@ export class ClassesService {
       });
   };
 
-  getClassesBySchool = (schoolId: string, pagination?: PaginationArgs) => {
+  getClassesBySchool = (
+    schoolId: string,
+    pagination?: PaginationArgs,
+    search?: string,
+  ) => {
     const page = pagination?.page || 1;
     const limit = pagination?.limit || 50;
     const skip = (page - 1) * limit;
 
-    return this.classesRepository
-      .findAndCount({
-        where: { schoolId },
-        relations: ['classTeacher', 'classSubjects', 'classSubjects.subject'],
-        skip,
-        take: limit,
-        order: { name: 'ASC' },
-      })
+    const queryBuilder = this.classesRepository
+      .createQueryBuilder('class')
+      .leftJoinAndSelect('class.classTeacher', 'classTeacher')
+      .leftJoinAndSelect('class.classSubjects', 'classSubjects')
+      .leftJoinAndSelect('classSubjects.subject', 'subject')
+      .leftJoinAndSelect('classSubjects.subjectTeacher', 'subjectTeacher')
+      .where('class.schoolId = :schoolId', { schoolId });
+    if (search?.trim()) {
+      queryBuilder.andWhere('class.name ILIKE :search', {
+        search: `%${search.trim()}%`,
+      });
+    }
+
+    return queryBuilder
+      .orderBy('class.name', 'ASC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount()
       .then(([items, total]) =>
         this.enrichWithStudentCounts(items, schoolId).then((enriched) => ({
           items: enriched,
