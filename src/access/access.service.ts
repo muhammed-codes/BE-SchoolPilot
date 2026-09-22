@@ -11,6 +11,7 @@ import { PermissionGroupPermission } from './entities/permission-group-permissio
 import { UserPermissionGroup } from './entities/user-permission-group.entity';
 import { UserPermission } from './entities/user-permission.entity';
 import { ActionType } from '../common/decorators/require-permission.decorator';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class AccessService implements OnModuleInit {
@@ -25,6 +26,8 @@ export class AccessService implements OnModuleInit {
     private readonly userGroupRepo: Repository<UserPermissionGroup>,
     @InjectRepository(UserPermission)
     private readonly userPermissionRepo: Repository<UserPermission>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
   private normalizeAction(action: ActionType): PermissionAction {
@@ -99,6 +102,129 @@ export class AccessService implements OnModuleInit {
 
   getUserPermissionOverrides = (userId: string, schoolId: string) =>
     this.userPermissionRepo.find({ where: { userId, schoolId } });
+
+  private async assertSchoolUser(userId: string, schoolId: string) {
+    const user = await this.userRepo.findOne({ where: { id: userId, schoolId } });
+    if (!user) throw new ForbiddenException('User does not belong to this school');
+    return user;
+  }
+
+  private async assertSchoolGroup(groupId: string, schoolId: string) {
+    const group = await this.groupRepo.findOne({ where: { id: groupId, schoolId } });
+    if (!group) throw new ForbiddenException('Permission group does not belong to this school');
+    return group;
+  }
+
+  async createPermissionGroup(
+    input: { name: string; description?: string; schoolId?: string },
+    schoolId: string,
+  ) {
+    const group = this.groupRepo.create({
+      schoolId,
+      name: input.name.trim(),
+      description: input.description?.trim() || null,
+    });
+    return this.groupRepo.save(group);
+  }
+
+  async updatePermissionGroup(
+    input: { id: string; name?: string; description?: string; isActive?: boolean },
+    schoolId: string,
+  ) {
+    await this.assertSchoolGroup(input.id, schoolId);
+    await this.groupRepo.update(input.id, {
+      ...(input.name === undefined ? {} : { name: input.name.trim() }),
+      ...(input.description === undefined
+        ? {}
+        : { description: input.description.trim() || null }),
+      ...(input.isActive === undefined ? {} : { isActive: input.isActive }),
+    });
+    return this.groupRepo.findOneByOrFail({ id: input.id, schoolId });
+  }
+
+  async deletePermissionGroup(groupId: string, schoolId: string) {
+    await this.assertSchoolGroup(groupId, schoolId);
+    const assignments = await this.userGroupRepo.count({ where: { groupId, schoolId } });
+    if (assignments > 0) {
+      throw new ForbiddenException('Remove staff assignments before deleting this group');
+    }
+    await this.groupPermissionRepo.delete({ groupId, schoolId });
+    await this.groupRepo.delete({ id: groupId, schoolId });
+    return true;
+  }
+
+  async setPermissionGroupPermissions(
+    groupId: string,
+    permissions: { resource: AppResource; action: PermissionAction }[],
+    schoolId: string,
+  ) {
+    await this.assertSchoolGroup(groupId, schoolId);
+    await this.groupPermissionRepo.delete({ groupId, schoolId });
+    if (permissions.length > 0) {
+      await this.groupPermissionRepo.save(
+        permissions.map((permission) =>
+          this.groupPermissionRepo.create({ groupId, schoolId, ...permission }),
+        ),
+      );
+    }
+    return this.groupPermissionRepo.find({ where: { groupId, schoolId } });
+  }
+
+  getPermissionGroupPermissions = (groupId: string, schoolId: string) =>
+    this.assertSchoolGroup(groupId, schoolId).then(() =>
+      this.groupPermissionRepo.find({ where: { groupId, schoolId } }),
+    );
+
+  async assignPermissionGroup(userId: string, groupId: string, schoolId: string) {
+    await this.assertSchoolUser(userId, schoolId);
+    await this.assertSchoolGroup(groupId, schoolId);
+    const existing = await this.userGroupRepo.findOne({ where: { userId, groupId } });
+    if (existing) return existing;
+    return this.userGroupRepo.save(this.userGroupRepo.create({ userId, groupId, schoolId }));
+  }
+
+  async removePermissionGroup(userId: string, groupId: string, schoolId: string) {
+    await this.assertSchoolUser(userId, schoolId);
+    await this.assertSchoolGroup(groupId, schoolId);
+    await this.userGroupRepo.delete({ userId, groupId, schoolId });
+    return true;
+  }
+
+  async setUserPermission(
+    input: {
+      userId: string;
+      resource: AppResource;
+      action: PermissionAction;
+      effect: PermissionEffect;
+    },
+    schoolId: string,
+  ) {
+    await this.assertSchoolUser(input.userId, schoolId);
+    const existing = await this.userPermissionRepo.findOne({
+      where: {
+        userId: input.userId,
+        schoolId,
+        resource: input.resource,
+        action: input.action,
+      },
+    });
+    if (existing) {
+      existing.effect = input.effect;
+      return this.userPermissionRepo.save(existing);
+    }
+    return this.userPermissionRepo.save(this.userPermissionRepo.create({ ...input, schoolId }));
+  }
+
+  async removeUserPermission(
+    userId: string,
+    resource: AppResource,
+    action: PermissionAction,
+    schoolId: string,
+  ) {
+    await this.assertSchoolUser(userId, schoolId);
+    await this.userPermissionRepo.delete({ userId, schoolId, resource, action });
+    return true;
+  }
 
   /**
    * On module init, seed global default permissions (schoolId = null) for ALL roles,
