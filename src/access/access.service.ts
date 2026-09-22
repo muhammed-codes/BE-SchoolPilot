@@ -356,6 +356,16 @@ export class AccessService implements OnModuleInit {
     }
     try {
       await this.permissionRepo.query(
+        `ALTER TYPE "role_permissions_resource_enum" ADD VALUE IF NOT EXISTS 'access'`,
+      );
+      await this.permissionRepo.query(
+        `ALTER TYPE "role_permissions_resource_enum" ADD VALUE IF NOT EXISTS 'communication'`,
+      );
+    } catch {
+      // Safe fallback if type doesn't exist yet or already has value
+    }
+    try {
+      await this.permissionRepo.query(
         `ALTER TYPE "role_permissions_role_enum" ADD VALUE IF NOT EXISTS 'bursar'`,
       );
     } catch {
