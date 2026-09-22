@@ -14,6 +14,7 @@ export enum PermissionAction {
   ASSIGN = 'assign',
   GENERATE = 'generate',
   CONFIGURE = 'configure',
+  MANAGE = 'manage',
 }
 
 registerEnumType(PermissionAction, { name: 'PermissionAction' });

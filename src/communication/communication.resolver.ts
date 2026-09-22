@@ -24,7 +24,7 @@ export class CommunicationResolver {
   }
 
   @Query(() => [Announcement])
-  @RequirePermission(AppResource.COMMUNICATION, PermissionAction.READ)
+  @RequirePermission(AppResource.COMMUNICATION, PermissionAction.MANAGE)
   adminAnnouncements(@CurrentUser() user: AuthUser) {
     if (!user.schoolId) return [];
     return this.communicationService.listForAdmin(user.schoolId);
