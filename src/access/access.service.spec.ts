@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/require-await */
+
 import { AccessService } from './access.service';
 import { AppResource } from './enums/resource.enum';
 import { PermissionAction } from './enums/permission-action.enum';
