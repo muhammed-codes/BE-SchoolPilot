@@ -82,6 +82,9 @@ jobs:
       - name: Run backend tests
         run: pnpm exec jest --watchman=false
 
+      - name: Run backend end-to-end tests
+        run: pnpm exec jest --config ./test/jest-e2e.json --runInBand --watchman=false
+
       - name: Print backend log on failure
         if: failure()
         run: cat /tmp/schoolpilot-backend.log
