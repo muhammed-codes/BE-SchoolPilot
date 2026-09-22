@@ -274,7 +274,7 @@ export class ResultsResolver {
 
   @Mutation(() => StudentResult)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.RESULTS, 'canUpdate')
+  @RequirePermission(AppResource.RESULTS, PermissionAction.UPDATE)
   saveClassTeacherRemark(
     @Args('studentResultId') studentResultId: string,
     @Args('remark') remark: string,
