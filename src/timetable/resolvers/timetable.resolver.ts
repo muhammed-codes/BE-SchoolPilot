@@ -1,7 +1,9 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { JwtAuthGuard, RolesGuard } from '../../common/guards';
-import { CurrentUser, Roles } from '../../common/decorators';
+import { JwtAuthGuard, PermissionGuard, RolesGuard } from '../../common/guards';
+import { CurrentUser, RequirePermission, Roles } from '../../common/decorators';
+import { AppResource } from '../../access/enums/resource.enum';
+import { PermissionAction } from '../../access/enums/permission-action.enum';
 import { UserRole } from '../../common/enums/role.enum';
 import { Room } from '../entities/room.entity';
 import { SchoolDay } from '../entities/school-day.entity';
@@ -51,6 +53,7 @@ const ADMIN_ROLES = [
 ];
 
 @Resolver()
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
 export class TimetableResolver {
   constructor(private readonly timetableService: TimetableService) {}
 
@@ -60,6 +63,7 @@ export class TimetableResolver {
   @Query(() => [Room])
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES, UserRole.CLASS_TEACHER, UserRole.SUBJECT_TEACHER)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.READ)
   rooms(@CurrentUser() user: { schoolId: string }) {
     return this.timetableService.getRooms(user.schoolId);
   }
@@ -67,6 +71,7 @@ export class TimetableResolver {
   @Mutation(() => Room)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   createRoom(
     @Args('input') input: CreateRoomInput,
     @CurrentUser() user: { schoolId: string },
@@ -77,6 +82,7 @@ export class TimetableResolver {
   @Mutation(() => Room)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   updateRoom(
     @Args('input') input: UpdateRoomInput,
     @CurrentUser() user: { schoolId: string },
@@ -87,6 +93,7 @@ export class TimetableResolver {
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   deleteRoom(
     @Args('id') id: string,
     @CurrentUser() user: { schoolId: string },
@@ -105,6 +112,7 @@ export class TimetableResolver {
     UserRole.SUBJECT_TEACHER,
     UserRole.PARENT,
   )
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.READ)
   schoolDays(@CurrentUser() user: { schoolId: string }) {
     return this.timetableService.getSchoolDays(user.schoolId);
   }
@@ -112,6 +120,7 @@ export class TimetableResolver {
   @Mutation(() => [SchoolDay])
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   initDefaultSchoolDays(@CurrentUser() user: { schoolId: string }) {
     return this.timetableService.initDefaultSchoolDays(user.schoolId);
   }
@@ -119,6 +128,7 @@ export class TimetableResolver {
   @Mutation(() => SchoolDay)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   updateSchoolDay(
     @Args('input') input: UpdateSchoolDayInput,
     @CurrentUser() user: { schoolId: string },
@@ -137,6 +147,7 @@ export class TimetableResolver {
     UserRole.SUBJECT_TEACHER,
     UserRole.PARENT,
   )
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.READ)
   periods(@CurrentUser() user: { schoolId: string }) {
     return this.timetableService.getPeriods(user.schoolId);
   }
@@ -144,6 +155,7 @@ export class TimetableResolver {
   @Mutation(() => [Period])
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   initDefaultPeriods(@CurrentUser() user: { schoolId: string }) {
     return this.timetableService.initDefaultPeriods(user.schoolId);
   }
@@ -151,6 +163,7 @@ export class TimetableResolver {
   @Mutation(() => Period)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   createPeriod(
     @Args('input') input: CreatePeriodInput,
     @CurrentUser() user: { schoolId: string },
@@ -161,6 +174,7 @@ export class TimetableResolver {
   @Mutation(() => Period)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   updatePeriod(
     @Args('input') input: UpdatePeriodInput,
     @CurrentUser() user: { schoolId: string },
@@ -171,6 +185,7 @@ export class TimetableResolver {
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   deletePeriod(
     @Args('id') id: string,
     @CurrentUser() user: { schoolId: string },
@@ -181,6 +196,7 @@ export class TimetableResolver {
   @Mutation(() => [Period])
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   reorderPeriods(
     @Args('items', { type: () => [ReorderPeriodItem] })
     items: ReorderPeriodItem[],
@@ -195,6 +211,7 @@ export class TimetableResolver {
   @Query(() => [NonTeachingSlot])
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES, UserRole.CLASS_TEACHER, UserRole.SUBJECT_TEACHER)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.READ)
   nonTeachingSlots(@CurrentUser() user: { schoolId: string }) {
     return this.timetableService.getNonTeachingSlots(user.schoolId);
   }
@@ -202,6 +219,7 @@ export class TimetableResolver {
   @Mutation(() => NonTeachingSlot)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   createNonTeachingSlot(
     @Args('input') input: CreateNonTeachingSlotInput,
     @CurrentUser() user: { schoolId: string },
@@ -212,6 +230,7 @@ export class TimetableResolver {
   @Mutation(() => NonTeachingSlot)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   updateNonTeachingSlot(
     @Args('input') input: UpdateNonTeachingSlotInput,
     @CurrentUser() user: { schoolId: string },
@@ -222,6 +241,7 @@ export class TimetableResolver {
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   deleteNonTeachingSlot(
     @Args('id') id: string,
     @CurrentUser() user: { schoolId: string },
@@ -235,13 +255,21 @@ export class TimetableResolver {
   @Query(() => [ClassSubject])
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES, UserRole.CLASS_TEACHER, UserRole.SUBJECT_TEACHER)
-  classSubjectAssignments(@Args('classId') classId: string) {
-    return this.timetableService.getClassSubjectAssignments(classId);
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.READ)
+  classSubjectAssignments(
+    @Args('classId') classId: string,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.timetableService.getClassSubjectAssignments(
+      classId,
+      user.schoolId,
+    );
   }
 
   @Mutation(() => ClassSubject)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.ASSIGN)
   assignClassSubject(
     @Args('input') input: AssignClassSubjectInput,
     @CurrentUser() user: { schoolId: string },
@@ -252,22 +280,35 @@ export class TimetableResolver {
   @Mutation(() => ClassSubject)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.ASSIGN)
   updateClassSubjectAssignment(
     @Args('input') input: UpdateClassSubjectAssignmentInput,
+    @CurrentUser() user: { schoolId: string },
   ) {
-    return this.timetableService.updateClassSubjectAssignment(input);
+    return this.timetableService.updateClassSubjectAssignment(
+      input,
+      user.schoolId,
+    );
   }
 
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
-  removeClassSubjectAssignment(@Args('id') id: string) {
-    return this.timetableService.removeClassSubjectAssignment(id);
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.ASSIGN)
+  removeClassSubjectAssignment(
+    @Args('id') id: string,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.timetableService.removeClassSubjectAssignment(
+      id,
+      user.schoolId,
+    );
   }
 
   @Mutation(() => User)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   updateTeacherWorkload(
     @Args('input') input: UpdateTeacherWorkloadInput,
     @CurrentUser() user: { schoolId: string },
@@ -278,6 +319,7 @@ export class TimetableResolver {
   @Mutation(() => [User])
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   updateTeachersWorkload(
     @Args('input') input: UpdateTeachersWorkloadInput,
     @CurrentUser() user: { schoolId: string },
@@ -291,6 +333,7 @@ export class TimetableResolver {
   @Query(() => [TeacherAvailability])
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.READ)
   teacherAvailabilities(
     @Args('teacherId', { nullable: true }) teacherId?: string,
     @Args('approvalStatus', { type: () => ApprovalStatus, nullable: true })
@@ -306,12 +349,14 @@ export class TimetableResolver {
 
   @Query(() => [TeacherAvailability])
   @UseGuards(JwtAuthGuard)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.READ)
   myAvailabilities(@CurrentUser() user: { sub: string; schoolId: string }) {
     return this.timetableService.getMyAvailabilities(user.sub, user.schoolId);
   }
 
   @Mutation(() => TeacherAvailability)
   @UseGuards(JwtAuthGuard)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.UPDATE)
   submitMyAvailability(
     @Args('input') input: SubmitTeacherAvailabilityInput,
     @CurrentUser() user: { sub: string; schoolId: string },
@@ -326,6 +371,7 @@ export class TimetableResolver {
   @Mutation(() => TeacherAvailability)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.UPDATE)
   adminSetTeacherAvailability(
     @Args('input') input: AdminSetTeacherAvailabilityInput,
     @CurrentUser() user: { schoolId: string },
@@ -339,6 +385,7 @@ export class TimetableResolver {
   @Mutation(() => TeacherAvailability)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.UPDATE)
   reviewTeacherAvailability(
     @Args('input') input: ReviewTeacherAvailabilityInput,
     @CurrentUser() user: { schoolId: string },
@@ -355,6 +402,7 @@ export class TimetableResolver {
   @Query(() => [TimetableEntry])
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES, UserRole.CLASS_TEACHER, UserRole.SUBJECT_TEACHER)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.READ)
   timetableEntries(
     @Args('termId') termId: string,
     @Args('classId', { nullable: true }) classId?: string,
@@ -374,6 +422,7 @@ export class TimetableResolver {
   @Mutation(() => TimetableMutationResult)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CREATE)
   createTimetableEntry(
     @Args('input') input: CreateTimetableEntryInput,
     @CurrentUser() user: { schoolId: string },
@@ -384,6 +433,7 @@ export class TimetableResolver {
   @Mutation(() => TimetableMutationResult)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.UPDATE)
   updateTimetableEntry(
     @Args('input') input: UpdateTimetableEntryInput,
     @CurrentUser() user: { schoolId: string },
@@ -394,6 +444,7 @@ export class TimetableResolver {
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.DELETE)
   deleteTimetableEntry(
     @Args('id') id: string,
     @CurrentUser() user: { schoolId: string },
@@ -407,6 +458,7 @@ export class TimetableResolver {
   @Mutation(() => [TimetableMutationResult])
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   copyDayLayout(
     @Args('input') input: CopyDayLayoutInput,
     @CurrentUser() user: { schoolId: string },
@@ -417,6 +469,7 @@ export class TimetableResolver {
   @Mutation(() => [TimetableMutationResult])
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   cloneClassTimetable(
     @Args('input') input: CloneClassTimetableInput,
     @CurrentUser() user: { schoolId: string },
@@ -429,6 +482,7 @@ export class TimetableResolver {
   // ══════════════════════════════════════════════════════════════════════════
   @Query(() => TeacherTimetableResult)
   @UseGuards(JwtAuthGuard)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.READ)
   myTimetable(
     @Args('termId', { nullable: true }) termId?: string,
     @CurrentUser() user?: { sub: string; schoolId: string },
@@ -478,6 +532,7 @@ export class TimetableResolver {
   @Query(() => TimetablePdfResult)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES, UserRole.CLASS_TEACHER, UserRole.SUBJECT_TEACHER)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.READ)
   exportTimetablePdf(
     @Args('input') input: ExportTimetablePdfInput,
     @CurrentUser() user: { schoolId: string },

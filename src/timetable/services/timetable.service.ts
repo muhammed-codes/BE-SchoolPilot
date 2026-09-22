@@ -427,9 +427,17 @@ export class TimetableService implements OnModuleInit {
   // ══════════════════════════════════════════════════════════════════════════
   // CLASS - SUBJECT - TEACHER ASSIGNMENTS
   // ══════════════════════════════════════════════════════════════════════════
-  async getClassSubjectAssignments(classId: string): Promise<ClassSubject[]> {
+  async getClassSubjectAssignments(
+    classId: string,
+    schoolId: string,
+  ): Promise<ClassSubject[]> {
+    const schoolClass = await this.classRepo.findOne({
+      where: { id: classId, schoolId },
+    });
+    if (!schoolClass) throw new NotFoundException('Class not found');
+
     return this.classSubjectRepo.find({
-      where: { classId },
+      where: { classId, schoolId },
       relations: ['classEntity', 'subject', 'subjectTeacher'],
       order: { createdAt: 'ASC' },
     });
@@ -439,8 +447,23 @@ export class TimetableService implements OnModuleInit {
     input: AssignClassSubjectInput,
     schoolId: string,
   ): Promise<ClassSubject> {
+    const [schoolClass, subject] = await Promise.all([
+      this.classRepo.findOne({ where: { id: input.classId, schoolId } }),
+      this.subjectRepo.findOne({ where: { id: input.subjectId, schoolId } }),
+    ]);
+    if (!schoolClass || !subject) {
+      throw new NotFoundException('Class or subject not found');
+    }
+
+    if (input.teacherId) {
+      const teacher = await this.userRepo.findOne({
+        where: { id: input.teacherId, schoolId },
+      });
+      if (!teacher) throw new NotFoundException('Teacher not found');
+    }
+
     let mapping = await this.classSubjectRepo.findOne({
-      where: { classId: input.classId, subjectId: input.subjectId },
+      where: { classId: input.classId, subjectId: input.subjectId, schoolId },
     });
 
     if (mapping) {
@@ -469,13 +492,20 @@ export class TimetableService implements OnModuleInit {
 
   async updateClassSubjectAssignment(
     input: UpdateClassSubjectAssignmentInput,
+    schoolId: string,
   ): Promise<ClassSubject> {
     const mapping = await this.classSubjectRepo.findOne({
-      where: { id: input.id },
+      where: { id: input.id, schoolId },
     });
     if (!mapping) throw new NotFoundException('Assignment not found');
 
     if (input.teacherId !== undefined) {
+      if (input.teacherId) {
+        const teacher = await this.userRepo.findOne({
+          where: { id: input.teacherId, schoolId },
+        });
+        if (!teacher) throw new NotFoundException('Teacher not found');
+      }
       mapping.subjectTeacherId = input.teacherId || '';
     }
     if (input.isDoublePeriod !== undefined) {
@@ -493,8 +523,13 @@ export class TimetableService implements OnModuleInit {
     return loaded || mapping;
   }
 
-  async removeClassSubjectAssignment(id: string): Promise<boolean> {
-    const mapping = await this.classSubjectRepo.findOne({ where: { id } });
+  async removeClassSubjectAssignment(
+    id: string,
+    schoolId: string,
+  ): Promise<boolean> {
+    const mapping = await this.classSubjectRepo.findOne({
+      where: { id, schoolId },
+    });
     if (!mapping) throw new NotFoundException('Assignment not found');
     await this.classSubjectRepo.remove(mapping);
     return true;
@@ -1033,7 +1068,7 @@ export class TimetableService implements OnModuleInit {
     });
 
     const targetAssignments = await this.classSubjectRepo.find({
-      where: { classId: input.targetClassId },
+      where: { classId: input.targetClassId, schoolId },
     });
 
     const results: TimetableMutationResult[] = [];
