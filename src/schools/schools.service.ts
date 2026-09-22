@@ -160,12 +160,24 @@ export class SchoolsService implements OnModuleInit {
       });
   };
 
-  findAll = (pagination: PaginationArgs) => {
-    const { page, limit = 50 } = pagination;
+  findAll = (pagination: PaginationArgs, search?: string) => {
+    const { page = 1, limit = 50 } = pagination;
     const skip = (page - 1) * limit;
 
-    return this.schoolsRepository
-      .findAndCount({ skip, take: limit, order: { createdAt: 'DESC' } })
+    const queryBuilder = this.schoolsRepository.createQueryBuilder('school');
+
+    if (search?.trim()) {
+      queryBuilder.where(
+        '(school.name ILIKE :search OR school.schoolCode ILIKE :search OR school.email ILIKE :search)',
+        { search: `%${search.trim()}%` },
+      );
+    }
+
+    return queryBuilder
+      .orderBy('school.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount()
       .then(([items, total]) => ({
         items,
         total,

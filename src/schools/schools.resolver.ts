@@ -113,8 +113,11 @@ export class SchoolsResolver {
   @Query(() => PaginatedSchool)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
-  schools(@Args() pagination: PaginationArgs) {
-    return this.schoolsService.findAll(pagination);
+  schools(
+    @Args() pagination: PaginationArgs,
+    @Args('search', { type: () => String, nullable: true }) search?: string,
+  ) {
+    return this.schoolsService.findAll(pagination, search);
   }
 
   @Query(() => School)
