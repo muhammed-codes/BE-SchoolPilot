@@ -11,6 +11,9 @@ import { JwtAuthGuard, PermissionGuard, RolesGuard } from '../common/guards';
 import { AppResource } from '../access/enums/resource.enum';
 import { PermissionAction } from '../access/enums/permission-action.enum';
 import { UserRole } from '../common/enums';
+import { PaginationArgs, createPaginatedType } from '../common/pagination';
+
+const PaginatedAnnouncement = createPaginatedType(Announcement);
 
 type AuthUser = { sub: string; schoolId?: string; role: UserRole };
 
@@ -30,11 +33,14 @@ export class CommunicationResolver {
     );
   }
 
-  @Query(() => [Announcement])
+  @Query(() => PaginatedAnnouncement)
   @RequirePermission(AppResource.COMMUNICATION, PermissionAction.MANAGE)
-  adminAnnouncements(@CurrentUser() user: AuthUser) {
-    if (!user.schoolId) return [];
-    return this.communicationService.listForAdmin(user.schoolId);
+  adminAnnouncementsPage(
+    @Args() pagination: PaginationArgs,
+    @CurrentUser() user: AuthUser,
+  ) {
+    if (!user.schoolId) return { items: [], total: 0, page: 1, totalPages: 0 };
+    return this.communicationService.listForAdmin(user.schoolId, pagination);
   }
 
   @Mutation(() => Announcement)

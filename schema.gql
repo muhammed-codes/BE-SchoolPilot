@@ -687,6 +687,13 @@ enum NonTeachingSlotType {
   OTHER
 }
 
+type PaginatedAnnouncement {
+  items: [Announcement!]!
+  page: Int!
+  total: Int!
+  totalPages: Int!
+}
+
 type PaginatedClassEntity {
   items: [ClassEntity!]!
   page: Int!
@@ -864,7 +871,7 @@ type PromotionResult {
 type Query {
   activeStaffQrCode: String!
   activeTerm: Term!
-  adminAnnouncements: [Announcement!]!
+  adminAnnouncementsPage(limit: Int! = 50, page: Int! = 1): PaginatedAnnouncement!
   allFeeCategories: [FeeCategory!]!
   allRolePermissions: [RolePermission!]!
   announcements: [Announcement!]!

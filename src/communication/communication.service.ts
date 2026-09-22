@@ -21,6 +21,7 @@ import {
   CreateAnnouncementInput,
   UpdateAnnouncementInput,
 } from './dto/announcement.input';
+import { PaginationArgs } from '../common/pagination';
 
 @Injectable()
 export class CommunicationService {
@@ -92,11 +93,23 @@ export class CommunicationService {
     );
   };
 
-  listForAdmin = (schoolId: string) =>
-    this.announcementRepo.find({
-      where: { schoolId },
-      order: { createdAt: 'DESC' },
-    });
+  listForAdmin = (schoolId: string, pagination?: PaginationArgs) => {
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 50;
+    return this.announcementRepo
+      .findAndCount({
+        where: { schoolId },
+        order: { createdAt: 'DESC' },
+        skip: (page - 1) * limit,
+        take: limit,
+      })
+      .then(([items, total]) => ({
+        items,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      }));
+  };
 
   listVisible = async (userId: string, role: UserRole, schoolId: string) => {
     const announcements = await this.announcementRepo.find({
