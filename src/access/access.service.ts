@@ -362,6 +362,17 @@ export class AccessService implements OnModuleInit {
       };
     }
 
+    // BURSAR retains the existing finance role access during migration.
+    if (role === UserRole.BURSAR) {
+      const isFees = resource === AppResource.FEES;
+      return {
+        canRead: isFees,
+        canCreate: isFees,
+        canUpdate: isFees,
+        canDelete: isFees,
+      };
+    }
+
     // 7. PARENT: Read-only access to children's academic info
     if (role === UserRole.PARENT) {
       const parentReadRes = [
