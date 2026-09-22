@@ -76,6 +76,40 @@ The backend generates `schema.gql` on startup when `VERCEL` is not set. Run
 `pnpm run check:schema-contract` again after startup, then stop the fixture with
 `docker compose -f docker-compose.test.yml down -v` when finished.
 
+## Role and permission contract
+
+The backend is the authorization authority for the Admin, Staff, and Guardian
+applications. It supports `SUPER_ADMIN`, `SCHOOL_ADMIN`, supported Staff roles,
+`BURSAR`, and `PARENT`.
+
+Effective Staff access is resolved as:
+
+```text
+legacy role permissions
++ permission-group permissions
++ individual allows
+- individual denies
+```
+
+Individual denies take precedence. School Admin is unrestricted within its
+school, Super Admin retains platform scope, and Parent operations remain
+child-scoped. Legacy BURSAR permission rows remain additive for migration
+compatibility; there is no hard-coded BURSAR bypass.
+
+## Application boundary
+
+This repository is the shared GraphQL backend for the separate Admin, Staff,
+and Guardian applications. The backend enforces authentication, permissions,
+school/tenant scope, ownership, and input validation. Frontend route guards and
+navigation are UX only.
+
+## Runtime validation in CI
+
+`.github/workflows/backend-runtime-validation.yml` provisions PostgreSQL 16,
+runs migrations, starts the compiled backend, checks `/api/health`, validates
+the generated GraphQL schema contract, and runs unit and E2E tests. The workflow
+must execute in GitHub Actions before runtime readiness can be claimed.
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
