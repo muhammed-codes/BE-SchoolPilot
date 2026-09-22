@@ -196,4 +196,25 @@ export class NotificationsService {
         );
       });
   };
+
+  notifySchool = (
+    schoolId: string,
+    title: string,
+    body: string,
+    data?: Record<string, unknown>,
+  ): Promise<void> => {
+    return this.userRepo
+      .find({ where: { schoolId } })
+      .then((users) => {
+        const tokens = users
+          .map((user) => user.expoPushToken)
+          .filter((token): token is string => !!token);
+        return this.sendBulkNotifications(tokens, title, body, data);
+      })
+      .catch((error) => {
+        this.logger.error(
+          `Failed to notify school ${schoolId}: ${this.getErrorMessage(error)}`,
+        );
+      });
+  };
 }

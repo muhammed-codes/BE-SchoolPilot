@@ -501,6 +501,7 @@ export class AccessService implements OnModuleInit {
         AppResource.SUBJECTS,
         AppResource.TIMETABLE,
         AppResource.FEES,
+        AppResource.COMMUNICATION,
       ];
       return {
         canRead: parentReadRes.includes(resource),
