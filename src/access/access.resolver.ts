@@ -21,6 +21,7 @@ import { UserPermissionGroup } from './entities/user-permission-group.entity';
 import { UserPermission } from './entities/user-permission.entity';
 import { PermissionAction } from './enums/permission-action.enum';
 import { AppResource } from './enums/resource.enum';
+import { EffectivePermission } from './dto/effective-permission.type';
 
 @Resolver(() => RolePermission)
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -39,6 +40,11 @@ export class AccessResolver {
   @Query(() => [RolePermission], { name: 'myPermissions' })
   getMyPermissions(@CurrentUser() user: { role: UserRole; schoolId?: string }) {
     return this.accessService.getPermissionsByRole(user.role, user.schoolId);
+  }
+
+  @Query(() => [EffectivePermission], { name: 'myEffectivePermissions' })
+  myEffectivePermissions(@CurrentUser() user: { sub: string; role: UserRole; schoolId?: string }) {
+    return this.accessService.getEffectivePermissions(user.sub, user.role, user.schoolId);
   }
 
   @Query(() => [RolePermission], { name: 'allRolePermissions' })

@@ -12,6 +12,7 @@ import { UserPermissionGroup } from './entities/user-permission-group.entity';
 import { UserPermission } from './entities/user-permission.entity';
 import { ActionType } from '../common/decorators/require-permission.decorator';
 import { User } from '../users/entities/user.entity';
+import { EffectivePermission } from './dto/effective-permission.type';
 
 @Injectable()
 export class AccessService implements OnModuleInit {
@@ -102,6 +103,60 @@ export class AccessService implements OnModuleInit {
 
   getUserPermissionOverrides = (userId: string, schoolId: string) =>
     this.userPermissionRepo.find({ where: { userId, schoolId } });
+
+  async getEffectivePermissions(
+    userId: string,
+    role: UserRole,
+    schoolId?: string | null,
+  ): Promise<EffectivePermission[]> {
+    const resources = Object.values(AppResource);
+    const actions = Object.values(PermissionAction);
+
+    if (role === UserRole.SUPER_ADMIN || role === UserRole.SCHOOL_ADMIN) {
+      return resources.flatMap((resource) =>
+        actions.map((action) => ({ resource, action, allowed: true })),
+      );
+    }
+    if (!schoolId) return [];
+
+    const rolePermissions = await this.getPermissionsByRole(role, schoolId);
+    const assignments = await this.userGroupRepo.find({ where: { userId, schoolId } });
+    const groupPermissions = assignments.length
+      ? await this.groupPermissionRepo.find({
+          where: {
+            schoolId,
+            groupId: In(assignments.map((assignment) => assignment.groupId)),
+          },
+        })
+      : [];
+    const overrides = await this.userPermissionRepo.find({ where: { userId, schoolId } });
+
+    return resources.flatMap((resource) =>
+      actions.map((action) => {
+        const rolePermission = rolePermissions.find((permission) => permission.resource === resource);
+        const legacyAction = {
+          [PermissionAction.CREATE]: 'canCreate',
+          [PermissionAction.READ]: 'canRead',
+          [PermissionAction.UPDATE]: 'canUpdate',
+          [PermissionAction.DELETE]: 'canDelete',
+        }[action] as keyof RolePermission | undefined;
+        const roleAllowed = legacyAction ? rolePermission?.[legacyAction] === true : false;
+        const groupAllowed = groupPermissions.some(
+          (permission) => permission.resource === resource && permission.action === action,
+        );
+        const override = overrides.find(
+          (permission) => permission.resource === resource && permission.action === action,
+        );
+        return {
+          resource,
+          action,
+          allowed: override?.effect === PermissionEffect.DENY
+            ? false
+            : override?.effect === PermissionEffect.GRANT || roleAllowed || groupAllowed,
+        };
+      }),
+    );
+  }
 
   private async assertSchoolUser(userId: string, schoolId: string) {
     const user = await this.userRepo.findOne({ where: { id: userId, schoolId } });
