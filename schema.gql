@@ -11,9 +11,37 @@ input AdminSetTeacherAvailabilityInput {
   teacherId: String!
 }
 
+type Announcement {
+  audience: AnnouncementAudience!
+  body: String!
+  createdAt: DateTime!
+  createdById: String!
+  id: ID!
+  publishedAt: DateTime
+  schoolId: String!
+  status: AnnouncementStatus!
+  targetClassId: String
+  title: String!
+  updatedAt: DateTime!
+}
+
+enum AnnouncementAudience {
+  CLASS
+  GUARDIANS
+  SCHOOL
+  STAFF
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  PUBLISHED
+}
+
 enum AppResource {
+  ACCESS
   ATTENDANCE
   CLASSES
+  COMMUNICATION
   FEES
   ID_CARDS
   RESULTS
@@ -58,6 +86,11 @@ input AssignClassSubjectInput {
   periodsPerWeek: Int! = 4
   subjectId: String!
   teacherId: String
+}
+
+input AssignPermissionGroupInput {
+  groupId: String!
+  userId: String!
 }
 
 enum AttendanceStatus {
@@ -202,6 +235,13 @@ input CopyDayLayoutInput {
   toDayOfWeek: Int!
 }
 
+input CreateAnnouncementInput {
+  audience: AnnouncementAudience!
+  body: String!
+  targetClassId: String
+  title: String!
+}
+
 input CreateBankAccountInput {
   accountName: String!
   accountNumber: String!
@@ -242,6 +282,12 @@ input CreatePeriodInput {
   name: String!
   orderIndex: Int! = 1
   startTime: String!
+}
+
+input CreatePermissionGroupInput {
+  description: String
+  name: String!
+  schoolId: String
 }
 
 input CreateResultSheetInput {
@@ -335,6 +381,12 @@ type DashboardOverview {
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
 scalar DateTime
+
+type EffectivePermission {
+  action: PermissionAction!
+  allowed: Boolean!
+  resource: AppResource!
+}
 
 input ExportTimetablePdfInput {
   targetId: String
@@ -494,6 +546,7 @@ type Mutation {
   archiveResultSheet(resultSheetId: String!): ResultSheet!
   assignClassSubject(input: AssignClassSubjectInput!): ClassSubject!
   assignClassTeacher(classId: String!, teacherId: String!): ClassEntity!
+  assignPermissionGroup(input: AssignPermissionGroupInput!, schoolId: String): UserPermissionGroup!
   assignSubjectTeacher(classId: String!, subjectId: String!, teacherId: String!): ClassSubject!
   assignSubjectsToClass(classId: String!, subjectIds: [String!]!): ClassEntity!
   assignUserToSchool(schoolId: String!, userId: String!): User!
@@ -505,12 +558,14 @@ type Mutation {
   cloneClassTimetable(input: CloneClassTimetableInput!): [TimetableMutationResult!]!
   closeTerm(termId: String!): Term!
   copyDayLayout(input: CopyDayLayoutInput!): [TimetableMutationResult!]!
+  createAnnouncement(input: CreateAnnouncementInput!): Announcement!
   createBankAccount(input: CreateBankAccountInput!): SchoolBankAccount!
   createClass(input: CreateClassInput!): ClassEntity!
   createFeeCategory(input: CreateFeeCategoryInput!): FeeCategory!
   createFeeStructure(input: CreateFeeStructureInput!): FeeStructure!
   createNonTeachingSlot(input: CreateNonTeachingSlotInput!): NonTeachingSlot!
   createPeriod(input: CreatePeriodInput!): Period!
+  createPermissionGroup(input: CreatePermissionGroupInput!): PermissionGroup!
   createReceiptTemplate(name: String!, templateKey: String!, thumbnailUrl: String): ReceiptTemplate!
   createResultSheet(input: CreateResultSheetInput!): ResultSheet!
   createRoom(input: CreateRoomInput!): Room!
@@ -524,8 +579,10 @@ type Mutation {
   deactivateFeeStructure(id: String!): Boolean!
   deactivateSchool(id: String!): School!
   deactivateUser(id: String!): User!
+  deleteAnnouncement(id: String!): Boolean!
   deleteNonTeachingSlot(id: String!): Boolean!
   deletePeriod(id: String!): Boolean!
+  deletePermissionGroup(groupId: String!, schoolId: String): Boolean!
   deleteRoom(id: String!): Boolean!
   deleteSubject(id: String!): Boolean!
   deleteTimetableEntry(id: String!): Boolean!
@@ -542,6 +599,7 @@ type Mutation {
   markAttendanceWithQr(token: String!): StaffAttendance!
   markStudentAttendance(input: MarkAttendanceInput!): [StudentAttendance!]!
   promoteStudents(input: PromoteStudentsInput!): PromotionResult!
+  publishAnnouncement(id: String!): Announcement!
   publishResultSheet(resultSheetId: String!): ResultSheet!
   refreshTokens(refreshToken: String!): AuthResponse!
   regenerateQrCode(schoolId: String!): School!
@@ -550,6 +608,8 @@ type Mutation {
   rejectPaymentShare(input: RejectShareInput!): PaymentSubmissionStudentShare!
   removeClassSubjectAssignment(id: String!): Boolean!
   removeFeeOverride(id: String!): Boolean!
+  removePermissionGroup(groupId: String!, schoolId: String, userId: String!): Boolean!
+  removeUserPermission(action: PermissionAction!, resource: AppResource!, schoolId: String, userId: String!): Boolean!
   reorderPeriods(items: [ReorderPeriodItem!]!): [Period!]!
   resendVerificationEmail(email: String!): Boolean!
   resetPassword(input: ResetPasswordInput!): Boolean!
@@ -560,6 +620,8 @@ type Mutation {
   saveSubjectScores(input: SaveSubjectScoresInput!): [SubjectScore!]!
   saveTeacherRemark(remark: String!, subjectScoreId: String!): SubjectScore!
   setDefaultReceiptTemplate(id: String!): ReceiptTemplate
+  setPermissionGroupPermissions(input: SetPermissionGroupPermissionsInput!, schoolId: String): [PermissionGroupPermission!]!
+  setUserPermission(input: SetUserPermissionInput!, schoolId: String): UserPermission!
   singleUpload(file: Upload!, folder: String!): UploadResult!
   submitForAdminReview(resultSheetId: String!): ResultSheet!
   submitForPrincipalApproval(resultSheetId: String!): ResultSheet!
@@ -568,6 +630,7 @@ type Mutation {
   unarchiveResultSheet(resultSheetId: String!): ResultSheet!
   unlinkParent(parentUserId: String!, studentId: String!): Boolean!
   unlockTerm(termId: String!): Term!
+  updateAnnouncement(id: String!, input: UpdateAnnouncementInput!): Announcement!
   updateBankAccount(id: String!, input: UpdateBankAccountInput!): SchoolBankAccount!
   updateClassSubjectAssignment(input: UpdateClassSubjectAssignmentInput!): ClassSubject!
   updateExpoPushToken(token: String!): Boolean!
@@ -575,6 +638,7 @@ type Mutation {
   updateFeeStructureAmount(amount: Int!, id: String!): FeeStructure!
   updateNonTeachingSlot(input: UpdateNonTeachingSlotInput!): NonTeachingSlot!
   updatePeriod(input: UpdatePeriodInput!): Period!
+  updatePermissionGroup(input: UpdatePermissionGroupInput!, schoolId: String): PermissionGroup!
   updateRolePermission(input: UpdatePermissionInput!): RolePermission!
   updateRoom(input: UpdateRoomInput!): Room!
   updateSchool(id: String!, input: UpdateSchoolInput!): School!
@@ -717,6 +781,53 @@ type Period {
   updatedAt: DateTime!
 }
 
+enum PermissionAction {
+  APPROVE
+  ARCHIVE
+  ASSIGN
+  CONFIGURE
+  CREATE
+  DELETE
+  GENERATE
+  IMPORT
+  MANAGE
+  PROMOTE
+  PUBLISH
+  READ
+  SUBMIT
+  UPDATE
+}
+
+input PermissionAssignmentInput {
+  action: PermissionAction!
+  resource: AppResource!
+}
+
+enum PermissionEffect {
+  DENY
+  GRANT
+}
+
+type PermissionGroup {
+  createdAt: DateTime!
+  description: String
+  id: ID!
+  isActive: Boolean!
+  name: String!
+  schoolId: String!
+  updatedAt: DateTime!
+}
+
+type PermissionGroupPermission {
+  action: PermissionAction!
+  createdAt: DateTime!
+  groupId: String!
+  id: ID!
+  resource: AppResource!
+  schoolId: String!
+  updatedAt: DateTime!
+}
+
 type PlatformStats {
   activeSchools: Int!
   totalSchools: Int!
@@ -739,8 +850,10 @@ type PromotionResult {
 type Query {
   activeStaffQrCode: String!
   activeTerm: Term!
+  adminAnnouncements: [Announcement!]!
   allFeeCategories: [FeeCategory!]!
   allRolePermissions: [RolePermission!]!
+  announcements: [Announcement!]!
   approvalConfigs: [FeeApprovalConfig!]!
   archivedResultSheets(status: ResultStatus): [ResultSheet!]!
   archivedStudents: [Student!]!
@@ -761,6 +874,7 @@ type Query {
   myChildren: [Student!]!
   myChildrenTimetables(termId: String): [ChildTimetableResult!]!
   myClasses: [ClassEntity!]!
+  myEffectivePermissions: [EffectivePermission!]!
   myPaymentSubmissions: [PaymentSubmissionBatch!]!
   myPermissions: [RolePermission!]!
   mySchool: School!
@@ -772,6 +886,8 @@ type Query {
   pendingApprovalQueue: [PaymentSubmissionStudentShare!]!
   pendingPrincipalApprovals: [ResultSheet!]!
   periods: [Period!]!
+  permissionGroupPermissions(groupId: String!, schoolId: String): [PermissionGroupPermission!]!
+  permissionGroups(schoolId: String): [PermissionGroup!]!
   platformStats: PlatformStats!
   receiptTemplates: [ReceiptTemplate!]!
   resolvedBankAccounts(feeCategoryId: String): [SchoolBankAccount!]!
@@ -803,6 +919,9 @@ type Query {
   timetableEntries(classId: String, roomId: String, teacherId: String, termId: String!): [TimetableEntry!]!
   unmarkedClasses(date: String!): [ClassEntity!]!
   user(id: String!): User!
+  userEffectivePermissions(schoolId: String, userId: String!): [EffectivePermission!]!
+  userPermissionGroups(schoolId: String, userId: String!): [UserPermissionGroup!]!
+  userPermissionOverrides(schoolId: String, userId: String!): [UserPermission!]!
 }
 
 type Receipt {
@@ -1035,6 +1154,18 @@ type Session {
   schoolId: String!
   terms: [Term!]
   updatedAt: DateTime!
+}
+
+input SetPermissionGroupPermissionsInput {
+  groupId: String!
+  permissions: [PermissionAssignmentInput!]!
+}
+
+input SetUserPermissionInput {
+  action: PermissionAction!
+  effect: PermissionEffect!
+  resource: AppResource!
+  userId: String!
 }
 
 type StaffAttendance {
@@ -1334,6 +1465,13 @@ type TimetablePdfResult {
   title: String!
 }
 
+input UpdateAnnouncementInput {
+  audience: AnnouncementAudience
+  body: String
+  targetClassId: String
+  title: String
+}
+
 input UpdateBankAccountInput {
   accountName: String
   accountNumber: String
@@ -1373,6 +1511,13 @@ input UpdatePeriodInput {
   name: String
   orderIndex: Int
   startTime: String
+}
+
+input UpdatePermissionGroupInput {
+  description: String
+  id: String!
+  isActive: Boolean
+  name: String
 }
 
 input UpdatePermissionInput {
@@ -1516,6 +1661,26 @@ type User {
   staffId: String
   updatedAt: DateTime!
   whatsappNumber: String
+}
+
+type UserPermission {
+  action: PermissionAction!
+  createdAt: DateTime!
+  effect: PermissionEffect!
+  id: ID!
+  resource: AppResource!
+  schoolId: String!
+  updatedAt: DateTime!
+  userId: String!
+}
+
+type UserPermissionGroup {
+  createdAt: DateTime!
+  groupId: String!
+  id: ID!
+  schoolId: String!
+  updatedAt: DateTime!
+  userId: String!
 }
 
 enum UserRole {
