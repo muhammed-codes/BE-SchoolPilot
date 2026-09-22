@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: schoolpilot_test
+      POSTGRES_USER: schoolpilot_test
+      POSTGRES_PASSWORD: schoolpilot_test
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U schoolpilot_test -d schoolpilot_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - schoolpilot_test_postgres:/var/lib/postgresql/data
+
+volumes:
+  schoolpilot_test_postgres:
