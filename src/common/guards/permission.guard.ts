@@ -28,7 +28,7 @@ export class PermissionGuard implements CanActivate {
 
     const ctx = GqlExecutionContext.create(context);
     const gqlContext = ctx.getContext<{
-      req?: { user?: { role: UserRole; schoolId?: string } };
+      req?: { user?: { sub: string; role: UserRole; schoolId?: string } };
     }>();
     const user = gqlContext?.req?.user;
 
@@ -41,18 +41,12 @@ export class PermissionGuard implements CanActivate {
       return Promise.resolve(true);
     }
 
-    return this.accessService
-      .getPermissionsByRole(user.role, user.schoolId)
-      .then((permissions) => {
-        const permission = permissions.find(
-          (p) => p.resource === requiredPermission.resource,
-        );
-
-        if (!permission) {
-          return false;
-        }
-
-        return permission[requiredPermission.action] === true;
-      });
+    return this.accessService.hasPermission(
+      user.sub,
+      user.role,
+      user.schoolId,
+      requiredPermission.resource,
+      requiredPermission.action,
+    );
   }
 }

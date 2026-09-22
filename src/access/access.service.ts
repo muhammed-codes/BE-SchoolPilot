@@ -1,16 +1,104 @@
 import { Injectable, OnModuleInit, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { RolePermission } from './entities/role-permission.entity';
 import { UserRole } from '../common/enums/role.enum';
 import { AppResource } from './enums/resource.enum';
+import { PermissionAction } from './enums/permission-action.enum';
+import { PermissionEffect } from './enums/permission-effect.enum';
+import { PermissionGroup } from './entities/permission-group.entity';
+import { PermissionGroupPermission } from './entities/permission-group-permission.entity';
+import { UserPermissionGroup } from './entities/user-permission-group.entity';
+import { UserPermission } from './entities/user-permission.entity';
+import { ActionType } from '../common/decorators/require-permission.decorator';
 
 @Injectable()
 export class AccessService implements OnModuleInit {
   constructor(
     @InjectRepository(RolePermission)
     private readonly permissionRepo: Repository<RolePermission>,
+    @InjectRepository(PermissionGroup)
+    private readonly groupRepo: Repository<PermissionGroup>,
+    @InjectRepository(PermissionGroupPermission)
+    private readonly groupPermissionRepo: Repository<PermissionGroupPermission>,
+    @InjectRepository(UserPermissionGroup)
+    private readonly userGroupRepo: Repository<UserPermissionGroup>,
+    @InjectRepository(UserPermission)
+    private readonly userPermissionRepo: Repository<UserPermission>,
   ) {}
+
+  private normalizeAction(action: ActionType): PermissionAction {
+    const legacyMap: Record<string, PermissionAction> = {
+      canCreate: PermissionAction.CREATE,
+      canRead: PermissionAction.READ,
+      canUpdate: PermissionAction.UPDATE,
+      canDelete: PermissionAction.DELETE,
+    };
+    return legacyMap[action] || (action as PermissionAction);
+  }
+
+  /**
+   * Effective access is additive during migration: legacy role permissions are
+   * preserved, group grants add access, and an individual DENY wins last.
+   */
+  async hasPermission(
+    userId: string,
+    role: UserRole,
+    schoolId: string | null | undefined,
+    resource: AppResource,
+    action: ActionType,
+  ): Promise<boolean> {
+    if (role === UserRole.SUPER_ADMIN || role === UserRole.SCHOOL_ADMIN) {
+      return true;
+    }
+    if (!schoolId) return false;
+
+    const normalizedAction = this.normalizeAction(action);
+    const legacyAction = {
+      [PermissionAction.CREATE]: 'canCreate',
+      [PermissionAction.READ]: 'canRead',
+      [PermissionAction.UPDATE]: 'canUpdate',
+      [PermissionAction.DELETE]: 'canDelete',
+    }[normalizedAction];
+
+    let allowed = false;
+    if (legacyAction) {
+      const rolePermissions = await this.getPermissionsByRole(role, schoolId);
+      const permission = rolePermissions.find((p) => p.resource === resource);
+      allowed = permission?.[legacyAction as keyof RolePermission] === true;
+    }
+
+    const assignments = await this.userGroupRepo.find({
+      where: { userId, schoolId },
+    });
+    if (assignments.length > 0) {
+      const groupPermissions = await this.groupPermissionRepo.find({
+        where: {
+          schoolId,
+          groupId: In(assignments.map((assignment) => assignment.groupId)),
+          resource,
+          action: normalizedAction,
+        },
+      });
+      allowed = allowed || groupPermissions.length > 0;
+    }
+
+    const individual = await this.userPermissionRepo.findOne({
+      where: { userId, schoolId, resource, action: normalizedAction },
+    });
+    if (individual?.effect === PermissionEffect.DENY) return false;
+    if (individual?.effect === PermissionEffect.GRANT) return true;
+    return allowed;
+  }
+
+  getPermissionGroups = (schoolId: string) =>
+    this.groupRepo.find({ where: { schoolId }, order: { name: 'ASC' } });
+
+  getUserPermissionGroups = (userId: string, schoolId: string) =>
+    this.userGroupRepo.find({ where: { userId, schoolId } });
+
+  getUserPermissionOverrides = (userId: string, schoolId: string) =>
+    this.userPermissionRepo.find({ where: { userId, schoolId } });
 
   /**
    * On module init, seed global default permissions (schoolId = null) for ALL roles,
