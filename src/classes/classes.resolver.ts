@@ -1,5 +1,6 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
+import { PermissionAction } from '../access/enums/permission-action.enum';
 import { UseGuards, ForbiddenException } from '@nestjs/common';
 import { ClassesService } from './classes.service';
 import { ClassEntity } from './entities/class.entity';
@@ -33,7 +34,7 @@ export class ClassesResolver {
 
   @Mutation(() => ClassEntity)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.CLASSES, 'canCreate')
+  @RequirePermission(AppResource.CLASSES, PermissionAction.CREATE)
   createClass(
     @Args('input') input: CreateClassInput,
     @CurrentUser() user: { schoolId: string },
@@ -43,7 +44,7 @@ export class ClassesResolver {
 
   @Query(() => PaginatedClass)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.CLASSES, 'canRead')
+  @RequirePermission(AppResource.CLASSES, PermissionAction.READ)
   schoolClasses(
     @Args() pagination: PaginationArgs,
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
@@ -60,21 +61,21 @@ export class ClassesResolver {
 
   @Query(() => [ClassEntity])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.CLASSES, 'canRead')
+  @RequirePermission(AppResource.CLASSES, PermissionAction.READ)
   myClasses(@CurrentUser() user: { sub: string; schoolId: string }) {
     return this.classesService.getClassesForTeacher(user.sub, user.schoolId);
   }
 
   @Query(() => ClassEntity)
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.CLASSES, 'canRead')
+  @RequirePermission(AppResource.CLASSES, PermissionAction.READ)
   classById(@Args('id') id: string, @CurrentUser() user: { schoolId: string }) {
     return this.classesService.getClassById(id, user.schoolId);
   }
 
   @Mutation(() => ClassEntity)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.CLASSES, 'canUpdate')
+  @RequirePermission(AppResource.CLASSES, PermissionAction.UPDATE)
   assignClassTeacher(
     @Args('classId') classId: string,
     @Args('teacherId') teacherId: string,
@@ -94,7 +95,7 @@ export class ClassesResolver {
 
   @Mutation(() => ClassEntity)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.CLASSES, 'canUpdate')
+  @RequirePermission(AppResource.CLASSES, PermissionAction.UPDATE)
   assignSubjectsToClass(
     @Args('classId') classId: string,
     @Args('subjectIds', { type: () => [String] }) subjectIds: string[],
@@ -130,7 +131,7 @@ export class ClassesResolver {
 
   @Mutation(() => ClassSubject)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.CLASSES, 'canUpdate')
+  @RequirePermission(AppResource.CLASSES, PermissionAction.UPDATE)
   assignSubjectTeacher(
     @Args('classId') classId: string,
     @Args('subjectId') subjectId: string,
