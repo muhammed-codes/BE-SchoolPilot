@@ -38,7 +38,10 @@ async function seed() {
 
     // 2. Ensure Admin User exists
     const adminEmail = 'admin@schoolpilot.ng';
-    const adminPasswordRaw = 'SchoolPilot321@';
+    const adminPasswordRaw = process.env.SEED_ADMIN_PASSWORD;
+    if (!adminPasswordRaw) {
+      throw new Error('SEED_ADMIN_PASSWORD is required for database seeding');
+    }
     let adminUser = await userRepo.findOne({ where: { email: adminEmail } });
 
     const passwordHash = await bcrypt.hash(adminPasswordRaw, 12);
@@ -74,7 +77,7 @@ async function seed() {
     console.log('----------------------------------------------------');
     console.log('✅ SEEDING COMPLETE');
     console.log(`Admin Email:    ${adminEmail}`);
-    console.log(`Admin Password: ${adminPasswordRaw}`);
+    console.log('Admin password was supplied through the environment.');
     console.log(`School:         ${school.name} (ID: ${school.id})`);
     console.log('----------------------------------------------------');
   } catch (error) {
