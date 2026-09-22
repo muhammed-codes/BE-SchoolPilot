@@ -1,0 +1,94 @@
+name: Backend Runtime Validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  runtime-validation:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: schoolpilot_test
+          POSTGRES_USER: schoolpilot_test
+          POSTGRES_PASSWORD: schoolpilot_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd="pg_isready -U schoolpilot_test -d schoolpilot_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=12
+
+    env:
+      NODE_ENV: test
+      PORT: 3001
+      DATABASE_URL: postgresql://schoolpilot_test:schoolpilot_test@127.0.0.1:5433/schoolpilot_test
+      JWT_ACCESS_SECRET: schoolpilot-ci-access-secret
+      JWT_REFRESH_SECRET: schoolpilot-ci-refresh-secret
+      JWT_ACCESS_EXPIRES: 15m
+      JWT_REFRESH_EXPIRES: 7d
+      FRONTEND_URL: http://localhost:9995
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.1.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run migrations
+        run: pnpm run migration:run
+
+      - name: Build backend
+        run: pnpm run build
+
+      - name: Start backend
+        run: |
+          pnpm run start:prod > /tmp/schoolpilot-backend.log 2>&1 &
+          echo $! > /tmp/schoolpilot-backend.pid
+
+      - name: Wait for GraphQL endpoint
+        run: |
+          for attempt in {1..30}; do
+            status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3001/graphql || true)
+            if [ "$status" != "000" ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/schoolpilot-backend.log
+          exit 1
+
+      - name: Check generated schema contract
+        run: pnpm run check:schema-contract
+
+      - name: Run backend tests
+        run: pnpm exec jest --watchman=false
+
+      - name: Print backend log on failure
+        if: failure()
+        run: cat /tmp/schoolpilot-backend.log
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f /tmp/schoolpilot-backend.pid ]; then
+            kill "$(cat /tmp/schoolpilot-backend.pid)" || true
+          fi
