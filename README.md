@@ -57,6 +57,25 @@ $ pnpm run test:e2e
 $ pnpm run test:cov
 ```
 
+## Isolated schema and migration validation
+
+The repository includes an isolated PostgreSQL fixture for local validation.
+It is not connected to production:
+
+```bash
+docker compose -f docker-compose.test.yml up -d
+set -a
+. ./.env.test.example
+set +a
+pnpm run migration:run
+pnpm run check:schema-contract
+pnpm run start:dev
+```
+
+The backend generates `schema.gql` on startup when `VERCEL` is not set. Run
+`pnpm run check:schema-contract` again after startup, then stop the fixture with
+`docker compose -f docker-compose.test.yml down -v` when finished.
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
