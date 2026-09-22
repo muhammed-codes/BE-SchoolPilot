@@ -1,7 +1,8 @@
 import { Resolver, Query } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../common/guards';
-import { CurrentUser } from '../common/decorators';
+import { JwtAuthGuard, PermissionGuard } from '../common/guards';
+import { CurrentUser, RequirePermission } from '../common/decorators';
+import { AppResource } from '../access/enums/resource.enum';
 import { UserRole } from '../common/enums';
 import { DashboardService } from './dashboard.service';
 import { DashboardOverview } from './dto/dashboard-overview.type';
@@ -11,7 +12,8 @@ export class DashboardResolver {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Query(() => DashboardOverview)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, 'canRead')
   dashboardOverview(
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
