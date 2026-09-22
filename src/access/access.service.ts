@@ -180,6 +180,11 @@ export class AccessService implements OnModuleInit {
     );
   }
 
+  async getEffectivePermissionsForUser(userId: string, schoolId: string) {
+    const user = await this.assertSchoolUser(userId, schoolId);
+    return this.getEffectivePermissions(user.id, user.role, user.schoolId);
+  }
+
   private async assertSchoolUser(userId: string, schoolId: string) {
     const user = await this.userRepo.findOne({
       where: { id: userId, schoolId },

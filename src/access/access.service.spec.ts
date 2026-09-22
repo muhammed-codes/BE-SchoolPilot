@@ -37,6 +37,7 @@ describe('AccessService effective permissions', () => {
       groupAssignments?: any[];
       groupPermissions?: any[];
       userPermissions?: any[];
+      users?: any[];
     } = {},
   ) =>
     new AccessService(
@@ -45,7 +46,9 @@ describe('AccessService effective permissions', () => {
       repository(config.groupPermissions) as any,
       repository(config.groupAssignments) as any,
       repository(config.userPermissions) as any,
-      repository([{ id: 'user-a', schoolId: 'school-a' }]) as any,
+      repository(
+        config.users || [{ id: 'user-a', schoolId: 'school-a' }],
+      ) as any,
     );
 
   it('allows School Admin without stored permission rows', async () => {
@@ -173,5 +176,37 @@ describe('AccessService effective permissions', () => {
         PermissionAction.READ,
       ),
     ).resolves.toBe(false);
+  });
+
+  it('returns target-user effective permissions only inside the requested school', async () => {
+    const service = makeService({
+      users: [
+        { id: 'staff-1', role: UserRole.CLASS_TEACHER, schoolId: 'school-a' },
+      ],
+      rolePermissions: [
+        {
+          role: UserRole.CLASS_TEACHER,
+          schoolId: 'school-a',
+          resource: AppResource.STUDENTS,
+          canRead: true,
+          canCreate: false,
+          canUpdate: false,
+          canDelete: false,
+        },
+      ],
+    });
+
+    const effective = await service.getEffectivePermissionsForUser(
+      'staff-1',
+      'school-a',
+    );
+
+    expect(
+      effective.find(
+        (permission) =>
+          permission.resource === AppResource.STUDENTS &&
+          permission.action === PermissionAction.READ,
+      )?.allowed,
+    ).toBe(true);
   });
 });

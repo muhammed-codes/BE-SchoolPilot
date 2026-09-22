@@ -54,6 +54,19 @@ export class AccessResolver {
     );
   }
 
+  @Query(() => [EffectivePermission], { name: 'userEffectivePermissions' })
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  userEffectivePermissions(
+    @Args('userId') userId: string,
+    @CurrentUser() user: { role: UserRole; schoolId?: string },
+    @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
+  ) {
+    return this.accessService.getEffectivePermissionsForUser(
+      userId,
+      this.schoolIdFor(user, schoolId),
+    );
+  }
+
   @Query(() => [RolePermission], { name: 'allRolePermissions' })
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   getAllPermissions(
