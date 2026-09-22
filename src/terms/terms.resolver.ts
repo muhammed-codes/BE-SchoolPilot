@@ -5,29 +5,31 @@ import { Session } from './entities/session.entity';
 import { Term } from './entities/term.entity';
 import { CreateSessionInput } from './dto/create-session.input';
 import { CreateTermInput } from './dto/create-term.input';
-import { JwtAuthGuard, RolesGuard } from '../common/guards';
-import { CurrentUser } from '../common/decorators';
-import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../common/enums';
+import { JwtAuthGuard, PermissionGuard } from '../common/guards';
+import { CurrentUser, RequirePermission } from '../common/decorators';
+import { AppResource } from '../access/enums/resource.enum';
 
 @Resolver()
 export class TermsResolver {
   constructor(private readonly termsService: TermsService) {}
 
   @Query(() => Term)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.SETTINGS, 'canRead')
   activeTerm(@CurrentUser() user: { schoolId: string }) {
     return this.termsService.getActiveTerm(user.schoolId);
   }
 
   @Query(() => [Session])
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.SETTINGS, 'canRead')
   sessions(@CurrentUser() user: { schoolId: string }) {
     return this.termsService.getSessionsBySchool(user.schoolId);
   }
 
   @Query(() => [Term])
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.SETTINGS, 'canRead')
   termsBySession(
     @Args('sessionId') sessionId: string,
     @CurrentUser() user: { schoolId: string },
@@ -36,8 +38,8 @@ export class TermsResolver {
   }
 
   @Mutation(() => Session)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.SETTINGS, 'canCreate')
   createSession(
     @Args('input') input: CreateSessionInput,
     @CurrentUser() user: { schoolId: string },
@@ -46,8 +48,8 @@ export class TermsResolver {
   }
 
   @Mutation(() => Term)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.SETTINGS, 'canCreate')
   createTerm(
     @Args('input') input: CreateTermInput,
     @CurrentUser() user: { schoolId: string },
@@ -56,8 +58,8 @@ export class TermsResolver {
   }
 
   @Mutation(() => Term)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.SETTINGS, 'canUpdate')
   activateTerm(
     @Args('termId') termId: string,
     @CurrentUser() user: { schoolId: string },
@@ -66,8 +68,8 @@ export class TermsResolver {
   }
 
   @Mutation(() => Term)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.SETTINGS, 'canUpdate')
   closeTerm(
     @Args('termId') termId: string,
     @CurrentUser() user: { schoolId: string },
@@ -76,8 +78,8 @@ export class TermsResolver {
   }
 
   @Mutation(() => Term)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.SETTINGS, 'canUpdate')
   unlockTerm(
     @Args('termId') termId: string,
     @CurrentUser() user: { schoolId: string },
@@ -86,8 +88,8 @@ export class TermsResolver {
   }
 
   @Mutation(() => Term)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SCHOOL_ADMIN)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.SETTINGS, 'canUpdate')
   updateTotalSchoolDays(
     @Args('termId') termId: string,
     @Args('days', { type: () => Int }) days: number,
