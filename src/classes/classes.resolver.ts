@@ -55,6 +55,7 @@ export class ClassesResolver {
         user.sub,
         user.schoolId,
         pagination,
+        search,
       );
     }
     return this.classesService.getClassesBySchool(

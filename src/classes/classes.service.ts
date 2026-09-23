@@ -235,19 +235,27 @@ export class ClassesService {
     teacherId: string,
     schoolId: string,
     pagination?: PaginationArgs,
+    search?: string,
   ) => {
     const page = pagination?.page || 1;
     const limit = pagination?.limit || 50;
     const skip = (page - 1) * limit;
 
-    return this.getClassesForTeacher(teacherId, schoolId).then((all) =>
-      this.enrichWithStudentCounts(all, schoolId).then((enriched) => ({
-        items: enriched.slice(skip, skip + limit),
-        total: enriched.length,
-        page,
-        totalPages: Math.ceil(enriched.length / limit),
-      })),
-    );
+    return this.getClassesForTeacher(teacherId, schoolId).then((all) => {
+      const filtered = search?.trim()
+        ? all.filter((c) =>
+            c.name.toLowerCase().includes(search.trim().toLowerCase()),
+          )
+        : all;
+      return this.enrichWithStudentCounts(filtered, schoolId).then(
+        (enriched) => ({
+          items: enriched.slice(skip, skip + limit),
+          total: enriched.length,
+          page,
+          totalPages: Math.ceil(enriched.length / limit),
+        }),
+      );
+    });
   };
 
   getTeacherClassIds = (
