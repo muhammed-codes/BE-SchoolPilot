@@ -1,4 +1,4 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
 import { PermissionAction } from '../access/enums/permission-action.enum';
 import { UseGuards } from '@nestjs/common';
@@ -63,15 +63,24 @@ export class StudentsResolver {
   searchStudents(
     @Args('query') query: string,
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+    @Args('limit', { type: () => Int, nullable: true, defaultValue: 5 })
+    limit: number = 5,
   ) {
+    const take = limit && limit > 0 ? limit : 5;
     if (TEACHER_ROLES.includes(user.role)) {
       return this.studentsService.searchStudentsForTeacher(
         query,
         user.sub,
         user.schoolId,
+        take,
       );
     }
-    return this.studentsService.searchStudents(query, user.schoolId);
+    return this.studentsService.searchStudents(
+      query,
+      user.schoolId,
+      undefined,
+      take,
+    );
   }
 
   @Query(() => PaginatedStudent)
