@@ -108,6 +108,13 @@ export class TimetableService implements OnModuleInit {
         ALTER TABLE "school_days" ADD COLUMN IF NOT EXISTS "openingTime" varchar NOT NULL DEFAULT '08:00';
         ALTER TABLE "school_days" ADD COLUMN IF NOT EXISTS "closingTime" varchar NOT NULL DEFAULT '15:00';
         ALTER TABLE "periods" ADD COLUMN IF NOT EXISTS "dayOfWeek" int NULL;
+        ALTER TABLE "periods" ADD COLUMN IF NOT EXISTS "slotType" varchar NOT NULL DEFAULT 'TEACHING';
+        ALTER TABLE "periods" ADD COLUMN IF NOT EXISTS "classIds" uuid[] NOT NULL DEFAULT '{}';
+        UPDATE "periods" SET "isActive" = true WHERE "isActive" IS NULL;
+        UPDATE "periods" SET "slotType" = 'TEACHING' WHERE "slotType" IS NULL;
+        UPDATE "periods" SET "classIds" = '{}' WHERE "classIds" IS NULL;
+        ALTER TABLE "periods" ALTER COLUMN "isActive" SET DEFAULT true;
+        ALTER TABLE "periods" ALTER COLUMN "isActive" SET NOT NULL;
         ALTER TABLE "rooms" ALTER COLUMN "capacity" DROP NOT NULL;
       `);
       this.hasEnsuredColumns = true;
@@ -249,6 +256,7 @@ export class TimetableService implements OnModuleInit {
     endTime: string,
     dayOfWeek?: number | null,
     excludePeriodId?: string,
+    classIds: string[] = [],
   ): Promise<void> {
     if (startTime >= endTime) {
       throw new BadRequestException('Start time must be before end time.');
@@ -279,7 +287,9 @@ export class TimetableService implements OnModuleInit {
     const candidatePeriods = allPeriods.filter((p) => {
       if (excludePeriodId && p.id === excludePeriodId) return false;
       if (dayOfWeek && p.dayOfWeek && p.dayOfWeek !== dayOfWeek) return false;
-      return true;
+      const existingClassIds = p.classIds || [];
+      return existingClassIds.length === 0 || classIds.length === 0 ||
+        existingClassIds.some((classId) => classIds.includes(classId));
     });
 
     for (const p of candidatePeriods) {
@@ -323,15 +333,26 @@ export class TimetableService implements OnModuleInit {
     schoolId: string,
   ): Promise<Period> {
     await this.ensureTableColumns();
+    if (input.classIds?.length) {
+      const classCount = await this.classRepo.count({
+        where: { schoolId, id: In(input.classIds) },
+      });
+      if (classCount !== new Set(input.classIds).size) {
+        throw new BadRequestException('One or more selected classes are invalid.');
+      }
+    }
     await this.validatePeriodTime(
       schoolId,
       input.startTime,
       input.endTime,
       input.dayOfWeek,
+      undefined,
+      input.classIds || [],
     );
 
     const period = this.periodRepo.create({
       ...input,
+      classIds: input.classIds || [],
       schoolId,
       isActive: true,
     });
@@ -347,10 +368,24 @@ export class TimetableService implements OnModuleInit {
     });
     if (!period) throw new NotFoundException('Period not found');
 
+    // Older period rows may predate the non-null GraphQL fields.
+    period.isActive = period.isActive ?? true;
+    period.slotType = period.slotType ?? 'TEACHING' as any;
+    period.classIds = period.classIds ?? [];
+
     const newStart = input.startTime ?? period.startTime;
     const newEnd = input.endTime ?? period.endTime;
     const newDay =
       input.dayOfWeek !== undefined ? input.dayOfWeek : period.dayOfWeek;
+    const newClassIds = input.classIds ?? period.classIds ?? [];
+    if (input.classIds?.length) {
+      const classCount = await this.classRepo.count({
+        where: { schoolId, id: In(input.classIds) },
+      });
+      if (classCount !== new Set(input.classIds).size) {
+        throw new BadRequestException('One or more selected classes are invalid.');
+      }
+    }
 
     await this.validatePeriodTime(
       schoolId,
@@ -358,9 +393,18 @@ export class TimetableService implements OnModuleInit {
       newEnd,
       newDay,
       period.id,
+      newClassIds,
     );
 
-    Object.assign(period, input);
+    // Do not assign GraphQL's undefined optional fields: doing so can overwrite
+    // legacy defaults such as isActive and make GraphQL return null.
+    const updates = Object.fromEntries(
+      Object.entries(input).filter(([, value]) => value !== undefined),
+    );
+    Object.assign(period, updates);
+    period.isActive = period.isActive ?? true;
+    period.slotType = period.slotType ?? ('TEACHING' as any);
+    period.classIds = period.classIds ?? [];
     return this.periodRepo.save(period);
   }
 

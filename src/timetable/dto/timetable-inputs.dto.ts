@@ -17,6 +17,7 @@ import {
   AvailabilityStatus,
   ApprovalStatus,
   TimetableExportView,
+  PeriodSlotType,
 } from '../enums/timetable.enums';
 
 // ── Room Inputs ─────────────────────────────────────────────────────────────
@@ -120,6 +121,15 @@ export class CreatePeriodInput {
   @IsOptional()
   @IsNumber()
   dayOfWeek?: number | null;
+
+  @Field(() => PeriodSlotType, { defaultValue: PeriodSlotType.TEACHING })
+  @IsEnum(PeriodSlotType)
+  slotType: PeriodSlotType = PeriodSlotType.TEACHING;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  classIds?: string[];
 }
 
 @InputType()
@@ -152,6 +162,16 @@ export class UpdatePeriodInput {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @Field(() => PeriodSlotType, { nullable: true })
+  @IsOptional()
+  @IsEnum(PeriodSlotType)
+  slotType?: PeriodSlotType;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  classIds?: string[];
 
   @Field(() => Int, { nullable: true })
   @IsOptional()

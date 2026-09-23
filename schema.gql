@@ -277,10 +277,12 @@ input CreateNonTeachingSlotInput {
 }
 
 input CreatePeriodInput {
+  classIds: [String!]
   dayOfWeek: Int
   endTime: String!
   name: String!
   orderIndex: Int! = 1
+  slotType: PeriodSlotType! = TEACHING
   startTime: String!
 }
 
@@ -812,6 +814,7 @@ type PaymentSubmissionStudentShare {
 }
 
 type Period {
+  classIds: [String!]!
   createdAt: DateTime!
   dayOfWeek: Int
   endTime: String!
@@ -820,8 +823,17 @@ type Period {
   name: String!
   orderIndex: Int!
   schoolId: String!
+  slotType: PeriodSlotType!
   startTime: String!
   updatedAt: DateTime!
+}
+
+enum PeriodSlotType {
+  ASSEMBLY
+  BREAK
+  EXTRACURRICULAR
+  OTHER
+  TEACHING
 }
 
 enum PermissionAction {
@@ -1591,12 +1603,14 @@ input UpdateNonTeachingSlotInput {
 }
 
 input UpdatePeriodInput {
+  classIds: [String!]
   dayOfWeek: Int
   endTime: String
   id: String!
   isActive: Boolean
   name: String
   orderIndex: Int
+  slotType: PeriodSlotType
   startTime: String
 }
 

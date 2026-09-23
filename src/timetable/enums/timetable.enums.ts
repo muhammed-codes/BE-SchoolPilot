@@ -17,6 +17,14 @@ export enum NonTeachingSlotType {
   OTHER = 'OTHER',
 }
 
+export enum PeriodSlotType {
+  TEACHING = 'TEACHING',
+  BREAK = 'BREAK',
+  ASSEMBLY = 'ASSEMBLY',
+  EXTRACURRICULAR = 'EXTRACURRICULAR',
+  OTHER = 'OTHER',
+}
+
 export enum AvailabilityStatus {
   AVAILABLE = 'AVAILABLE',
   UNAVAILABLE = 'UNAVAILABLE',
@@ -58,6 +66,7 @@ export enum ConflictType {
 
 registerEnumType(RoomType, { name: 'RoomType' });
 registerEnumType(NonTeachingSlotType, { name: 'NonTeachingSlotType' });
+registerEnumType(PeriodSlotType, { name: 'PeriodSlotType' });
 registerEnumType(AvailabilityStatus, { name: 'AvailabilityStatus' });
 registerEnumType(AvailabilitySource, { name: 'AvailabilitySource' });
 registerEnumType(ApprovalStatus, { name: 'ApprovalStatus' });
