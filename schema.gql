@@ -714,6 +714,13 @@ type PaginatedClassScores {
   total: Int!
 }
 
+type PaginatedPaymentSubmissionBatch {
+  items: [PaymentSubmissionBatch!]!
+  page: Int!
+  total: Int!
+  totalPages: Int!
+}
+
 type PaginatedSchool {
   items: [School!]!
   page: Int!
@@ -888,6 +895,7 @@ type Query {
   allFeeCategories: [FeeCategory!]!
   allRolePermissions: [RolePermission!]!
   announcements: [Announcement!]!
+  announcementsPage(limit: Int! = 50, page: Int! = 1): PaginatedAnnouncement!
   approvalConfigs: [FeeApprovalConfig!]!
   archivedResultSheets(status: ResultStatus): [ResultSheet!]!
   archivedStudents: [Student!]!
@@ -912,6 +920,7 @@ type Query {
   myClasses: [ClassEntity!]!
   myEffectivePermissions: [EffectivePermission!]!
   myPaymentSubmissions: [PaymentSubmissionBatch!]!
+  myPaymentSubmissionsPage(limit: Int! = 50, page: Int! = 1): PaginatedPaymentSubmissionBatch!
   myPermissions: [RolePermission!]!
   mySchool: School!
   myStudentInvoices(studentId: String!): [StudentInvoice!]!

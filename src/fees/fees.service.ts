@@ -43,6 +43,7 @@ import { ReceiptSerialSequence } from './entities/receipt-serial-sequence.entity
 import { StaffFeeVisibilityConfig } from './entities/staff-fee-visibility-config.entity';
 import { Student } from '../students/entities/student.entity';
 import { User } from '../users/entities/user.entity';
+import { PaginationArgs } from '../common/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
 import { StudentParent } from '../students/entities/student-parent.entity';
 import { UserRole } from '../common/enums';
@@ -685,6 +686,31 @@ export class FeesService {
       relations: ['shares', 'shares.allocations'],
       order: { submittedAt: 'DESC' },
     });
+  }
+
+  getParentSubmissionsPaginated(
+    parentId: string,
+    schoolId: string,
+    pagination?: PaginationArgs,
+  ) {
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 50;
+    const skip = (page - 1) * limit;
+
+    return this.batchRepo
+      .findAndCount({
+        where: { parentId, schoolId },
+        relations: ['shares', 'shares.allocations'],
+        order: { submittedAt: 'DESC' },
+        skip,
+        take: limit,
+      })
+      .then(([items, total]) => ({
+        items,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      }));
   }
 
   getShareById(shareId: string) {

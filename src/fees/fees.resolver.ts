@@ -19,6 +19,9 @@ import { CurrentUser, RequirePermission, Roles } from '../common/decorators';
 import { UserRole } from '../common/enums';
 import { AppResource } from '../access/enums/resource.enum';
 import { PermissionAction } from '../access/enums/permission-action.enum';
+import { PaginationArgs, createPaginatedType } from '../common/pagination';
+
+const PaginatedPaymentSubmissionBatch = createPaginatedType(PaymentSubmissionBatch);
 
 import {
   CreateFeeCategoryInput,
@@ -320,6 +323,20 @@ export class FeesResolver {
   @Roles(UserRole.PARENT)
   myPaymentSubmissions(@CurrentUser() user: AuthUser) {
     return this.feesService.getParentSubmissions(user.sub, user.schoolId);
+  }
+
+  @Query(() => PaginatedPaymentSubmissionBatch)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.PARENT)
+  myPaymentSubmissionsPage(
+    @Args() pagination: PaginationArgs,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.feesService.getParentSubmissionsPaginated(
+      user.sub,
+      user.schoolId,
+      pagination,
+    );
   }
 
   // ─── Approval Queue ────────────────────────────────────────────────────────

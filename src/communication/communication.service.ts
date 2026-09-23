@@ -147,6 +147,27 @@ export class CommunicationService {
     );
   };
 
+  listVisiblePaginated = async (
+    userId: string,
+    role: UserRole,
+    schoolId: string,
+    pagination?: PaginationArgs,
+  ) => {
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 50;
+    const skip = (page - 1) * limit;
+
+    const all = await this.listVisible(userId, role, schoolId);
+    const items = all.slice(skip, skip + limit);
+    const total = all.length;
+    return {
+      items,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  };
+
   update = async (
     id: string,
     input: UpdateAnnouncementInput,

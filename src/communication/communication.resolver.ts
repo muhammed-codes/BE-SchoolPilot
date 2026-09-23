@@ -34,6 +34,21 @@ export class CommunicationResolver {
   }
 
   @Query(() => PaginatedAnnouncement)
+  @RequirePermission(AppResource.COMMUNICATION, PermissionAction.READ)
+  announcementsPage(
+    @Args() pagination: PaginationArgs,
+    @CurrentUser() user: AuthUser,
+  ) {
+    if (!user.schoolId) return { items: [], total: 0, page: 1, totalPages: 0 };
+    return this.communicationService.listVisiblePaginated(
+      user.sub,
+      user.role,
+      user.schoolId,
+      pagination,
+    );
+  }
+
+  @Query(() => PaginatedAnnouncement)
   @RequirePermission(AppResource.COMMUNICATION, PermissionAction.MANAGE)
   adminAnnouncementsPage(
     @Args() pagination: PaginationArgs,
