@@ -1368,8 +1368,8 @@ export class ResultsService {
       const sum = percentages.reduce((a, b) => a + b, 0);
       const classAverage = Number((sum / assessedCount).toFixed(1));
 
-      const passedCount = validResults.filter((sr) => {
-        const pct = sr.percentage ?? 0;
+      const passedCount = validResults.filter((sr, idx) => {
+        const pct = percentages[idx];
         return pct >= 40 && sr.grade !== 'F9' && sr.grade !== 'F';
       }).length;
 
