@@ -494,7 +494,6 @@ export class StudentsService {
       });
   }
 
-
   searchStudents = (query: string, schoolId: string, classIds?: string[]) => {
     if (classIds && classIds.length === 0) return Promise.resolve([]);
 

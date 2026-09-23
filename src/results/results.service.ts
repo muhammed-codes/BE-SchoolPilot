@@ -5,10 +5,24 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In, FindOptionsWhere } from 'typeorm';
+import {
+  Repository,
+  DataSource,
+  In,
+  FindOptionsWhere,
+  LessThan,
+} from 'typeorm';
 import { ResultSheet } from './entities/result-sheet.entity';
 import { StudentResult } from './entities/student-result.entity';
 import { SubjectScore } from './entities/subject-score.entity';
+import {
+  ResultAnalytics,
+  GradeDistributionItem,
+} from './dto/result-analytics.type';
+import {
+  PaginatedClassScores,
+  StudentScoreRecord,
+} from './dto/paginated-class-scores.type';
 import { ClassEntity } from '../classes/entities/class.entity';
 import { ClassSubject } from '../classes/entities/class-subject.entity';
 import { Student } from '../students/entities/student.entity';
@@ -814,6 +828,13 @@ export class ResultsService {
   ) => {
     return this.resultSheetRepo.find({
       where: { classId, termId, schoolId },
+      relations: [
+        'classEntity',
+        'term',
+        'studentResults',
+        'studentResults.student',
+        'studentResults.subjectScores',
+      ],
       order: { createdAt: 'DESC' },
     });
   };
@@ -1186,5 +1207,392 @@ export class ResultsService {
       where,
       order: { createdAt: 'DESC' },
     });
+  };
+
+  getResultAnalytics = async (
+    classId: string,
+    sessionId: string,
+    termId: string,
+    subjectId: string | undefined,
+    schoolId: string,
+  ): Promise<ResultAnalytics> => {
+    const sheet = await this.resultSheetRepo.findOne({
+      where: { classId, termId, schoolId, isArchived: false },
+    });
+
+    const defaultAnalytics: ResultAnalytics = {
+      classAverage: 0,
+      passRate: 0,
+      highestScore: 0,
+      lowestScore: 0,
+      assessedCount: 0,
+      passedCount: 0,
+      gradeDistribution: [],
+      deltaPreviousTerm: null,
+    };
+
+    if (!sheet) {
+      return defaultAnalytics;
+    }
+
+    const currentTerm = await this.termRepo.findOne({
+      where: { id: termId, schoolId },
+    });
+
+    if (subjectId && subjectId !== 'ALL') {
+      const scores = await this.subjectScoreRepo.find({
+        where: { resultSheetId: sheet.id, subjectId },
+      });
+
+      const maxScore =
+        (sheet.scoreComponents || []).reduce((s, c) => s + c.maxScore, 0) ||
+        100;
+
+      const validScores = scores.filter(
+        (s) => typeof s.totalScore === 'number' && s.totalScore !== null,
+      );
+
+      if (validScores.length === 0) {
+        return defaultAnalytics;
+      }
+
+      const assessedCount = validScores.length;
+      const numericScores = validScores.map((s) => s.totalScore);
+      const highestScore = Math.max(...numericScores);
+      const lowestScore = Math.min(...numericScores);
+      const sum = numericScores.reduce((a, b) => a + b, 0);
+      const classAverage = Number((sum / assessedCount).toFixed(1));
+
+      const passedCount = validScores.filter((s) => {
+        const pct = (s.totalScore / maxScore) * 100;
+        return pct >= 40 && s.grade !== 'F9' && s.grade !== 'F';
+      }).length;
+
+      const passRate = Number(((passedCount / assessedCount) * 100).toFixed(1));
+
+      const gradeCounts = new Map<string, number>();
+      validScores.forEach((s) => {
+        const g = s.grade || 'N/A';
+        gradeCounts.set(g, (gradeCounts.get(g) || 0) + 1);
+      });
+
+      const gradeDistribution: GradeDistributionItem[] = Array.from(
+        gradeCounts.entries(),
+      )
+        .map(([grade, count]) => ({
+          grade,
+          count,
+          percentage: Number(((count / assessedCount) * 100).toFixed(1)),
+        }))
+        .sort((a, b) => a.grade.localeCompare(b.grade));
+
+      let deltaPreviousTerm: number | null = null;
+      if (currentTerm?.startDate) {
+        const prevTerm = await this.termRepo.findOne({
+          where: {
+            schoolId,
+            startDate: LessThan(currentTerm.startDate),
+          },
+          order: { startDate: 'DESC' },
+        });
+
+        if (prevTerm) {
+          const prevSheet = await this.resultSheetRepo.findOne({
+            where: {
+              classId,
+              termId: prevTerm.id,
+              schoolId,
+              isArchived: false,
+            },
+          });
+          if (prevSheet) {
+            const prevScores = await this.subjectScoreRepo.find({
+              where: { resultSheetId: prevSheet.id, subjectId },
+            });
+            const validPrev = prevScores.filter(
+              (s) => typeof s.totalScore === 'number' && s.totalScore !== null,
+            );
+            if (validPrev.length > 0) {
+              const prevAvg =
+                validPrev.reduce((acc, s) => acc + s.totalScore, 0) /
+                validPrev.length;
+              deltaPreviousTerm = Number((classAverage - prevAvg).toFixed(1));
+            }
+          }
+        }
+      }
+
+      return {
+        classAverage,
+        passRate,
+        highestScore,
+        lowestScore,
+        assessedCount,
+        passedCount,
+        gradeDistribution,
+        deltaPreviousTerm,
+      };
+    } else {
+      const studentResults = await this.studentResultRepo.find({
+        where: { resultSheetId: sheet.id },
+        relations: ['subjectScores'],
+      });
+
+      const totalMaxPerSubject = (sheet.scoreComponents || []).reduce(
+        (sum, sc) => sum + sc.maxScore,
+        0,
+      );
+
+      const validResults = studentResults.filter(
+        (sr) => typeof sr.totalScore === 'number' && sr.totalScore > 0,
+      );
+
+      if (validResults.length === 0) {
+        return defaultAnalytics;
+      }
+
+      const assessedCount = validResults.length;
+      const percentages = validResults.map((sr) => {
+        if (typeof sr.percentage === 'number' && sr.percentage > 0) {
+          return sr.percentage;
+        }
+        const subjectCount = sr.subjectScores?.length || 1;
+        const overallMax = totalMaxPerSubject * subjectCount;
+        return overallMax > 0
+          ? (sr.totalScore / overallMax) * 100
+          : sr.totalScore;
+      });
+
+      const highestScore = Number(Math.max(...percentages).toFixed(1));
+      const lowestScore = Number(Math.min(...percentages).toFixed(1));
+      const sum = percentages.reduce((a, b) => a + b, 0);
+      const classAverage = Number((sum / assessedCount).toFixed(1));
+
+      const passedCount = validResults.filter((sr) => {
+        const pct = sr.percentage ?? 0;
+        return pct >= 40 && sr.grade !== 'F9' && sr.grade !== 'F';
+      }).length;
+
+      const passRate = Number(((passedCount / assessedCount) * 100).toFixed(1));
+
+      const gradeCounts = new Map<string, number>();
+      validResults.forEach((sr) => {
+        const g = sr.grade || 'N/A';
+        gradeCounts.set(g, (gradeCounts.get(g) || 0) + 1);
+      });
+
+      const gradeDistribution: GradeDistributionItem[] = Array.from(
+        gradeCounts.entries(),
+      )
+        .map(([grade, count]) => ({
+          grade,
+          count,
+          percentage: Number(((count / assessedCount) * 100).toFixed(1)),
+        }))
+        .sort((a, b) => a.grade.localeCompare(b.grade));
+
+      let deltaPreviousTerm: number | null = null;
+      if (currentTerm?.startDate) {
+        const prevTerm = await this.termRepo.findOne({
+          where: {
+            schoolId,
+            startDate: LessThan(currentTerm.startDate),
+          },
+          order: { startDate: 'DESC' },
+        });
+
+        if (prevTerm) {
+          const prevSheet = await this.resultSheetRepo.findOne({
+            where: {
+              classId,
+              termId: prevTerm.id,
+              schoolId,
+              isArchived: false,
+            },
+          });
+          if (prevSheet) {
+            const prevResults = await this.studentResultRepo.find({
+              where: { resultSheetId: prevSheet.id },
+            });
+            const validPrev = prevResults.filter(
+              (sr) => typeof sr.totalScore === 'number' && sr.totalScore > 0,
+            );
+            if (validPrev.length > 0) {
+              const prevAvg =
+                validPrev.reduce(
+                  (acc, sr) => acc + (sr.percentage ?? sr.totalScore),
+                  0,
+                ) / validPrev.length;
+              deltaPreviousTerm = Number((classAverage - prevAvg).toFixed(1));
+            }
+          }
+        }
+      }
+
+      return {
+        classAverage,
+        passRate,
+        highestScore,
+        lowestScore,
+        assessedCount,
+        passedCount,
+        gradeDistribution,
+        deltaPreviousTerm,
+      };
+    }
+  };
+
+  getClassScores = async (
+    classId: string,
+    termId: string,
+    subjectId: string | undefined,
+    search: string | undefined,
+    skip = 0,
+    take = 50,
+    schoolId: string,
+  ): Promise<PaginatedClassScores> => {
+    const sheet = await this.resultSheetRepo.findOne({
+      where: { classId, termId, schoolId, isArchived: false },
+      relations: ['classEntity'],
+    });
+
+    if (!sheet) {
+      return { items: [], total: 0, hasMore: false };
+    }
+
+    if (subjectId && subjectId !== 'ALL') {
+      const qb = this.subjectScoreRepo
+        .createQueryBuilder('ss')
+        .leftJoinAndSelect('ss.studentResult', 'sr')
+        .leftJoinAndSelect('sr.student', 'student')
+        .leftJoinAndSelect('ss.subject', 'subject')
+        .where('ss.resultSheetId = :resultSheetId', { resultSheetId: sheet.id })
+        .andWhere('ss.subjectId = :subjectId', { subjectId });
+
+      if (search && search.trim()) {
+        const term = `%${search.trim().toLowerCase()}%`;
+        qb.andWhere(
+          '(LOWER(student.firstName) LIKE :term OR LOWER(student.lastName) LIKE :term OR LOWER(student.admissionNumber) LIKE :term)',
+          { term },
+        );
+      }
+
+      qb.orderBy('student.lastName', 'ASC').addOrderBy(
+        'student.firstName',
+        'ASC',
+      );
+
+      const total = await qb.getCount();
+      const scores = await qb.skip(skip).take(take).getMany();
+
+      const items: StudentScoreRecord[] = scores.map((ss) => {
+        let ca1: number | undefined;
+        let ca2: number | undefined;
+        let exam: number | undefined;
+
+        (ss.scores || []).forEach((cs) => {
+          const comp = cs.component.toUpperCase();
+          if (comp.includes('CA1') || comp.includes('1ST CA')) ca1 = cs.score;
+          if (comp.includes('CA2') || comp.includes('2ND CA')) ca2 = cs.score;
+          if (comp.includes('EXAM')) exam = cs.score;
+        });
+
+        const totalScore = ss.totalScore ?? 0;
+        let status = 'Fail';
+        if (totalScore >= 75) status = 'Distinction';
+        else if (totalScore >= 60) status = 'Credit';
+        else if (totalScore >= 40) status = 'Pass';
+
+        return {
+          id: ss.id,
+          studentId: ss.studentResult?.studentId || '',
+          studentName:
+            `${ss.studentResult?.student?.firstName || ''} ${ss.studentResult?.student?.lastName || ''}`.trim(),
+          admissionNumber: ss.studentResult?.student?.admissionNumber,
+          passportPhotoUrl: ss.studentResult?.student?.passportPhotoUrl,
+          gender: ss.studentResult?.student?.gender,
+          classId: sheet.classId,
+          className: sheet.classEntity?.name || '',
+          subjectId: ss.subjectId,
+          subjectName: ss.subject?.name,
+          componentScores: ss.scores,
+          ca1,
+          ca2,
+          exam,
+          totalScore,
+          grade: ss.grade,
+          status,
+          position: ss.studentResult?.position,
+          teacherRemark: ss.teacherRemark,
+          resultSheetId: sheet.id,
+          resultSheetStatus: sheet.status,
+        };
+      });
+
+      return {
+        items,
+        total,
+        hasMore: skip + items.length < total,
+      };
+    } else {
+      const qb = this.studentResultRepo
+        .createQueryBuilder('sr')
+        .leftJoinAndSelect('sr.student', 'student')
+        .leftJoinAndSelect('sr.subjectScores', 'ss')
+        .leftJoinAndSelect('ss.subject', 'subject')
+        .where('sr.resultSheetId = :resultSheetId', {
+          resultSheetId: sheet.id,
+        });
+
+      if (search && search.trim()) {
+        const term = `%${search.trim().toLowerCase()}%`;
+        qb.andWhere(
+          '(LOWER(student.firstName) LIKE :term OR LOWER(student.lastName) LIKE :term OR LOWER(student.admissionNumber) LIKE :term)',
+          { term },
+        );
+      }
+
+      qb.orderBy('sr.position', 'ASC', 'NULLS LAST').addOrderBy(
+        'student.lastName',
+        'ASC',
+      );
+
+      const total = await qb.getCount();
+      const results = await qb.skip(skip).take(take).getMany();
+
+      const items: StudentScoreRecord[] = results.map((sr) => {
+        const totalScore = sr.totalScore ?? 0;
+        const pct = sr.percentage ?? 0;
+        let status = 'Fail';
+        if (pct >= 75) status = 'Distinction';
+        else if (pct >= 60) status = 'Credit';
+        else if (pct >= 40) status = 'Pass';
+
+        return {
+          id: sr.id,
+          studentId: sr.studentId,
+          studentName:
+            `${sr.student?.firstName || ''} ${sr.student?.lastName || ''}`.trim(),
+          admissionNumber: sr.student?.admissionNumber,
+          passportPhotoUrl: sr.student?.passportPhotoUrl,
+          gender: sr.student?.gender,
+          classId: sheet.classId,
+          className: sheet.classEntity?.name || '',
+          totalScore,
+          grade: sr.grade,
+          status,
+          position: sr.position,
+          teacherRemark: sr.classTeacherRemark,
+          resultSheetId: sheet.id,
+          resultSheetStatus: sheet.status,
+        };
+      });
+
+      return {
+        items,
+        total,
+        hasMore: skip + items.length < total,
+      };
+    }
   };
 }

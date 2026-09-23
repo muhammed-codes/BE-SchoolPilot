@@ -1,4 +1,4 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
 import { PermissionAction } from '../access/enums/permission-action.enum';
 import { UseGuards } from '@nestjs/common';
@@ -9,6 +9,8 @@ import { SubjectScore } from './entities/subject-score.entity';
 import { CreateResultSheetInput } from './dto/create-result-sheet.input';
 import { SaveSubjectScoresInput } from './dto/save-subject-scores.input';
 import { ResultStats } from './dto/result-stats.type';
+import { ResultAnalytics } from './dto/result-analytics.type';
+import { PaginatedClassScores } from './dto/paginated-class-scores.type';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission } from '../common/decorators';
 import { UserRole, ResultStatus } from '../common/enums';
@@ -80,6 +82,48 @@ export class ResultsResolver {
       user.schoolId,
       user.sub,
       user.role,
+    );
+  }
+
+  @Query(() => ResultAnalytics)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
+  resultAnalytics(
+    @Args('classId') classId: string,
+    @Args('sessionId') sessionId: string,
+    @Args('termId') termId: string,
+    @Args('subjectId', { nullable: true }) subjectId: string,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.resultsService.getResultAnalytics(
+      classId,
+      sessionId,
+      termId,
+      subjectId,
+      user.schoolId,
+    );
+  }
+
+  @Query(() => PaginatedClassScores)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
+  classScores(
+    @Args('classId') classId: string,
+    @Args('termId') termId: string,
+    @Args('subjectId', { nullable: true }) subjectId: string,
+    @Args('search', { nullable: true }) search: string,
+    @Args('skip', { type: () => Int, defaultValue: 0 }) skip: number,
+    @Args('take', { type: () => Int, defaultValue: 50 }) take: number,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.resultsService.getClassScores(
+      classId,
+      termId,
+      subjectId,
+      search,
+      skip,
+      take,
+      user.schoolId,
     );
   }
 

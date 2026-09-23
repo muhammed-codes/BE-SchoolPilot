@@ -481,6 +481,12 @@ type GenerateInvoicesResult {
   skipped: Int!
 }
 
+type GradeDistributionItem {
+  count: Int!
+  grade: String!
+  percentage: Float!
+}
+
 enum GradingSystem {
   GPA
   LETTER
@@ -538,6 +544,7 @@ type MetricStat {
 type Mutation {
   activateSchool(id: String!): School!
   activateTerm(termId: String!): Term!
+  activateUser(id: String!): User!
   adminResetPassword(newPassword: String!, userId: String!): Boolean!
   adminResetSchoolPassword(newPassword: String!, schoolId: String!): Boolean!
   adminSetTeacherAvailability(input: AdminSetTeacherAvailabilityInput!): TeacherAvailability!
@@ -699,6 +706,12 @@ type PaginatedClassEntity {
   page: Int!
   total: Int!
   totalPages: Int!
+}
+
+type PaginatedClassScores {
+  hasMore: Boolean!
+  items: [StudentScoreRecord!]!
+  total: Int!
 }
 
 type PaginatedSchool {
@@ -883,12 +896,14 @@ type Query {
   classAttendance(classId: String!, date: String!): [StudentAttendance!]!
   classById(id: String!): ClassEntity!
   classInvoices(classId: String!, sessionId: String, termId: String): [StudentInvoice!]!
+  classScores(classId: String!, search: String, skip: Int! = 0, subjectId: String, take: Int! = 50, termId: String!): PaginatedClassScores!
   classSubjectAssignments(classId: String!): [ClassSubject!]!
   dashboardOverview: DashboardOverview!
   exportTimetablePdf(input: ExportTimetablePdfInput!): TimetablePdfResult!
   feeCategories: [FeeCategory!]!
   feeOverrides(classId: String, feeStructureId: String, sessionId: String, studentId: String, termId: String): [StudentFeeOverride!]!
   feeStructures(sessionId: String!, termId: String): [FeeStructure!]!
+  guardianStudents(guardianId: String!): [Student!]!
   me: User!
   myAvailabilities: [TeacherAvailability!]!
   myChildResults(studentId: String!): [StudentResult!]!
@@ -912,6 +927,7 @@ type Query {
   platformStats: PlatformStats!
   receiptTemplates: [ReceiptTemplate!]!
   resolvedBankAccounts(feeCategoryId: String): [SchoolBankAccount!]!
+  resultAnalytics(classId: String!, sessionId: String!, subjectId: String, termId: String!): ResultAnalytics!
   resultSheet(id: String!): ResultSheet!
   resultSheetsByClass(classId: String!, termId: String!): [ResultSheet!]!
   resultStats: ResultStats!
@@ -1012,6 +1028,17 @@ input ReorderPeriodItem {
 input ResetPasswordInput {
   newPassword: String!
   token: String!
+}
+
+type ResultAnalytics {
+  assessedCount: Int!
+  classAverage: Float!
+  deltaPreviousTerm: Float
+  gradeDistribution: [GradeDistributionItem!]!
+  highestScore: Float!
+  lowestScore: Float!
+  passRate: Float!
+  passedCount: Int!
 }
 
 type ResultSheet {
@@ -1354,6 +1381,30 @@ input StudentScoreInput {
   studentId: String!
 }
 
+type StudentScoreRecord {
+  admissionNumber: String
+  ca1: Float
+  ca2: Float
+  classId: String!
+  className: String!
+  componentScores: [ComponentScore!]
+  exam: Float
+  gender: String
+  grade: String
+  id: String!
+  passportPhotoUrl: String
+  position: Int
+  resultSheetId: String!
+  resultSheetStatus: String!
+  status: String
+  studentId: String!
+  studentName: String!
+  subjectId: String
+  subjectName: String
+  teacherRemark: String
+  totalScore: Float!
+}
+
 """The operational status of a student in the school"""
 enum StudentStatus {
   ACTIVE
@@ -1673,6 +1724,7 @@ type User {
   isClassTeacher: Boolean
   isEmailVerified: Boolean!
   lastName: String!
+  linkedStudentsCount: Int!
   maxPeriodsPerDay: Int
   maxPeriodsPerWeek: Int
   namePrefix: NamePrefix
