@@ -21,7 +21,9 @@ import { AppResource } from '../access/enums/resource.enum';
 import { PermissionAction } from '../access/enums/permission-action.enum';
 import { PaginationArgs, createPaginatedType } from '../common/pagination';
 
-const PaginatedPaymentSubmissionBatch = createPaginatedType(PaymentSubmissionBatch);
+const PaginatedPaymentSubmissionBatch = createPaginatedType(
+  PaymentSubmissionBatch,
+);
 
 import {
   CreateFeeCategoryInput,

@@ -15,6 +15,7 @@ const createApp = async () => {
   app.use(
     helmet({
       crossOriginEmbedderPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
       contentSecurityPolicy:
         process.env.NODE_ENV === 'production' ? undefined : false,
     }),
@@ -26,17 +27,42 @@ const createApp = async () => {
     'http://localhost:9995',
     'http://localhost:9996',
     'http://localhost:3000',
-  ].filter(Boolean);
+    'http://127.0.0.1:9997',
+    'http://127.0.0.1:9995',
+    'http://127.0.0.1:9996',
+    'http://127.0.0.1:3000',
+  ].filter(Boolean) as string[];
+
+  const isOriginAllowed = (origin?: string): boolean => {
+    if (!origin) return true;
+    const cleanOrigin = origin.replace(/\/$/, '');
+    if (allowedOrigins.some((o) => o.replace(/\/$/, '') === cleanOrigin))
+      return true;
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin))
+      return true;
+    if (
+      /^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?$/.test(
+        cleanOrigin,
+      )
+    )
+      return true;
+    return false;
+  };
 
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'Apollo-Require-Preflight',
-    ],
+    optionsSuccessStatus: 204,
   });
 
   app.setGlobalPrefix('api');
