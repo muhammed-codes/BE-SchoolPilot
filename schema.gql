@@ -949,7 +949,7 @@ type Query {
   schoolTeachers: [User!]!
   schoolUsers(limit: Int! = 50, page: Int! = 1, role: UserRole, search: String): PaginatedUser!
   schools(limit: Int! = 50, page: Int! = 1, search: String): PaginatedSchool!
-  searchStudents(query: String!): [Student!]!
+  searchStudents(limit: Int = 5, query: String!): [Student!]!
   sessions: [Session!]!
   staffAttendanceHistory(from: String!, to: String!, userId: String!): [StaffAttendance!]!
   staffAttendanceLog(date: String!): [StaffAttendance!]!
