@@ -12,7 +12,7 @@ import { PromoteStudentsInput } from './dto/promote-students.input';
 import { BulkImportResult } from './dto/bulk-import-result.type';
 import { PromotionResult } from './dto/promotion-result.type';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
-import { CurrentUser, RequirePermission } from '../common/decorators';
+import { CurrentUser, RequirePermission, Roles } from '../common/decorators';
 import { Gender, StudentStatus, UserRole } from '../common/enums';
 import { TEACHER_ROLES } from '../common/constants/roles.constant';
 import { PaginationArgs, createPaginatedType } from '../common/pagination';
@@ -42,9 +42,10 @@ export class StudentsResolver {
 
   @Query(() => [Student])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(UserRole.PARENT)
   @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
-  myChildren(@CurrentUser() user: { sub: string }) {
-    return this.studentsService.getStudentsByParent(user.sub);
+  myChildren(@CurrentUser() user: { sub: string; schoolId: string }) {
+    return this.studentsService.getStudentsByParent(user.sub, user.schoolId);
   }
 
   @Query(() => [Student])
