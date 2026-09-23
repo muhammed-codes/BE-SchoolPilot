@@ -711,6 +711,8 @@ type PaginatedClassEntity {
 type PaginatedClassScores {
   hasMore: Boolean!
   items: [StudentScoreRecord!]!
+  maxScore: Float
+  scoreComponents: [ScoreComponentConfig!]
   total: Int!
 }
 
@@ -1401,13 +1403,16 @@ type StudentScoreRecord {
   gender: String
   grade: String
   id: String!
+  maxScore: Float
   passportPhotoUrl: String
+  percentage: Float
   position: Int
   resultSheetId: String!
   resultSheetStatus: String!
   status: String
   studentId: String!
   studentName: String!
+  subjectCount: Int
   subjectId: String
   subjectName: String
   teacherRemark: String

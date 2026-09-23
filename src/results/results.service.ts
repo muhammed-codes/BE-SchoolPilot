@@ -1460,6 +1460,12 @@ export class ResultsService {
       return { items: [], total: 0, hasMore: false };
     }
 
+    const singleSubjectMax =
+      (sheet.scoreComponents || []).reduce(
+        (sum, sc) => sum + (sc.maxScore || 0),
+        0,
+      ) || 100;
+
     if (subjectId && subjectId !== 'ALL') {
       const qb = this.subjectScoreRepo
         .createQueryBuilder('ss')
@@ -1498,10 +1504,27 @@ export class ResultsService {
         });
 
         const totalScore = ss.totalScore ?? 0;
+        const pct =
+          singleSubjectMax > 0
+            ? Math.round((totalScore / singleSubjectMax) * 100 * 10) / 10
+            : 0;
+
         let status = 'Fail';
-        if (totalScore >= 75) status = 'Distinction';
-        else if (totalScore >= 60) status = 'Credit';
-        else if (totalScore >= 40) status = 'Pass';
+        const gradeUpper = (ss.grade || '').toUpperCase();
+        if (gradeUpper.startsWith('A') || pct >= 75) status = 'Distinction';
+        else if (
+          gradeUpper.startsWith('B') ||
+          gradeUpper.startsWith('C') ||
+          pct >= 50
+        )
+          status = 'Credit';
+        else if (
+          gradeUpper.startsWith('D') ||
+          gradeUpper.startsWith('E') ||
+          pct >= 40
+        )
+          status = 'Pass';
+        else status = 'Fail';
 
         return {
           id: ss.id,
@@ -1520,6 +1543,9 @@ export class ResultsService {
           ca2,
           exam,
           totalScore,
+          maxScore: singleSubjectMax,
+          percentage: pct,
+          subjectCount: 1,
           grade: ss.grade,
           status,
           position: ss.studentResult?.position,
@@ -1533,6 +1559,8 @@ export class ResultsService {
         items,
         total,
         hasMore: skip + items.length < total,
+        scoreComponents: sheet.scoreComponents || [],
+        maxScore: singleSubjectMax,
       };
     } else {
       const qb = this.studentResultRepo
@@ -1560,13 +1588,39 @@ export class ResultsService {
       const total = await qb.getCount();
       const results = await qb.skip(skip).take(take).getMany();
 
+      this.applyComputedMetrics(
+        sheet.scoreComponents || [],
+        results,
+        sheet.gradingSystem,
+      );
+
       const items: StudentScoreRecord[] = results.map((sr) => {
         const totalScore = sr.totalScore ?? 0;
-        const pct = sr.percentage ?? 0;
+        const subjectCount = sr.subjectScores?.length || 1;
+        const maxScore = subjectCount * singleSubjectMax;
+        const pct =
+          sr.percentage !== undefined && sr.percentage !== null
+            ? Math.round(sr.percentage * 10) / 10
+            : maxScore > 0
+              ? Math.round((totalScore / maxScore) * 100 * 10) / 10
+              : 0;
+
         let status = 'Fail';
-        if (pct >= 75) status = 'Distinction';
-        else if (pct >= 60) status = 'Credit';
-        else if (pct >= 40) status = 'Pass';
+        const gradeUpper = (sr.grade || '').toUpperCase();
+        if (gradeUpper.startsWith('A') || pct >= 75) status = 'Distinction';
+        else if (
+          gradeUpper.startsWith('B') ||
+          gradeUpper.startsWith('C') ||
+          pct >= 50
+        )
+          status = 'Credit';
+        else if (
+          gradeUpper.startsWith('D') ||
+          gradeUpper.startsWith('E') ||
+          pct >= 40
+        )
+          status = 'Pass';
+        else status = 'Fail';
 
         return {
           id: sr.id,
@@ -1579,6 +1633,9 @@ export class ResultsService {
           classId: sheet.classId,
           className: sheet.classEntity?.name || '',
           totalScore,
+          maxScore,
+          percentage: pct,
+          subjectCount,
           grade: sr.grade,
           status,
           position: sr.position,
@@ -1592,6 +1649,8 @@ export class ResultsService {
         items,
         total,
         hasMore: skip + items.length < total,
+        scoreComponents: sheet.scoreComponents || [],
+        maxScore: singleSubjectMax,
       };
     }
   };

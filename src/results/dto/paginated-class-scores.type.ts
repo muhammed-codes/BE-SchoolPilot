@@ -1,5 +1,6 @@
 import { ObjectType, Field, Float, Int } from '@nestjs/graphql';
 import { ComponentScore } from './component-score.type';
+import { ScoreComponentConfig } from './score-component-config.type';
 
 @ObjectType()
 export class StudentScoreRecord {
@@ -48,6 +49,15 @@ export class StudentScoreRecord {
   @Field(() => Float)
   totalScore: number;
 
+  @Field(() => Float, { nullable: true })
+  maxScore?: number;
+
+  @Field(() => Float, { nullable: true })
+  percentage?: number;
+
+  @Field(() => Int, { nullable: true })
+  subjectCount?: number;
+
   @Field({ nullable: true })
   grade?: string;
 
@@ -77,4 +87,10 @@ export class PaginatedClassScores {
 
   @Field(() => Boolean)
   hasMore: boolean;
+
+  @Field(() => [ScoreComponentConfig], { nullable: true })
+  scoreComponents?: ScoreComponentConfig[];
+
+  @Field(() => Float, { nullable: true })
+  maxScore?: number;
 }
