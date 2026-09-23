@@ -23,6 +23,7 @@ import {
   PaginatedClassScores,
   StudentScoreRecord,
 } from './dto/paginated-class-scores.type';
+import { ComponentScore } from './dto/component-score.type';
 import { ClassEntity } from '../classes/entities/class.entity';
 import { ClassSubject } from '../classes/entities/class-subject.entity';
 import { Student } from '../students/entities/student.entity';
@@ -37,6 +38,7 @@ import {
   ResultStatus,
   TermStatus,
   GradingSystem,
+  ScoreComponent,
 } from '../common/enums';
 import { calculateGrade } from './utils/grading.util';
 import { createMetricStat } from '../common/dto/metric-stat.type';
@@ -1497,9 +1499,21 @@ export class ResultsService {
         let exam: number | undefined;
 
         (ss.scores || []).forEach((cs) => {
-          const comp = cs.component.toUpperCase();
-          if (comp.includes('CA1') || comp.includes('1ST CA')) ca1 = cs.score;
-          if (comp.includes('CA2') || comp.includes('2ND CA')) ca2 = cs.score;
+          const comp = (cs.component || '').toUpperCase();
+          if (
+            comp.includes('CA1') ||
+            comp.includes('1ST CA') ||
+            comp.includes('TEST 1') ||
+            comp.includes('FIRST CA')
+          )
+            ca1 = cs.score;
+          if (
+            comp.includes('CA2') ||
+            comp.includes('2ND CA') ||
+            comp.includes('TEST 2') ||
+            comp.includes('SECOND CA')
+          )
+            ca2 = cs.score;
           if (comp.includes('EXAM')) exam = cs.score;
         });
 
@@ -1605,6 +1619,54 @@ export class ResultsService {
               ? Math.round((totalScore / maxScore) * 100 * 10) / 10
               : 0;
 
+        let totalCa1 = 0;
+        let totalCa2 = 0;
+        let totalExam = 0;
+        let hasCa1 = false;
+        let hasCa2 = false;
+        let hasExam = false;
+        const componentTotalsMap = new Map<ScoreComponent, number>();
+
+        (sr.subjectScores || []).forEach((ss) => {
+          (ss.scores || []).forEach((cs) => {
+            const comp = String(cs.component || '').toUpperCase();
+            if (
+              comp.includes('CA1') ||
+              comp.includes('1ST CA') ||
+              comp.includes('TEST 1') ||
+              comp.includes('FIRST CA')
+            ) {
+              totalCa1 += cs.score || 0;
+              hasCa1 = true;
+            } else if (
+              comp.includes('CA2') ||
+              comp.includes('2ND CA') ||
+              comp.includes('TEST 2') ||
+              comp.includes('SECOND CA')
+            ) {
+              totalCa2 += cs.score || 0;
+              hasCa2 = true;
+            } else if (comp.includes('EXAM')) {
+              totalExam += cs.score || 0;
+              hasExam = true;
+            }
+
+            if (cs.component) {
+              componentTotalsMap.set(
+                cs.component,
+                (componentTotalsMap.get(cs.component) || 0) + (cs.score || 0),
+              );
+            }
+          });
+        });
+
+        const aggregatedComponentScores: ComponentScore[] = Array.from(
+          componentTotalsMap.entries(),
+        ).map(([component, score]) => ({
+          component,
+          score: Math.round(score * 10) / 10,
+        }));
+
         let status = 'Fail';
         const gradeUpper = (sr.grade || '').toUpperCase();
         if (gradeUpper.startsWith('A') || pct >= 75) status = 'Distinction';
@@ -1632,6 +1694,10 @@ export class ResultsService {
           gender: sr.student?.gender,
           classId: sheet.classId,
           className: sheet.classEntity?.name || '',
+          componentScores: aggregatedComponentScores,
+          ca1: hasCa1 ? Math.round(totalCa1 * 10) / 10 : undefined,
+          ca2: hasCa2 ? Math.round(totalCa2 * 10) / 10 : undefined,
+          exam: hasExam ? Math.round(totalExam * 10) / 10 : undefined,
           totalScore,
           maxScore,
           percentage: pct,
