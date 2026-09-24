@@ -11,6 +11,7 @@ import { UpdateStudentInput } from './dto/update-student.input';
 import { PromoteStudentsInput } from './dto/promote-students.input';
 import { BulkImportResult } from './dto/bulk-import-result.type';
 import { PromotionResult } from './dto/promotion-result.type';
+import { StudentStatistics } from './dto/student-statistics.type';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission, Roles } from '../common/decorators';
 import { Gender, StudentStatus, UserRole } from '../common/enums';
@@ -108,6 +109,28 @@ export class StudentsResolver {
         classId,
         gender,
         status,
+        archived,
+        classIds,
+      }),
+    );
+  }
+
+  @Query(() => StudentStatistics)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
+  studentStatistics(
+    @Args('query', { type: () => String, defaultValue: '' }) query: string,
+    @Args('classId', { type: () => String, nullable: true }) classId: string,
+    @Args('archived', { type: () => Boolean, defaultValue: false }) archived: boolean,
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+  ) {
+    const classIdsPromise = TEACHER_ROLES.includes(user.role)
+      ? this.studentsService.getTeacherClassIds(user.sub, user.schoolId)
+      : Promise.resolve(undefined);
+    return classIdsPromise.then((classIds) =>
+      this.studentsService.getStudentStatistics(user.schoolId, {
+        query,
+        classId,
         archived,
         classIds,
       }),

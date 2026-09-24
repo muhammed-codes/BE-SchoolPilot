@@ -1011,6 +1011,7 @@ type Query {
   studentAttendanceSummary(studentId: String!, termId: String!): AttendanceSummary!
   studentParents(studentId: String!): [StudentParent!]!
   studentResult(studentId: String!, termId: String!): StudentResult
+  studentStatistics(archived: Boolean! = false, classId: String, query: String! = ""): StudentStatistics!
   studentsByClass(classId: String!): [Student!]!
   studentsPage(archived: Boolean! = false, classId: String, gender: Gender, limit: Int! = 50, page: Int! = 1, query: String! = "", status: StudentStatus): PaginatedStudent!
   teacherAvailabilities(approvalStatus: ApprovalStatus, teacherId: String): [TeacherAvailability!]!
@@ -1501,6 +1502,13 @@ type StudentScoreRecord {
   subjectName: String
   teacherRemark: String
   totalScore: Float!
+}
+
+type StudentStatistics {
+  active: Int!
+  female: Int!
+  male: Int!
+  total: Int!
 }
 
 """The operational status of a student in the school"""

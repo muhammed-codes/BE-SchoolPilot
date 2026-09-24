@@ -607,6 +607,55 @@ export class StudentsService {
     return { items, total, page, totalPages: Math.ceil(total / limit) };
   };
 
+  getStudentStatistics = async (
+    schoolId: string,
+    options: {
+      query?: string;
+      classId?: string;
+      archived?: boolean;
+      classIds?: string[];
+    },
+  ) => {
+    const builder = this.studentsRepository
+      .createQueryBuilder('student')
+      .where('student.schoolId = :schoolId', { schoolId })
+      .andWhere('student.isArchived = :archived', {
+        archived: options.archived ?? false,
+      });
+
+    if (options.classIds) {
+      if (options.classIds.length === 0) {
+        return { total: 0, male: 0, female: 0, active: 0 };
+      }
+      builder.andWhere('student.currentClassId IN (:...classIds)', {
+        classIds: options.classIds,
+      });
+    }
+    if (options.classId) {
+      builder.andWhere('student.currentClassId = :classId', {
+        classId: options.classId,
+      });
+    }
+    if (options.query?.trim()) {
+      builder.andWhere(
+        '(student.firstName ILIKE :query OR student.lastName ILIKE :query OR student.admissionNumber ILIKE :query)',
+        { query: `%${options.query.trim()}%` },
+      );
+    }
+
+    const count = (condition: string, parameters: Record<string, string> = {}) =>
+      builder.clone().andWhere(condition, parameters).getCount();
+
+    const [total, male, female, active] = await Promise.all([
+      builder.getCount(),
+      count('student.gender = :male', { male: 'MALE' }),
+      count('student.gender = :female', { female: 'FEMALE' }),
+      count('(student.status = :activeStatus OR student.status IS NULL)', { activeStatus: 'ACTIVE' }),
+    ]);
+
+    return { total, male, female, active };
+  };
+
   promoteStudents = (
     input: PromoteStudentsInput,
     schoolId: string,
