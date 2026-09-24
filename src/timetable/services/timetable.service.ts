@@ -937,8 +937,8 @@ export class TimetableService implements OnModuleInit {
     const targetTeacherId = input.teacherId || existing.teacherId;
     const targetRoomId =
       input.roomId !== undefined ? input.roomId : existing.roomId;
-    const targetDayOfWeek = input.dayOfWeek || existing.dayOfWeek;
-    const targetPeriodId = input.periodId || existing.periodId;
+    const targetDayOfWeek = input.dayOfWeek ?? existing.dayOfWeek;
+    const targetPeriodId = input.periodId ?? existing.periodId;
     const targetIsDouble =
       input.isDoublePeriod !== undefined
         ? input.isDoublePeriod
@@ -1058,15 +1058,6 @@ export class TimetableService implements OnModuleInit {
 
     const results: TimetableMutationResult[] = [];
 
-    // Clear destination slots for this class/day to avoid duplicate conflicts
-    const destWhere: FindOptionsWhere<TimetableEntry> = {
-      schoolId,
-      termId: input.termId,
-      dayOfWeek: input.toDayOfWeek,
-    };
-    if (input.classId) destWhere.classId = input.classId;
-    await this.entryRepo.delete(destWhere);
-
     for (const src of sourceEntries) {
       const res = await this.createTimetableEntry(
         {
@@ -1103,13 +1094,6 @@ export class TimetableService implements OnModuleInit {
     if (sourceEntries.length === 0) {
       return [];
     }
-
-    // Clear destination class timetable for this term
-    await this.entryRepo.delete({
-      schoolId,
-      termId: input.termId,
-      classId: input.targetClassId,
-    });
 
     const targetAssignments = await this.classSubjectRepo.find({
       where: { classId: input.targetClassId, schoolId },

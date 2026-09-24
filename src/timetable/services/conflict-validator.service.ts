@@ -86,6 +86,8 @@ export class ConflictValidatorService {
     const className = currentClass?.name || 'This class';
     const periodName = period?.name || 'this period';
     const roomName = room?.name || 'Selected room';
+    const targetStartTime = period?.startTime;
+    const targetEndTime = period?.endTime;
 
     // 1. Teacher Overload Check (Checked FIRST: max periods per day and week)
     const maxPerDay = teacher?.maxPeriodsPerDay ?? 6;
@@ -140,16 +142,28 @@ export class ConflictValidatorService {
     }
 
     // 2. Teacher Double-Booked Check
-    const teacherConflict = await this.entryRepo.findOne({
-      where: {
-        schoolId,
-        termId,
-        teacherId,
-        dayOfWeek,
-        periodId,
-        ...(entryId ? { id: Not(entryId) } : {}),
-      },
-      relations: ['classEntity'],
+    const findOverlappingEntry = async (where: Record<string, string | number>) => {
+      if (!targetStartTime || !targetEndTime) return null;
+      const entries = await this.entryRepo.find({
+        where,
+        relations: ['period', 'classEntity', 'subject'],
+      });
+      return (
+        entries.find(
+          (candidate) =>
+            candidate.id !== entryId &&
+            candidate.period &&
+            candidate.period.startTime < targetEndTime &&
+            candidate.period.endTime > targetStartTime,
+        ) || null
+      );
+    };
+
+    const teacherConflict = await findOverlappingEntry({
+      schoolId,
+      termId,
+      teacherId,
+      dayOfWeek,
     });
 
     if (teacherConflict && teacherConflict.classId !== classId) {
@@ -168,16 +182,11 @@ export class ConflictValidatorService {
 
     // 3. Room Double-Booked Check
     if (roomId) {
-      const roomConflict = await this.entryRepo.findOne({
-        where: {
-          schoolId,
-          termId,
-          roomId,
-          dayOfWeek,
-          periodId,
-          ...(entryId ? { id: Not(entryId) } : {}),
-        },
-        relations: ['classEntity'],
+      const roomConflict = await findOverlappingEntry({
+        schoolId,
+        termId,
+        roomId,
+        dayOfWeek,
       });
 
       if (roomConflict && roomConflict.classId !== classId) {
@@ -221,16 +230,11 @@ export class ConflictValidatorService {
     }
 
     // 5. Class Duplicate Assignment Check (same class, same day/period, another subject)
-    const classConflict = await this.entryRepo.findOne({
-      where: {
-        schoolId,
-        termId,
-        classId,
-        dayOfWeek,
-        periodId,
-        ...(entryId ? { id: Not(entryId) } : {}),
-      },
-      relations: ['subject'],
+    const classConflict = await findOverlappingEntry({
+      schoolId,
+      termId,
+      classId,
+      dayOfWeek,
     });
 
     if (classConflict) {
@@ -239,7 +243,7 @@ export class ConflictValidatorService {
       violations.push({
         type: ConflictType.CLASS_DUPLICATE_SLOT,
         severity: ConflictSeverity.BLOCKING,
-        message: `${className} already has ${existingSubjectName} scheduled for ${periodName}.`,
+        message: `${className} already has ${existingSubjectName} scheduled during ${periodName} (${targetStartTime}–${targetEndTime}).`,
         dayOfWeek,
         periodId,
         classId,
