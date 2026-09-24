@@ -41,4 +41,10 @@ export class Period extends BaseEntity {
   @Field(() => [String])
   @Column({ type: 'uuid', array: true, default: '{}' })
   classIds!: string[];
+
+  @Field(() => [Int], { nullable: true })
+  dayOfWeeks?: number[];
+
+  @Field(() => [String], { nullable: true })
+  groupedIds?: string[];
 }

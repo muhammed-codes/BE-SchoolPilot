@@ -32,6 +32,7 @@ export interface GenerateScheduleInput {
   endTime: string;
   teachingDurationMinutes: number;
   blocks: ScheduleBlockConfig[];
+  unallocatedTimeAsPeriod?: boolean;
 }
 
 export interface GeneratedScheduleBlock {
@@ -175,7 +176,12 @@ export class ScheduleGeneratorService {
       const availableMinutes = nextBoundary - cursor;
       if (availableMinutes < input.teachingDurationMinutes) {
         if (availableMinutes > 0) {
-          this.addBlock(generated, 'Unallocated time', 'TRANSITION', cursor, availableMinutes);
+          if (input.unallocatedTimeAsPeriod) {
+            periodNumber += 1;
+            this.addBlock(generated, `Period ${periodNumber}`, 'TEACHING', cursor, availableMinutes, periodNumber);
+          } else {
+            this.addBlock(generated, 'Unallocated time', 'TRANSITION', cursor, availableMinutes);
+          }
           cursor = nextBoundary;
         }
         continue;

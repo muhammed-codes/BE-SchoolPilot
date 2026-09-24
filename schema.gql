@@ -490,6 +490,7 @@ input GenerateSchoolDayScheduleInput {
   endTime: String!
   startTime: String!
   teachingDurationMinutes: Int!
+  unallocatedTimeAsPeriod: Boolean! = false
 }
 
 type GeneratedScheduleBlockResult {
@@ -838,7 +839,9 @@ type Period {
   classIds: [String!]!
   createdAt: DateTime!
   dayOfWeek: Int
+  dayOfWeeks: [Int!]
   endTime: String!
+  groupedIds: [String!]
   id: ID!
   isActive: Boolean!
   name: String!
@@ -925,6 +928,7 @@ input PreviewSchoolDayScheduleInput {
   endTime: String!
   startTime: String!
   teachingDurationMinutes: Int!
+  unallocatedTimeAsPeriod: Boolean! = false
 }
 
 input PromoteStudentsInput {
@@ -1267,6 +1271,7 @@ type SchoolDaySchedulePreviewResult {
   dayOfWeeks: [Int!]!
   errors: [String!]!
   teachingPeriodCount: Int!
+  unallocatedTimeAsPeriod: Boolean!
   valid: Boolean!
   warnings: [String!]!
 }

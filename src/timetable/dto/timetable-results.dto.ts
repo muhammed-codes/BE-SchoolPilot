@@ -126,6 +126,9 @@ export class SchoolDaySchedulePreviewResult {
   classIds!: string[];
 
   @Field(() => Boolean)
+  unallocatedTimeAsPeriod!: boolean;
+
+  @Field(() => Boolean)
   valid!: boolean;
 
   @Field(() => [String])

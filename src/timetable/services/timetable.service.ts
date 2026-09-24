@@ -138,6 +138,7 @@ export class TimetableService implements OnModuleInit {
     return {
       dayOfWeeks: [...input.dayOfWeeks].sort((a, b) => a - b),
       classIds: input.classIds || [],
+      unallocatedTimeAsPeriod: input.unallocatedTimeAsPeriod ?? false,
       ...generated,
       blocks: generated.blocks as any,
     };
@@ -419,10 +420,36 @@ export class TimetableService implements OnModuleInit {
 
   async getPeriods(schoolId: string): Promise<Period[]> {
     await this.ensureTableColumns();
-    return this.periodRepo.find({
+    const periods = await this.periodRepo.find({
       where: { schoolId },
       order: { orderIndex: 'ASC' },
     });
+    const groups = new Map<string, Period[]>();
+    for (const period of periods) {
+      const key = JSON.stringify([
+        period.name,
+        period.startTime,
+        period.endTime,
+        period.orderIndex,
+        period.slotType || 'TEACHING',
+        [...(period.classIds || [])].sort(),
+      ]);
+      const group = groups.get(key) || [];
+      group.push(period);
+      groups.set(key, group);
+    }
+    for (const group of groups.values()) {
+      const dayOfWeeks = group
+        .filter((period) => period.dayOfWeek !== null && period.dayOfWeek !== undefined)
+        .map((period) => period.dayOfWeek as number)
+        .sort((a, b) => a - b);
+      const groupedIds = group.map((period) => period.id);
+      for (const period of group) {
+        period.dayOfWeeks = dayOfWeeks;
+        period.groupedIds = groupedIds;
+      }
+    }
+    return periods;
   }
 
   async initDefaultPeriods(schoolId: string): Promise<Period[]> {
@@ -526,7 +553,17 @@ export class TimetableService implements OnModuleInit {
   async deletePeriod(id: string, schoolId: string): Promise<boolean> {
     const period = await this.periodRepo.findOne({ where: { id, schoolId } });
     if (!period) throw new NotFoundException('Period not found');
-    await this.periodRepo.remove(period);
+    const candidates = await this.periodRepo.find({ where: { schoolId } });
+    const classIds = [...(period.classIds || [])].sort();
+    const matchingPeriods = candidates.filter((candidate) =>
+      candidate.name === period.name &&
+      candidate.startTime === period.startTime &&
+      candidate.endTime === period.endTime &&
+      candidate.orderIndex === period.orderIndex &&
+      (candidate.slotType || 'TEACHING') === (period.slotType || 'TEACHING') &&
+      JSON.stringify([...(candidate.classIds || [])].sort()) === JSON.stringify(classIds),
+    );
+    await this.periodRepo.remove(matchingPeriods);
     return true;
   }
 

@@ -228,6 +228,10 @@ export class PreviewSchoolDayScheduleInput {
   @IsUUID('4', { each: true })
   classIds!: string[];
 
+  @Field(() => Boolean, { defaultValue: false })
+  @IsBoolean()
+  unallocatedTimeAsPeriod = false;
+
   @Field()
   @IsString()
   startTime!: string;

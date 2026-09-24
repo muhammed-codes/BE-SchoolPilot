@@ -112,4 +112,17 @@ describe('ScheduleGeneratorService', () => {
     generator.generate(input);
     expect(input).toEqual(copy);
   });
+
+  it('can promote an unallocated gap into a standalone teaching period', () => {
+    const result = generator.generate({
+      startTime: '08:00',
+      endTime: '10:00',
+      teachingDurationMinutes: 40,
+      blocks: [{ name: 'Lunch', type: 'LUNCH', durationMinutes: 20, placement: 'AT_TIME', atTime: '09:40' }],
+      unallocatedTimeAsPeriod: true,
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.blocks.some((block) => block.name === 'Period 3' && block.isTeaching)).toBe(true);
+  });
 });
