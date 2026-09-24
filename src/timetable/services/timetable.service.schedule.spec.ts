@@ -60,4 +60,38 @@ describe('TimetableService school-day schedule API', () => {
     expect(save).toHaveBeenCalledTimes(1);
     expect(result.createdPeriods).toEqual(savedPeriods);
   });
+
+  it('persists each generated block for every selected day and class scope', async () => {
+    const service = makeService(0, 0);
+    service.classRepo.count.mockResolvedValue(2);
+    const created: any[] = [];
+    service.dataSource.transaction.mockImplementation(async (callback: Function) =>
+      callback({
+        getRepository: () => ({
+          create: jest.fn((value) => {
+            created.push(value);
+            return value;
+          }),
+          save: jest.fn().mockResolvedValue(created),
+        }),
+      }),
+    );
+
+    const result = await service.generateSchoolDaySchedule({
+      ...input,
+      dayOfWeeks: [3, 1],
+      classIds: ['class-1', 'class-2'],
+    } as any, 'school-1');
+
+    expect(result.success).toBe(true);
+    expect(created).toHaveLength(6);
+    expect(new Set(created.map((period) => period.dayOfWeek))).toEqual(new Set([1, 3]));
+    expect(created.every((period) => period.classIds.join(',') === 'class-1,class-2')).toBe(true);
+  });
+
+  it('rejects invalid schedule scope before preview or persistence', async () => {
+    const service = makeService(0, 0);
+    await expect(service.previewSchoolDaySchedule({ ...input, dayOfWeeks: [0], classIds: [] } as any, 'school-1'))
+      .rejects.toThrow('Select valid days');
+  });
 });
