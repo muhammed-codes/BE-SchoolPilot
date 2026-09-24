@@ -648,9 +648,9 @@ export class StudentsService {
 
     const [total, male, female, active] = await Promise.all([
       builder.getCount(),
-      count('student.gender = :male', { male: 'MALE' }),
-      count('student.gender = :female', { female: 'FEMALE' }),
-      count('(student.status = :activeStatus OR student.status IS NULL)', { activeStatus: 'ACTIVE' }),
+      count('student.gender = :male', { male: Gender.MALE }),
+      count('student.gender = :female', { female: Gender.FEMALE }),
+      count('(student.status = :activeStatus OR student.status IS NULL)', { activeStatus: StudentStatus.ACTIVE }),
     ]);
 
     return { total, male, female, active };
