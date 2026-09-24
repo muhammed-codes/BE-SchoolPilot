@@ -17,6 +17,7 @@ import { School } from '../schools/entities/school.entity';
 import { TimetableService } from './services/timetable.service';
 import { ConflictValidatorService } from './services/conflict-validator.service';
 import { TimetableResolver } from './resolvers/timetable.resolver';
+import { ScheduleGeneratorService } from './services/schedule-generator.service';
 
 @Module({
   imports: [
@@ -37,7 +38,7 @@ import { TimetableResolver } from './resolvers/timetable.resolver';
       School,
     ]),
   ],
-  providers: [TimetableService, ConflictValidatorService, TimetableResolver],
+  providers: [TimetableService, ConflictValidatorService, TimetableResolver, ScheduleGeneratorService],
   exports: [TimetableService],
 })
 export class TimetableModule {}

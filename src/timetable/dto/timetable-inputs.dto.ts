@@ -18,7 +18,9 @@ import {
   ApprovalStatus,
   TimetableExportView,
   PeriodSlotType,
+  ScheduleBlockPlacement,
 } from '../enums/timetable.enums';
+import { SCHEDULE_BLOCK_TYPES } from '../services/schedule-generator.service';
 
 // ── Room Inputs ─────────────────────────────────────────────────────────────
 @InputType()
@@ -178,6 +180,61 @@ export class UpdatePeriodInput {
   @IsNumber()
   dayOfWeek?: number | null;
 }
+
+@InputType()
+export class ScheduleBlockConfigInput {
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  name!: string;
+
+  @Field(() => PeriodSlotType)
+  @IsEnum(PeriodSlotType)
+  type!: (typeof SCHEDULE_BLOCK_TYPES)[number];
+
+  @Field(() => Int)
+  @IsNumber()
+  @Min(1)
+  durationMinutes!: number;
+
+  @Field(() => ScheduleBlockPlacement)
+  @IsEnum(ScheduleBlockPlacement)
+  placement!: ScheduleBlockPlacement;
+
+  @Field(() => Int, { nullable: true })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  afterPeriodNumber?: number;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  atTime?: string;
+}
+
+@InputType()
+export class PreviewSchoolDayScheduleInput {
+  @Field()
+  @IsString()
+  startTime!: string;
+
+  @Field()
+  @IsString()
+  endTime!: string;
+
+  @Field(() => Int)
+  @IsNumber()
+  @Min(1)
+  teachingDurationMinutes!: number;
+
+  @Field(() => [ScheduleBlockConfigInput], { defaultValue: [] })
+  @IsArray()
+  blocks!: ScheduleBlockConfigInput[];
+}
+
+@InputType()
+export class GenerateSchoolDayScheduleInput extends PreviewSchoolDayScheduleInput {}
 
 @InputType()
 export class ReorderPeriodItem {

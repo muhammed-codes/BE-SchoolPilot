@@ -6,7 +6,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, In, Not } from 'typeorm';
+import { Repository, FindOptionsWhere, In, Not, DataSource } from 'typeorm';
 import { Room } from '../entities/room.entity';
 import { SchoolDay } from '../entities/school-day.entity';
 import { Period } from '../entities/period.entity';
@@ -49,14 +49,22 @@ import {
   UpdateTeacherWorkloadInput,
   UpdateTeachersWorkloadInput,
   ExportTimetablePdfInput,
+  PreviewSchoolDayScheduleInput,
+  GenerateSchoolDayScheduleInput,
 } from '../dto/timetable-inputs.dto';
 import {
   TimetableMutationResult,
   TeacherTimetableResult,
   ChildTimetableResult,
   TimetablePdfResult,
+  SchoolDaySchedulePreviewResult,
+  SchoolDayScheduleGenerationResult,
 } from '../dto/timetable-results.dto';
 import { ConflictValidatorService } from './conflict-validator.service';
+import {
+  ScheduleGeneratorService,
+  GenerateScheduleInput,
+} from './schedule-generator.service';
 import {
   renderTimetableHtml,
   TimetablePdfRenderData,
@@ -94,10 +102,89 @@ export class TimetableService implements OnModuleInit {
     @InjectRepository(School)
     private readonly schoolRepo: Repository<School>,
     private readonly conflictValidator: ConflictValidatorService,
+    private readonly dataSource: DataSource,
+    private readonly scheduleGenerator: ScheduleGeneratorService,
   ) {}
 
   async onModuleInit() {
     await this.ensureTableColumns();
+  }
+
+  private previewSchedule(input: PreviewSchoolDayScheduleInput): SchoolDaySchedulePreviewResult {
+    const generated = this.scheduleGenerator.generate(input as GenerateScheduleInput);
+    return {
+      ...generated,
+      blocks: generated.blocks as any,
+    };
+  }
+
+  async previewSchoolDaySchedule(
+    input: PreviewSchoolDayScheduleInput,
+  ): Promise<SchoolDaySchedulePreviewResult> {
+    return this.previewSchedule(input);
+  }
+
+  async generateSchoolDaySchedule(
+    input: GenerateSchoolDayScheduleInput,
+    schoolId: string,
+  ): Promise<SchoolDayScheduleGenerationResult> {
+    const preview = this.previewSchedule(input);
+    const [existingPeriodCount, existingAssignmentCount] = await Promise.all([
+      this.periodRepo.count({ where: { schoolId } }),
+      this.entryRepo.count({ where: { schoolId } }),
+    ]);
+
+    if (!preview.valid) {
+      return {
+        success: false,
+        message: 'The schedule configuration is invalid. No periods were generated.',
+        existingPeriodCount,
+        existingAssignmentCount,
+        preview,
+        createdPeriods: [],
+      };
+    }
+
+    if (existingPeriodCount > 0 || existingAssignmentCount > 0) {
+      return {
+        success: false,
+        message:
+          existingAssignmentCount > 0
+            ? 'Existing timetable assignments were found. Generation was stopped to protect them.'
+            : 'Existing timetable periods were found. Generation was stopped to avoid duplicate schedules.',
+        existingPeriodCount,
+        existingAssignmentCount,
+        preview,
+        createdPeriods: [],
+      };
+    }
+
+    const createdPeriods = await this.dataSource.transaction(async (manager) => {
+      const periodRepo = manager.getRepository(Period);
+      const entities = preview.blocks.map((block) =>
+        periodRepo.create({
+          schoolId,
+          name: block.name,
+          startTime: block.startTime,
+          endTime: block.endTime,
+          orderIndex: block.order,
+          isActive: true,
+          dayOfWeek: null,
+          slotType: block.type as any,
+          classIds: [],
+        }),
+      );
+      return periodRepo.save(entities);
+    });
+
+    return {
+      success: true,
+      message: `Generated ${preview.teachingPeriodCount} teaching periods and ${preview.blocks.length - preview.teachingPeriodCount} non-teaching blocks.`,
+      existingPeriodCount,
+      existingAssignmentCount,
+      preview,
+      createdPeriods,
+    };
   }
 
   private hasEnsuredColumns = false;

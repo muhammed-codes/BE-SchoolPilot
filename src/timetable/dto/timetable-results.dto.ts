@@ -1,6 +1,8 @@
 import { ObjectType, Field, Int } from '@nestjs/graphql';
 import { TimetableEntry } from '../entities/timetable-entry.entity';
+import { Period } from '../entities/period.entity';
 import { ConflictSeverity, ConflictType } from '../enums/timetable.enums';
+import { PeriodSlotType } from '../enums/timetable.enums';
 import { ClassEntity } from '../../classes/entities/class.entity';
 import { Student } from '../../students/entities/student.entity';
 
@@ -86,4 +88,70 @@ export class TimetablePdfResult {
 
   @Field()
   title!: string;
+}
+
+@ObjectType()
+export class GeneratedScheduleBlockResult {
+  @Field()
+  name!: string;
+
+  @Field(() => PeriodSlotType)
+  type!: PeriodSlotType;
+
+  @Field()
+  startTime!: string;
+
+  @Field()
+  endTime!: string;
+
+  @Field(() => Int)
+  durationMinutes!: number;
+
+  @Field(() => Int, { nullable: true })
+  periodNumber?: number;
+
+  @Field(() => Int)
+  order!: number;
+
+  @Field(() => Boolean)
+  isTeaching!: boolean;
+}
+
+@ObjectType()
+export class SchoolDaySchedulePreviewResult {
+  @Field(() => Boolean)
+  valid!: boolean;
+
+  @Field(() => [String])
+  errors!: string[];
+
+  @Field(() => [String])
+  warnings!: string[];
+
+  @Field(() => Int)
+  teachingPeriodCount!: number;
+
+  @Field(() => [GeneratedScheduleBlockResult])
+  blocks!: GeneratedScheduleBlockResult[];
+}
+
+@ObjectType()
+export class SchoolDayScheduleGenerationResult {
+  @Field(() => Boolean)
+  success!: boolean;
+
+  @Field()
+  message!: string;
+
+  @Field(() => Int)
+  existingPeriodCount!: number;
+
+  @Field(() => Int)
+  existingAssignmentCount!: number;
+
+  @Field(() => SchoolDaySchedulePreviewResult)
+  preview!: SchoolDaySchedulePreviewResult;
+
+  @Field(() => [Period])
+  createdPeriods!: Period[];
 }

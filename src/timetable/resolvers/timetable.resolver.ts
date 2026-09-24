@@ -36,12 +36,16 @@ import {
   UpdateTeacherWorkloadInput,
   UpdateTeachersWorkloadInput,
   ExportTimetablePdfInput,
+  PreviewSchoolDayScheduleInput,
+  GenerateSchoolDayScheduleInput,
 } from '../dto/timetable-inputs.dto';
 import {
   TimetableMutationResult,
   TeacherTimetableResult,
   ChildTimetableResult,
   TimetablePdfResult,
+  SchoolDaySchedulePreviewResult,
+  SchoolDayScheduleGenerationResult,
 } from '../dto/timetable-results.dto';
 
 const ADMIN_ROLES = [
@@ -60,6 +64,28 @@ export class TimetableResolver {
   // ══════════════════════════════════════════════════════════════════════════
   // ROOMS (Admin Only)
   // ══════════════════════════════════════════════════════════════════════════
+  @Query(() => SchoolDaySchedulePreviewResult)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
+  previewSchoolDaySchedule(
+    @Args('input') input: PreviewSchoolDayScheduleInput,
+    @CurrentUser() _user: { schoolId: string },
+  ) {
+    return this.timetableService.previewSchoolDaySchedule(input);
+  }
+
+  @Mutation(() => SchoolDayScheduleGenerationResult)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...ADMIN_ROLES)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
+  generateSchoolDaySchedule(
+    @Args('input') input: GenerateSchoolDayScheduleInput,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.timetableService.generateSchoolDaySchedule(input, user.schoolId);
+  }
+
   @Query(() => [Room])
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES, UserRole.CLASS_TEACHER, UserRole.SUBJECT_TEACHER)

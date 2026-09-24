@@ -32,6 +32,12 @@ export enum PeriodSlotType {
   OTHER = 'OTHER',
 }
 
+export enum ScheduleBlockPlacement {
+  BEFORE_TEACHING = 'BEFORE_TEACHING',
+  AFTER_PERIOD = 'AFTER_PERIOD',
+  AT_TIME = 'AT_TIME',
+}
+
 export enum AvailabilityStatus {
   AVAILABLE = 'AVAILABLE',
   UNAVAILABLE = 'UNAVAILABLE',
@@ -74,6 +80,7 @@ export enum ConflictType {
 registerEnumType(RoomType, { name: 'RoomType' });
 registerEnumType(NonTeachingSlotType, { name: 'NonTeachingSlotType' });
 registerEnumType(PeriodSlotType, { name: 'PeriodSlotType' });
+registerEnumType(ScheduleBlockPlacement, { name: 'ScheduleBlockPlacement' });
 registerEnumType(AvailabilityStatus, { name: 'AvailabilityStatus' });
 registerEnumType(AvailabilitySource, { name: 'AvailabilitySource' });
 registerEnumType(ApprovalStatus, { name: 'ApprovalStatus' });
