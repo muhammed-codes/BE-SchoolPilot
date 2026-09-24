@@ -483,6 +483,24 @@ type GenerateInvoicesResult {
   skipped: Int!
 }
 
+input GenerateSchoolDayScheduleInput {
+  blocks: [ScheduleBlockConfigInput!]! = []
+  endTime: String!
+  startTime: String!
+  teachingDurationMinutes: Int!
+}
+
+type GeneratedScheduleBlockResult {
+  durationMinutes: Int!
+  endTime: String!
+  isTeaching: Boolean!
+  name: String!
+  order: Int!
+  periodNumber: Int
+  startTime: String!
+  type: PeriodSlotType!
+}
+
 type GradeDistributionItem {
   count: Int!
   grade: String!
@@ -599,6 +617,7 @@ type Mutation {
   generateBulkReportCards(resultSheetId: String!): String!
   generateInvoices(input: GenerateInvoicesInput!): GenerateInvoicesResult!
   generateReportCard(studentResultId: String!): String!
+  generateSchoolDaySchedule(input: GenerateSchoolDayScheduleInput!): SchoolDayScheduleGenerationResult!
   initDefaultPeriods: [Period!]!
   initDefaultSchoolDays: [SchoolDay!]!
   linkParent(parentUserId: String!, studentId: String!): Student!
@@ -829,11 +848,18 @@ type Period {
 }
 
 enum PeriodSlotType {
+  ACTIVITY
   ASSEMBLY
   BREAK
+  CUSTOM
   EXTRACURRICULAR
+  LUNCH
   OTHER
+  PRAYER
+  REGISTRATION
+  STUDY
   TEACHING
+  TRANSITION
 }
 
 enum PermissionAction {
@@ -888,6 +914,13 @@ type PlatformStats {
   totalSchools: Int!
   totalStudents: Int!
   totalUsers: Int!
+}
+
+input PreviewSchoolDayScheduleInput {
+  blocks: [ScheduleBlockConfigInput!]! = []
+  endTime: String!
+  startTime: String!
+  teachingDurationMinutes: Int!
 }
 
 input PromoteStudentsInput {
@@ -948,6 +981,7 @@ type Query {
   permissionGroupPermissions(groupId: String!, schoolId: String): [PermissionGroupPermission!]!
   permissionGroups(schoolId: String): [PermissionGroup!]!
   platformStats: PlatformStats!
+  previewSchoolDaySchedule(input: PreviewSchoolDayScheduleInput!): SchoolDaySchedulePreviewResult!
   receiptTemplates: [ReceiptTemplate!]!
   resolvedBankAccounts(feeCategoryId: String): [SchoolBankAccount!]!
   resultAnalytics(classId: String!, sessionId: String!, subjectId: String, termId: String!): ResultAnalytics!
@@ -1144,6 +1178,21 @@ input SaveSubjectScoresInput {
   submit: Boolean!
 }
 
+input ScheduleBlockConfigInput {
+  afterPeriodNumber: Int
+  atTime: String
+  durationMinutes: Int!
+  name: String!
+  placement: ScheduleBlockPlacement!
+  type: PeriodSlotType!
+}
+
+enum ScheduleBlockPlacement {
+  AFTER_PERIOD
+  AT_TIME
+  BEFORE_TEACHING
+}
+
 type School {
   address: String
   contactPersonEmail: String
@@ -1196,6 +1245,23 @@ type SchoolDay {
   orderIndex: Int!
   schoolId: String!
   updatedAt: DateTime!
+}
+
+type SchoolDayScheduleGenerationResult {
+  createdPeriods: [Period!]!
+  existingAssignmentCount: Int!
+  existingPeriodCount: Int!
+  message: String!
+  preview: SchoolDaySchedulePreviewResult!
+  success: Boolean!
+}
+
+type SchoolDaySchedulePreviewResult {
+  blocks: [GeneratedScheduleBlockResult!]!
+  errors: [String!]!
+  teachingPeriodCount: Int!
+  valid: Boolean!
+  warnings: [String!]!
 }
 
 enum ScoreComponent {
