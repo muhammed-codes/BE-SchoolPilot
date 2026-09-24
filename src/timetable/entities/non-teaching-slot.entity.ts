@@ -43,4 +43,8 @@ export class NonTeachingSlot extends BaseEntity {
   @Field(() => String, { nullable: true })
   @Column({ type: 'varchar', nullable: true })
   endTime?: string | null;
+
+  @Field(() => [String])
+  @Column({ type: 'uuid', array: true, default: '{}' })
+  teacherIds!: string[];
 }

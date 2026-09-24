@@ -226,9 +226,15 @@ export class TimetableService implements OnModuleInit {
         ALTER TABLE "periods" ADD COLUMN IF NOT EXISTS "dayOfWeek" int NULL;
         ALTER TABLE "periods" ADD COLUMN IF NOT EXISTS "slotType" varchar NOT NULL DEFAULT 'TEACHING';
         ALTER TABLE "periods" ADD COLUMN IF NOT EXISTS "classIds" uuid[] NOT NULL DEFAULT '{}';
+        ALTER TABLE "periods" ADD COLUMN IF NOT EXISTS "teacherIds" uuid[] NOT NULL DEFAULT '{}';
+        ALTER TABLE "non_teaching_slots" ADD COLUMN IF NOT EXISTS "teacherIds" uuid[] NOT NULL DEFAULT '{}';
+        ALTER TABLE "class_subjects" ADD COLUMN IF NOT EXISTS "teacherIds" uuid[] NOT NULL DEFAULT '{}';
         UPDATE "periods" SET "isActive" = true WHERE "isActive" IS NULL;
         UPDATE "periods" SET "slotType" = 'TEACHING' WHERE "slotType" IS NULL;
         UPDATE "periods" SET "classIds" = '{}' WHERE "classIds" IS NULL;
+        UPDATE "periods" SET "teacherIds" = '{}' WHERE "teacherIds" IS NULL;
+        UPDATE "non_teaching_slots" SET "teacherIds" = '{}' WHERE "teacherIds" IS NULL;
+        UPDATE "class_subjects" SET "teacherIds" = '{}' WHERE "teacherIds" IS NULL;
         ALTER TABLE "periods" ALTER COLUMN "isActive" SET DEFAULT true;
         ALTER TABLE "periods" ALTER COLUMN "isActive" SET NOT NULL;
         ALTER TABLE "rooms" ALTER COLUMN "capacity" DROP NOT NULL;
@@ -237,6 +243,14 @@ export class TimetableService implements OnModuleInit {
     } catch (err) {
       console.warn('Could not auto-add timetable columns:', err);
     }
+  }
+
+  private async validateTeacherIds(teacherIds: string[] | undefined, schoolId: string): Promise<string[]> {
+    const ids = [...new Set(teacherIds || [])];
+    if (ids.length === 0) return [];
+    const count = await this.userRepo.count({ where: { schoolId, id: In(ids) } });
+    if (count !== ids.length) throw new BadRequestException('One or more selected staff members are invalid.');
+    return ids;
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -483,6 +497,7 @@ export class TimetableService implements OnModuleInit {
         throw new BadRequestException('One or more selected classes are invalid.');
       }
     }
+    const teacherIds = await this.validateTeacherIds(input.teacherIds, schoolId);
     await this.validatePeriodTime(
       schoolId,
       input.startTime,
@@ -495,6 +510,7 @@ export class TimetableService implements OnModuleInit {
     const period = this.periodRepo.create({
       ...input,
       classIds: input.classIds || [],
+      teacherIds,
       schoolId,
       isActive: true,
     });
@@ -514,12 +530,16 @@ export class TimetableService implements OnModuleInit {
     period.isActive = period.isActive ?? true;
     period.slotType = period.slotType ?? 'TEACHING' as any;
     period.classIds = period.classIds ?? [];
+    period.teacherIds = period.teacherIds ?? [];
 
     const newStart = input.startTime ?? period.startTime;
     const newEnd = input.endTime ?? period.endTime;
     const newDay =
       input.dayOfWeek !== undefined ? input.dayOfWeek : period.dayOfWeek;
     const newClassIds = input.classIds ?? period.classIds ?? [];
+    const newTeacherIds = input.teacherIds !== undefined
+      ? await this.validateTeacherIds(input.teacherIds, schoolId)
+      : period.teacherIds;
     if (input.classIds?.length) {
       const classCount = await this.classRepo.count({
         where: { schoolId, id: In(input.classIds) },
@@ -547,6 +567,7 @@ export class TimetableService implements OnModuleInit {
     period.isActive = period.isActive ?? true;
     period.slotType = period.slotType ?? ('TEACHING' as any);
     period.classIds = period.classIds ?? [];
+    period.teacherIds = newTeacherIds ?? [];
     return this.periodRepo.save(period);
   }
 
@@ -595,7 +616,11 @@ export class TimetableService implements OnModuleInit {
     input: CreateNonTeachingSlotInput,
     schoolId: string,
   ): Promise<NonTeachingSlot> {
-    const slot = this.nonTeachingSlotRepo.create({ ...input, schoolId });
+    const slot = this.nonTeachingSlotRepo.create({
+      ...input,
+      teacherIds: await this.validateTeacherIds(input.teacherIds, schoolId),
+      schoolId,
+    });
     return this.nonTeachingSlotRepo.save(slot);
   }
 
@@ -607,6 +632,9 @@ export class TimetableService implements OnModuleInit {
       where: { id: input.id, schoolId },
     });
     if (!slot) throw new NotFoundException('Slot not found');
+    if (input.teacherIds !== undefined) {
+      input.teacherIds = await this.validateTeacherIds(input.teacherIds, schoolId);
+    }
     Object.assign(slot, input);
     return this.nonTeachingSlotRepo.save(slot);
   }
@@ -657,6 +685,10 @@ export class TimetableService implements OnModuleInit {
       });
       if (!teacher) throw new NotFoundException('Teacher not found');
     }
+    const teacherIds = await this.validateTeacherIds(
+      input.teacherIds?.length ? input.teacherIds : input.teacherId ? [input.teacherId] : [],
+      schoolId,
+    );
 
     let mapping = await this.classSubjectRepo.findOne({
       where: { classId: input.classId, subjectId: input.subjectId, schoolId },
@@ -664,6 +696,7 @@ export class TimetableService implements OnModuleInit {
 
     if (mapping) {
       mapping.subjectTeacherId = input.teacherId || mapping.subjectTeacherId;
+      mapping.teacherIds = teacherIds.length ? teacherIds : (mapping.teacherIds || []);
       mapping.isDoublePeriod = input.isDoublePeriod;
       mapping.periodsPerWeek = input.periodsPerWeek;
       mapping.schoolId = schoolId;
@@ -672,6 +705,7 @@ export class TimetableService implements OnModuleInit {
         classId: input.classId,
         subjectId: input.subjectId,
         subjectTeacherId: input.teacherId,
+        teacherIds,
         isDoublePeriod: input.isDoublePeriod,
         periodsPerWeek: input.periodsPerWeek,
         schoolId,
@@ -704,6 +738,11 @@ export class TimetableService implements OnModuleInit {
       }
       mapping.subjectTeacherId = input.teacherId || '';
     }
+    if (input.teacherIds !== undefined) {
+      mapping.teacherIds = await this.validateTeacherIds(input.teacherIds, schoolId);
+      mapping.subjectTeacherId = mapping.teacherIds[0] || '';
+    }
+    mapping.teacherIds = mapping.teacherIds || [];
     if (input.isDoublePeriod !== undefined) {
       mapping.isDoublePeriod = input.isDoublePeriod;
     }

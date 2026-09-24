@@ -20,6 +20,10 @@ export class ClassSubject extends BaseEntity {
   @Column({ type: 'uuid', nullable: true })
   subjectTeacherId!: string;
 
+  @Field(() => [String])
+  @Column({ type: 'uuid', array: true, default: '{}' })
+  teacherIds!: string[];
+
   @Field(() => Boolean, { nullable: true, defaultValue: false })
   @Column({ type: 'boolean', default: false })
   isDoublePeriod?: boolean;

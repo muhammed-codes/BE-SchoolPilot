@@ -86,6 +86,7 @@ input AssignClassSubjectInput {
   periodsPerWeek: Int! = 4
   subjectId: String!
   teacherId: String
+  teacherIds: [String!]
 }
 
 input AssignPermissionGroupInput {
@@ -179,6 +180,7 @@ type ClassSubject {
   subjectTeacherId: String
   teacher: User
   teacherId: String
+  teacherIds: [String!]!
   updatedAt: DateTime!
 }
 
@@ -273,6 +275,7 @@ input CreateNonTeachingSlotInput {
   name: String!
   periodId: String
   startTime: String
+  teacherIds: [String!]
   type: NonTeachingSlotType! = BREAK
 }
 
@@ -284,6 +287,7 @@ input CreatePeriodInput {
   orderIndex: Int! = 1
   slotType: PeriodSlotType! = TEACHING
   startTime: String!
+  teacherIds: [String!]
 }
 
 input CreatePermissionGroupInput {
@@ -707,6 +711,7 @@ type NonTeachingSlot {
   periodId: String
   schoolId: String!
   startTime: String
+  teacherIds: [String!]!
   type: NonTeachingSlotType!
   updatedAt: DateTime!
 }
@@ -849,6 +854,7 @@ type Period {
   schoolId: String!
   slotType: PeriodSlotType!
   startTime: String!
+  teacherIds: [String!]!
   updatedAt: DateTime!
 }
 
@@ -1669,6 +1675,7 @@ input UpdateClassSubjectAssignmentInput {
   isDoublePeriod: Boolean
   periodsPerWeek: Int
   teacherId: String
+  teacherIds: [String!]
 }
 
 input UpdateFeeCategoryInput {
@@ -1684,6 +1691,7 @@ input UpdateNonTeachingSlotInput {
   name: String
   periodId: String
   startTime: String
+  teacherIds: [String!]
   type: NonTeachingSlotType
 }
 
@@ -1697,6 +1705,7 @@ input UpdatePeriodInput {
   orderIndex: Int
   slotType: PeriodSlotType
   startTime: String
+  teacherIds: [String!]
 }
 
 input UpdatePermissionGroupInput {

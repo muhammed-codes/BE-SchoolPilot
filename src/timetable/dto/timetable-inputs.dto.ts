@@ -133,6 +133,11 @@ export class CreatePeriodInput {
   @IsOptional()
   @IsUUID('4', { each: true })
   classIds?: string[];
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  teacherIds?: string[];
 }
 
 @InputType()
@@ -175,6 +180,11 @@ export class UpdatePeriodInput {
   @IsOptional()
   @IsUUID('4', { each: true })
   classIds?: string[];
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  teacherIds?: string[];
 
   @Field(() => Int, { nullable: true })
   @IsOptional()
@@ -298,6 +308,11 @@ export class CreateNonTeachingSlotInput {
   @IsOptional()
   @IsString()
   endTime?: string;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  teacherIds?: string[];
 }
 
 @InputType()
@@ -333,6 +348,11 @@ export class UpdateNonTeachingSlotInput {
   @IsOptional()
   @IsString()
   endTime?: string;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  teacherIds?: string[];
 }
 
 // ── Class Subject Assignment Inputs ────────────────────────────────────────
@@ -350,6 +370,11 @@ export class AssignClassSubjectInput {
   @IsOptional()
   @IsUUID()
   teacherId?: string;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  teacherIds?: string[];
 
   @Field(() => Boolean, { defaultValue: false })
   @IsBoolean()
@@ -371,6 +396,11 @@ export class UpdateClassSubjectAssignmentInput {
   @IsOptional()
   @IsUUID()
   teacherId?: string;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  teacherIds?: string[];
 
   @Field(() => Boolean, { nullable: true })
   @IsOptional()
