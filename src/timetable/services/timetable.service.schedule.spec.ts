@@ -2,6 +2,8 @@ import { ScheduleGeneratorService } from './schedule-generator.service';
 import { TimetableService } from './timetable.service';
 
 const input = {
+  dayOfWeeks: [1, 2],
+  classIds: [],
   startTime: '08:00',
   endTime: '10:00',
   teachingDurationMinutes: 40,
@@ -13,6 +15,7 @@ function makeService(periodCount: number, assignmentCount: number) {
   service.scheduleGenerator = new ScheduleGeneratorService();
   service.periodRepo = { count: jest.fn().mockResolvedValue(periodCount) };
   service.entryRepo = { count: jest.fn().mockResolvedValue(assignmentCount) };
+  service.classRepo = { count: jest.fn().mockResolvedValue(0) };
   service.dataSource = { transaction: jest.fn() };
   return service;
 }
@@ -20,7 +23,7 @@ function makeService(periodCount: number, assignmentCount: number) {
 describe('TimetableService school-day schedule API', () => {
   it('previews without querying or mutating persistence', async () => {
     const service = makeService(0, 0);
-    const result = await service.previewSchoolDaySchedule(input);
+    const result = await service.previewSchoolDaySchedule(input, 'school-1');
 
     expect(result.valid).toBe(true);
     expect(result.teachingPeriodCount).toBe(3);
@@ -53,7 +56,7 @@ describe('TimetableService school-day schedule API', () => {
 
     expect(result.success).toBe(true);
     expect(service.dataSource.transaction).toHaveBeenCalledTimes(1);
-    expect(create).toHaveBeenCalledTimes(3);
+    expect(create).toHaveBeenCalledTimes(6);
     expect(save).toHaveBeenCalledTimes(1);
     expect(result.createdPeriods).toEqual(savedPeriods);
   });

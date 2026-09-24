@@ -110,9 +110,34 @@ export class TimetableService implements OnModuleInit {
     await this.ensureTableColumns();
   }
 
-  private previewSchedule(input: PreviewSchoolDayScheduleInput): SchoolDaySchedulePreviewResult {
+  private async validateScheduleScope(input: PreviewSchoolDayScheduleInput, schoolId: string): Promise<void> {
+    if (input.dayOfWeeks.some((day) => !Number.isInteger(day) || day < 1 || day > 7)) {
+      throw new BadRequestException('Select valid days from Monday to Sunday.');
+    }
+
+    const uniqueClassIds = new Set(input.classIds || []);
+    if (uniqueClassIds.size !== (input.classIds || []).length) {
+      throw new BadRequestException('A class cannot be selected more than once.');
+    }
+    if (uniqueClassIds.size > 0) {
+      const matchingClasses = await this.classRepo.count({
+        where: { schoolId, id: In([...uniqueClassIds]) },
+      });
+      if (matchingClasses !== uniqueClassIds.size) {
+        throw new BadRequestException('One or more selected classes are invalid.');
+      }
+    }
+  }
+
+  private async previewSchedule(
+    input: PreviewSchoolDayScheduleInput,
+    schoolId: string,
+  ): Promise<SchoolDaySchedulePreviewResult> {
+    await this.validateScheduleScope(input, schoolId);
     const generated = this.scheduleGenerator.generate(input as GenerateScheduleInput);
     return {
+      dayOfWeeks: [...input.dayOfWeeks].sort((a, b) => a - b),
+      classIds: input.classIds || [],
       ...generated,
       blocks: generated.blocks as any,
     };
@@ -120,15 +145,16 @@ export class TimetableService implements OnModuleInit {
 
   async previewSchoolDaySchedule(
     input: PreviewSchoolDayScheduleInput,
+    schoolId: string,
   ): Promise<SchoolDaySchedulePreviewResult> {
-    return this.previewSchedule(input);
+    return this.previewSchedule(input, schoolId);
   }
 
   async generateSchoolDaySchedule(
     input: GenerateSchoolDayScheduleInput,
     schoolId: string,
   ): Promise<SchoolDayScheduleGenerationResult> {
-    const preview = this.previewSchedule(input);
+    const preview = await this.previewSchedule(input, schoolId);
     const [existingPeriodCount, existingAssignmentCount] = await Promise.all([
       this.periodRepo.count({ where: { schoolId } }),
       this.entryRepo.count({ where: { schoolId } }),
@@ -161,18 +187,20 @@ export class TimetableService implements OnModuleInit {
 
     const createdPeriods = await this.dataSource.transaction(async (manager) => {
       const periodRepo = manager.getRepository(Period);
-      const entities = preview.blocks.map((block) =>
-        periodRepo.create({
-          schoolId,
-          name: block.name,
-          startTime: block.startTime,
-          endTime: block.endTime,
-          orderIndex: block.order,
-          isActive: true,
-          dayOfWeek: null,
-          slotType: block.type as any,
-          classIds: [],
-        }),
+      const entities = preview.dayOfWeeks.flatMap((dayOfWeek) =>
+        preview.blocks.map((block) =>
+          periodRepo.create({
+            schoolId,
+            name: block.name,
+            startTime: block.startTime,
+            endTime: block.endTime,
+            orderIndex: block.order,
+            isActive: true,
+            dayOfWeek,
+            slotType: block.type as any,
+            classIds: preview.classIds,
+          }),
+        ),
       );
       return periodRepo.save(entities);
     });

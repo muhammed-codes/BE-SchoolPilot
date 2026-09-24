@@ -119,6 +119,12 @@ export class GeneratedScheduleBlockResult {
 
 @ObjectType()
 export class SchoolDaySchedulePreviewResult {
+  @Field(() => [Int])
+  dayOfWeeks!: number[];
+
+  @Field(() => [String])
+  classIds!: string[];
+
   @Field(() => Boolean)
   valid!: boolean;
 

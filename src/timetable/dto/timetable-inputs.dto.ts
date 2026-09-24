@@ -10,6 +10,7 @@ import {
   Max,
   IsEnum,
   IsArray,
+  ArrayMinSize,
 } from 'class-validator';
 import {
   RoomType,
@@ -215,6 +216,18 @@ export class ScheduleBlockConfigInput {
 
 @InputType()
 export class PreviewSchoolDayScheduleInput {
+  @Field(() => [Int])
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsNumber({}, { each: true })
+  dayOfWeeks!: number[];
+
+  /** Empty means the explicitly selected entire school; non-empty scopes to those classes. */
+  @Field(() => [String], { defaultValue: [] })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  classIds!: string[];
+
   @Field()
   @IsString()
   startTime!: string;

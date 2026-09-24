@@ -70,9 +70,9 @@ export class TimetableResolver {
   @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   previewSchoolDaySchedule(
     @Args('input') input: PreviewSchoolDayScheduleInput,
-    @CurrentUser() _user: { schoolId: string },
+    @CurrentUser() user: { schoolId: string },
   ) {
-    return this.timetableService.previewSchoolDaySchedule(input);
+    return this.timetableService.previewSchoolDaySchedule(input, user.schoolId);
   }
 
   @Mutation(() => SchoolDayScheduleGenerationResult)
