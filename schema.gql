@@ -615,7 +615,7 @@ type Mutation {
   deactivateUser(id: String!): User!
   deleteAnnouncement(id: String!): Boolean!
   deleteNonTeachingSlot(id: String!): Boolean!
-  deletePeriod(id: String!): Boolean!
+  deletePeriod(deleteGroup: Boolean! = true, id: String!): Boolean!
   deletePermissionGroup(groupId: String!, schoolId: String): Boolean!
   deleteRoom(id: String!): Boolean!
   deleteSubject(id: String!): Boolean!

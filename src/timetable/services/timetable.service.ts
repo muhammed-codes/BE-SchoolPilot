@@ -571,9 +571,13 @@ export class TimetableService implements OnModuleInit {
     return this.periodRepo.save(period);
   }
 
-  async deletePeriod(id: string, schoolId: string): Promise<boolean> {
+  async deletePeriod(id: string, schoolId: string, deleteGroup = true): Promise<boolean> {
     const period = await this.periodRepo.findOne({ where: { id, schoolId } });
     if (!period) throw new NotFoundException('Period not found');
+    if (!deleteGroup) {
+      await this.periodRepo.remove(period);
+      return true;
+    }
     const candidates = await this.periodRepo.find({ where: { schoolId } });
     const classIds = [...(period.classIds || [])].sort();
     const matchingPeriods = candidates.filter((candidate) =>

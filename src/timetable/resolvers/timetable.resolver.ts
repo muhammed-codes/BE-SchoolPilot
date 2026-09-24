@@ -214,9 +214,10 @@ export class TimetableResolver {
   @RequirePermission(AppResource.TIMETABLE, PermissionAction.CONFIGURE)
   deletePeriod(
     @Args('id') id: string,
+    @Args('deleteGroup', { type: () => Boolean, defaultValue: true }) deleteGroup: boolean,
     @CurrentUser() user: { schoolId: string },
   ) {
-    return this.timetableService.deletePeriod(id, user.schoolId);
+    return this.timetableService.deletePeriod(id, user.schoolId, deleteGroup);
   }
 
   @Mutation(() => [Period])
