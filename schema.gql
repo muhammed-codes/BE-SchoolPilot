@@ -485,6 +485,8 @@ type GenerateInvoicesResult {
 
 input GenerateSchoolDayScheduleInput {
   blocks: [ScheduleBlockConfigInput!]! = []
+  classIds: [String!]! = []
+  dayOfWeeks: [Int!]!
   endTime: String!
   startTime: String!
   teachingDurationMinutes: Int!
@@ -918,6 +920,8 @@ type PlatformStats {
 
 input PreviewSchoolDayScheduleInput {
   blocks: [ScheduleBlockConfigInput!]! = []
+  classIds: [String!]! = []
+  dayOfWeeks: [Int!]!
   endTime: String!
   startTime: String!
   teachingDurationMinutes: Int!
@@ -1258,6 +1262,8 @@ type SchoolDayScheduleGenerationResult {
 
 type SchoolDaySchedulePreviewResult {
   blocks: [GeneratedScheduleBlockResult!]!
+  classIds: [String!]!
+  dayOfWeeks: [Int!]!
   errors: [String!]!
   teachingPeriodCount: Int!
   valid: Boolean!
