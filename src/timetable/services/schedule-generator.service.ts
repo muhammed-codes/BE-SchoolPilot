@@ -197,9 +197,6 @@ export class ScheduleGeneratorService {
       }
     }
 
-    const placedAfterPeriods = new Set(
-      generated.filter((block) => block.type !== 'TEACHING').map((block) => block.name),
-    );
     for (const [afterPeriod, blocks] of afterPeriods) {
       if (afterPeriod > periodNumber) {
         errors.push(`${blocks.map((block) => block.name).join(', ')} cannot be placed after Period ${afterPeriod}; only ${periodNumber} teaching periods fit.`);
