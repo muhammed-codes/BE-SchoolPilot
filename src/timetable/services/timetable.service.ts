@@ -289,10 +289,14 @@ export class TimetableService implements OnModuleInit {
   // ══════════════════════════════════════════════════════════════════════════
   async getSchoolDays(schoolId: string): Promise<SchoolDay[]> {
     await this.ensureTableColumns();
-    return this.schoolDayRepo.find({
+    const days = await this.schoolDayRepo.find({
       where: { schoolId },
       order: { orderIndex: 'ASC' },
     });
+    if (days.length === 0) {
+      return this.initDefaultSchoolDays(schoolId);
+    }
+    return days;
   }
 
   async initDefaultSchoolDays(schoolId: string): Promise<SchoolDay[]> {
