@@ -6,7 +6,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, In, Not, DataSource } from 'typeorm';
+import { Repository, FindOptionsWhere, In, Not, DataSource, IsNull } from 'typeorm';
 import { Room } from '../entities/room.entity';
 import { SchoolDay } from '../entities/school-day.entity';
 import { Period } from '../entities/period.entity';
@@ -664,11 +664,21 @@ export class TimetableService implements OnModuleInit {
     });
     if (!schoolClass) throw new NotFoundException('Class not found');
 
-    return this.classSubjectRepo.find({
-      where: { classId, schoolId },
+    const assignments = await this.classSubjectRepo.find({
+      where: { classId },
       relations: ['classEntity', 'subject', 'subjectTeacher'],
       order: { createdAt: 'ASC' },
     });
+
+    const withoutSchoolId = assignments.filter((a) => !a.schoolId);
+    if (withoutSchoolId.length > 0) {
+      await this.classSubjectRepo.update(
+        { classId, schoolId: IsNull() },
+        { schoolId },
+      );
+    }
+
+    return assignments;
   }
 
   async assignClassSubject(
@@ -695,7 +705,7 @@ export class TimetableService implements OnModuleInit {
     );
 
     let mapping = await this.classSubjectRepo.findOne({
-      where: { classId: input.classId, subjectId: input.subjectId, schoolId },
+      where: { classId: input.classId, subjectId: input.subjectId },
     });
 
     if (mapping) {

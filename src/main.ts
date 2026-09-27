@@ -23,10 +23,12 @@ const createApp = async () => {
 
   const allowedOrigins = [
     process.env.FRONTEND_URL,
+    'http://localhost:9999',
     'http://localhost:9997',
     'http://localhost:9995',
     'http://localhost:9996',
     'http://localhost:3000',
+    'http://127.0.0.1:9999',
     'http://127.0.0.1:9997',
     'http://127.0.0.1:9995',
     'http://127.0.0.1:9996',

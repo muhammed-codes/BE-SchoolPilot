@@ -67,7 +67,7 @@ export class ClassesService {
 
             if (toAddIds.length > 0) {
               const newSubjects = toAddIds.map((subjectId) =>
-                transactionalRepo.create({ classId, subjectId }),
+                transactionalRepo.create({ classId, subjectId, schoolId }),
               );
               return transactionalRepo.save(newSubjects);
             }
