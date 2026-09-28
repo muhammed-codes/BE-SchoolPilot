@@ -643,14 +643,18 @@ export class StudentsService {
       );
     }
 
-    const count = (condition: string, parameters: Record<string, string> = {}) =>
-      builder.clone().andWhere(condition, parameters).getCount();
+    const count = (
+      condition: string,
+      parameters: Record<string, string> = {},
+    ) => builder.clone().andWhere(condition, parameters).getCount();
 
     const [total, male, female, active] = await Promise.all([
       builder.getCount(),
       count('student.gender = :male', { male: Gender.MALE }),
       count('student.gender = :female', { female: Gender.FEMALE }),
-      count('(student.status = :activeStatus OR student.status IS NULL)', { activeStatus: StudentStatus.ACTIVE }),
+      count('(student.status = :activeStatus OR student.status IS NULL)', {
+        activeStatus: StudentStatus.ACTIVE,
+      }),
     ]);
 
     return { total, male, female, active };

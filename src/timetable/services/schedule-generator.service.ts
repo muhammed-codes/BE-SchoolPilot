@@ -65,8 +65,11 @@ function parseTime(value: string, label: string): number {
 }
 
 function formatTime(totalMinutes: number): string {
-  const normalized = ((totalMinutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
-  const hours = Math.floor(normalized / 60).toString().padStart(2, '0');
+  const normalized =
+    ((totalMinutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  const hours = Math.floor(normalized / 60)
+    .toString()
+    .padStart(2, '0');
   const minutes = (normalized % 60).toString().padStart(2, '0');
   return `${hours}:${minutes}`;
 }
@@ -90,7 +93,9 @@ export class ScheduleGeneratorService {
       schoolStart = parseTime(input.startTime, 'School start time');
       schoolEnd = parseTime(input.endTime, 'School end time');
     } catch (error) {
-      return this.invalid(error instanceof Error ? error.message : String(error));
+      return this.invalid(
+        error instanceof Error ? error.message : String(error),
+      );
     }
 
     if (schoolEnd <= schoolStart) {
@@ -103,21 +108,36 @@ export class ScheduleGeneratorService {
     }
     if (errors.length > 0) return this.result(errors, warnings, generated);
 
-    const beforeTeaching = input.blocks.filter((block) => block.placement === 'BEFORE_TEACHING');
+    const beforeTeaching = input.blocks.filter(
+      (block) => block.placement === 'BEFORE_TEACHING',
+    );
     const afterPeriods = new Map<number, ScheduleBlockConfig[]>();
-    const atTimes: Array<{ block: ScheduleBlockConfig; time: number; index: number }> = [];
+    const atTimes: Array<{
+      block: ScheduleBlockConfig;
+      time: number;
+      index: number;
+    }> = [];
 
     input.blocks.forEach((block, index) => {
-      if (!block.name.trim()) errors.push('Every schedule block must have a name.');
+      if (!block.name.trim())
+        errors.push('Every schedule block must have a name.');
       try {
-        assertDuration(block.durationMinutes, `Duration for ${block.name || 'schedule block'}`);
+        assertDuration(
+          block.durationMinutes,
+          `Duration for ${block.name || 'schedule block'}`,
+        );
       } catch (error) {
         errors.push(error instanceof Error ? error.message : String(error));
       }
 
       if (block.placement === 'AFTER_PERIOD') {
-        if (!Number.isInteger(block.afterPeriodNumber) || (block.afterPeriodNumber || 0) < 1) {
-          errors.push(`${block.name || 'Schedule block'} must specify a valid period number.`);
+        if (
+          !Number.isInteger(block.afterPeriodNumber) ||
+          (block.afterPeriodNumber || 0) < 1
+        ) {
+          errors.push(
+            `${block.name || 'Schedule block'} must specify a valid period number.`,
+          );
         } else {
           const list = afterPeriods.get(block.afterPeriodNumber!) || [];
           list.push(block);
@@ -130,7 +150,11 @@ export class ScheduleGeneratorService {
           errors.push(`${block.name || 'Schedule block'} must specify a time.`);
         } else {
           try {
-            atTimes.push({ block, time: parseTime(block.atTime, `${block.name} time`), index });
+            atTimes.push({
+              block,
+              time: parseTime(block.atTime, `${block.name} time`),
+              index,
+            });
           } catch (error) {
             errors.push(error instanceof Error ? error.message : String(error));
           }
@@ -139,18 +163,34 @@ export class ScheduleGeneratorService {
     });
 
     for (const block of beforeTeaching) {
-      this.addBlock(generated, block.name, block.type, schoolStart + this.totalDuration(generated), block.durationMinutes);
+      this.addBlock(
+        generated,
+        block.name,
+        block.type,
+        schoolStart + this.totalDuration(generated),
+        block.durationMinutes,
+      );
     }
 
     if (errors.length > 0) return this.result(errors, warnings, generated);
 
     atTimes.sort((a, b) => a.time - b.time || a.index - b.index);
     for (let index = 1; index < atTimes.length; index += 1) {
-      if (atTimes[index].time < atTimes[index - 1].time + atTimes[index - 1].block.durationMinutes) {
-        errors.push(`Schedule blocks at ${formatTime(atTimes[index - 1].time)} and ${formatTime(atTimes[index].time)} overlap.`);
+      if (
+        atTimes[index].time <
+        atTimes[index - 1].time + atTimes[index - 1].block.durationMinutes
+      ) {
+        errors.push(
+          `Schedule blocks at ${formatTime(atTimes[index - 1].time)} and ${formatTime(atTimes[index].time)} overlap.`,
+        );
       }
     }
-    if (atTimes.some(({ time, block }) => time < schoolStart || time + block.durationMinutes > schoolEnd)) {
+    if (
+      atTimes.some(
+        ({ time, block }) =>
+          time < schoolStart || time + block.durationMinutes > schoolEnd,
+      )
+    ) {
       errors.push('Every timed schedule block must fit within school hours.');
     }
     if (errors.length > 0) return this.result(errors, warnings, generated);
@@ -162,11 +202,19 @@ export class ScheduleGeneratorService {
     while (cursor < schoolEnd) {
       const timedBlock = atTimes[atTimeIndex];
       if (timedBlock && timedBlock.time < cursor) {
-        errors.push(`${timedBlock.block.name} overlaps an earlier generated block.`);
+        errors.push(
+          `${timedBlock.block.name} overlaps an earlier generated block.`,
+        );
         break;
       }
       if (timedBlock && timedBlock.time === cursor) {
-        this.addBlock(generated, timedBlock.block.name, timedBlock.block.type, cursor, timedBlock.block.durationMinutes);
+        this.addBlock(
+          generated,
+          timedBlock.block.name,
+          timedBlock.block.type,
+          cursor,
+          timedBlock.block.durationMinutes,
+        );
         cursor += timedBlock.block.durationMinutes;
         atTimeIndex += 1;
         continue;
@@ -178,9 +226,22 @@ export class ScheduleGeneratorService {
         if (availableMinutes > 0) {
           if (input.unallocatedTimeAsPeriod) {
             periodNumber += 1;
-            this.addBlock(generated, `Period ${periodNumber}`, 'TEACHING', cursor, availableMinutes, periodNumber);
+            this.addBlock(
+              generated,
+              `Period ${periodNumber}`,
+              'TEACHING',
+              cursor,
+              availableMinutes,
+              periodNumber,
+            );
           } else {
-            this.addBlock(generated, 'Unallocated time', 'TRANSITION', cursor, availableMinutes);
+            this.addBlock(
+              generated,
+              'Unallocated time',
+              'TRANSITION',
+              cursor,
+              availableMinutes,
+            );
           }
           cursor = nextBoundary;
         }
@@ -189,29 +250,55 @@ export class ScheduleGeneratorService {
 
       periodNumber += 1;
       const teachingStart = cursor;
-      this.addBlock(generated, `Period ${periodNumber}`, 'TEACHING', teachingStart, input.teachingDurationMinutes, periodNumber);
+      this.addBlock(
+        generated,
+        `Period ${periodNumber}`,
+        'TEACHING',
+        teachingStart,
+        input.teachingDurationMinutes,
+        periodNumber,
+      );
       cursor += input.teachingDurationMinutes;
 
       const placedAfter = afterPeriods.get(periodNumber) || [];
       for (const block of placedAfter) {
         if (cursor + block.durationMinutes > schoolEnd) {
-          errors.push(`${block.name} after Period ${periodNumber} does not fit before school closing time.`);
+          errors.push(
+            `${block.name} after Period ${periodNumber} does not fit before school closing time.`,
+          );
           continue;
         }
-        this.addBlock(generated, block.name, block.type, cursor, block.durationMinutes);
+        this.addBlock(
+          generated,
+          block.name,
+          block.type,
+          cursor,
+          block.durationMinutes,
+        );
         cursor += block.durationMinutes;
       }
     }
 
     for (const [afterPeriod, blocks] of afterPeriods) {
       if (afterPeriod > periodNumber) {
-        errors.push(`${blocks.map((block) => block.name).join(', ')} cannot be placed after Period ${afterPeriod}; only ${periodNumber} teaching periods fit.`);
+        errors.push(
+          `${blocks.map((block) => block.name).join(', ')} cannot be placed after Period ${afterPeriod}; only ${periodNumber} teaching periods fit.`,
+        );
       }
     }
-    if (periodNumber === 0) errors.push('The configuration does not leave room for a teaching period.');
-    if (atTimeIndex < atTimes.length) errors.push('Not all timed schedule blocks could be placed.');
-    if (generated.length > 0 && generated[generated.length - 1].endTime !== formatTime(schoolEnd)) {
-      warnings.push(`The generated structure leaves intentional unallocated time before ${formatTime(schoolEnd)}.`);
+    if (periodNumber === 0)
+      errors.push(
+        'The configuration does not leave room for a teaching period.',
+      );
+    if (atTimeIndex < atTimes.length)
+      errors.push('Not all timed schedule blocks could be placed.');
+    if (
+      generated.length > 0 &&
+      generated[generated.length - 1].endTime !== formatTime(schoolEnd)
+    ) {
+      warnings.push(
+        `The generated structure leaves intentional unallocated time before ${formatTime(schoolEnd)}.`,
+      );
     }
 
     return this.result(errors, warnings, generated, periodNumber);

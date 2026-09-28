@@ -1307,7 +1307,7 @@ export class TimetableService implements OnModuleInit {
     // If double period, also delete adjacent partner slot if present
     if (existing.isDoublePeriod) {
       const curOrder = existing.period?.orderIndex;
-      const partnerWhere: any = {
+      const partnerWhere: FindOptionsWhere<TimetableEntry> = {
         schoolId,
         termId: existing.termId,
         classId: existing.classId,

@@ -38,7 +38,12 @@ import { ScheduleGeneratorService } from './services/schedule-generator.service'
       School,
     ]),
   ],
-  providers: [TimetableService, ConflictValidatorService, TimetableResolver, ScheduleGeneratorService],
+  providers: [
+    TimetableService,
+    ConflictValidatorService,
+    TimetableResolver,
+    ScheduleGeneratorService,
+  ],
   exports: [TimetableService],
 })
 export class TimetableModule {}

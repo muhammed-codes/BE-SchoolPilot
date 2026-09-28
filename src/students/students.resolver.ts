@@ -121,7 +121,8 @@ export class StudentsResolver {
   studentStatistics(
     @Args('query', { type: () => String, defaultValue: '' }) query: string,
     @Args('classId', { type: () => String, nullable: true }) classId: string,
-    @Args('archived', { type: () => Boolean, defaultValue: false }) archived: boolean,
+    @Args('archived', { type: () => Boolean, defaultValue: false })
+    archived: boolean,
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
     const classIdsPromise = TEACHER_ROLES.includes(user.role)
