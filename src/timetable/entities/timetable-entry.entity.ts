@@ -42,14 +42,14 @@ export class TimetableEntry extends BaseEntity {
   @JoinColumn({ name: 'subjectId' })
   subject!: Subject;
 
-  @Field()
-  @Column({ type: 'uuid' })
-  teacherId!: string;
+  @Field(() => String, { nullable: true })
+  @Column({ type: 'uuid', nullable: true })
+  teacherId?: string | null;
 
-  @Field(() => User)
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @Field(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'teacherId' })
-  teacher!: User;
+  teacher?: User | null;
 
   @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })

@@ -264,9 +264,11 @@ export function renderTimetableHtml(data: TimetablePdfRenderData): string {
                         ${it.subjectName}
                       </div>
                       <div class="slot-details">
-                        ${it.className ? `<span>${it.className}</span> • ` : ''}
-                        <span>${it.teacherName}</span>
-                        ${it.roomName ? ` • <span>[${it.roomName}]</span>` : ''}
+                        ${it.className ? `<span>${it.className}</span>` : ''}
+                        ${it.className && (it.teacherName || it.roomName) ? ' • ' : ''}
+                        ${it.teacherName ? `<span>${it.teacherName}</span>` : ''}
+                        ${it.teacherName && it.roomName ? ' • ' : ''}
+                        ${it.roomName ? `<span>[${it.roomName}]</span>` : ''}
                       </div>
                     </div>
                   `,

@@ -24,7 +24,7 @@ export interface ValidateSlotParams {
   termId: string;
   classId: string;
   subjectId: string;
-  teacherId: string;
+  teacherId?: string | null;
   roomId?: string | null;
   dayOfWeek: number;
   periodId: string;
@@ -74,7 +74,9 @@ export class ConflictValidatorService {
 
     // Preload entities for readable conflict messages
     const [teacher, currentClass, period, room] = await Promise.all([
-      this.userRepo.findOne({ where: { id: teacherId, schoolId } }),
+      teacherId
+        ? this.userRepo.findOne({ where: { id: teacherId, schoolId } })
+        : null,
       this.classRepo.findOne({ where: { id: classId, schoolId } }),
       this.periodRepo.findOne({ where: { id: periodId, schoolId } }),
       roomId
@@ -89,60 +91,10 @@ export class ConflictValidatorService {
     const targetStartTime = period?.startTime;
     const targetEndTime = period?.endTime;
 
-    // 1. Teacher Overload Check (Checked FIRST: max periods per day and week)
-    const maxPerDay = teacher?.maxPeriodsPerDay ?? 6;
-    const maxPerWeek = teacher?.maxPeriodsPerWeek ?? 25;
-    const slotsToAdd = params.isDoublePeriod ? 2 : 1;
-
-    // Count teacher's existing slots today
-    const dailySlots = await this.entryRepo.count({
-      where: {
-        schoolId,
-        termId,
-        teacherId,
-        dayOfWeek,
-        ...(entryId ? { id: Not(entryId) } : {}),
-      },
-    });
-
-    if (dailySlots + slotsToAdd > maxPerDay) {
-      violations.push({
-        type: ConflictType.TEACHER_OVERLOAD,
-        severity: allowOverride
-          ? ConflictSeverity.WARNING
-          : ConflictSeverity.BLOCKING,
-        message: `${teacherName} exceeds maximum periods per day (limit: ${maxPerDay}, scheduled: ${dailySlots}, attempting to add: ${slotsToAdd}).`,
-        dayOfWeek,
-        periodId,
-        teacherId,
-      });
-    }
-
-    // Count teacher's existing slots this week
-    const weeklySlots = await this.entryRepo.count({
-      where: {
-        schoolId,
-        termId,
-        teacherId,
-        ...(entryId ? { id: Not(entryId) } : {}),
-      },
-    });
-
-    if (weeklySlots + slotsToAdd > maxPerWeek) {
-      violations.push({
-        type: ConflictType.TEACHER_OVERLOAD,
-        severity: allowOverride
-          ? ConflictSeverity.WARNING
-          : ConflictSeverity.BLOCKING,
-        message: `${teacherName} exceeds maximum periods per week (limit: ${maxPerWeek}, scheduled: ${weeklySlots}, attempting to add: ${slotsToAdd}).`,
-        dayOfWeek,
-        periodId,
-        teacherId,
-      });
-    }
-
-    // 2. Teacher Double-Booked Check
-    const findOverlappingEntry = async (where: Record<string, string | number>) => {
+    // Helper for overlapping entries
+    const findOverlappingEntry = async (
+      where: Record<string, string | number>,
+    ) => {
       if (!targetStartTime || !targetEndTime) return null;
       const entries = await this.entryRepo.find({
         where,
@@ -159,25 +111,80 @@ export class ConflictValidatorService {
       );
     };
 
-    const teacherConflict = await findOverlappingEntry({
-      schoolId,
-      termId,
-      teacherId,
-      dayOfWeek,
-    });
+    // 1. Teacher Overload Check & Double-Booked Check (Only if teacher is assigned)
+    if (teacherId) {
+      const maxPerDay = teacher?.maxPeriodsPerDay ?? 6;
+      const maxPerWeek = teacher?.maxPeriodsPerWeek ?? 25;
+      const slotsToAdd = params.isDoublePeriod ? 2 : 1;
 
-    if (teacherConflict && teacherConflict.classId !== classId) {
-      const otherClassName =
-        teacherConflict.classEntity?.name || 'another class';
-      violations.push({
-        type: ConflictType.TEACHER_DOUBLE_BOOKED,
-        severity: ConflictSeverity.BLOCKING,
-        message: `${teacherName} is already teaching ${otherClassName} during ${periodName}.`,
-        dayOfWeek,
-        periodId,
-        teacherId,
-        classId: teacherConflict.classId,
+      // Count teacher's existing slots today
+      const dailySlots = await this.entryRepo.count({
+        where: {
+          schoolId,
+          termId,
+          teacherId,
+          dayOfWeek,
+          ...(entryId ? { id: Not(entryId) } : {}),
+        },
       });
+
+      if (dailySlots + slotsToAdd > maxPerDay) {
+        violations.push({
+          type: ConflictType.TEACHER_OVERLOAD,
+          severity: allowOverride
+            ? ConflictSeverity.WARNING
+            : ConflictSeverity.BLOCKING,
+          message: `${teacherName} exceeds maximum periods per day (limit: ${maxPerDay}, scheduled: ${dailySlots}, attempting to add: ${slotsToAdd}).`,
+          dayOfWeek,
+          periodId,
+          teacherId,
+        });
+      }
+
+      // Count teacher's existing slots this week
+      const weeklySlots = await this.entryRepo.count({
+        where: {
+          schoolId,
+          termId,
+          teacherId,
+          ...(entryId ? { id: Not(entryId) } : {}),
+        },
+      });
+
+      if (weeklySlots + slotsToAdd > maxPerWeek) {
+        violations.push({
+          type: ConflictType.TEACHER_OVERLOAD,
+          severity: allowOverride
+            ? ConflictSeverity.WARNING
+            : ConflictSeverity.BLOCKING,
+          message: `${teacherName} exceeds maximum periods per week (limit: ${maxPerWeek}, scheduled: ${weeklySlots}, attempting to add: ${slotsToAdd}).`,
+          dayOfWeek,
+          periodId,
+          teacherId,
+        });
+      }
+
+      // 2. Teacher Double-Booked Check
+      const teacherConflict = await findOverlappingEntry({
+        schoolId,
+        termId,
+        teacherId,
+        dayOfWeek,
+      });
+
+      if (teacherConflict && teacherConflict.classId !== classId) {
+        const otherClassName =
+          teacherConflict.classEntity?.name || 'another class';
+        violations.push({
+          type: ConflictType.TEACHER_DOUBLE_BOOKED,
+          severity: ConflictSeverity.BLOCKING,
+          message: `${teacherName} is already teaching ${otherClassName} during ${periodName}.`,
+          dayOfWeek,
+          periodId,
+          teacherId,
+          classId: teacherConflict.classId,
+        });
+      }
     }
 
     // 3. Room Double-Booked Check
@@ -251,28 +258,30 @@ export class ConflictValidatorService {
     }
 
     // 6. Teacher Availability Check (approved unavailable slot)
-    const availability = await this.availabilityRepo.findOne({
-      where: {
-        schoolId,
-        teacherId,
-        dayOfWeek,
-        periodId,
-        approvalStatus: ApprovalStatus.APPROVED,
-        status: AvailabilityStatus.UNAVAILABLE,
-      },
-    });
-
-    if (availability) {
-      violations.push({
-        type: ConflictType.TEACHER_UNAVAILABLE,
-        severity: allowOverride
-          ? ConflictSeverity.WARNING
-          : ConflictSeverity.BLOCKING,
-        message: `${teacherName} has approved unavailable status for this slot.`,
-        dayOfWeek,
-        periodId,
-        teacherId,
+    if (teacherId) {
+      const availability = await this.availabilityRepo.findOne({
+        where: {
+          schoolId,
+          teacherId,
+          dayOfWeek,
+          periodId,
+          approvalStatus: ApprovalStatus.APPROVED,
+          status: AvailabilityStatus.UNAVAILABLE,
+        },
       });
+
+      if (availability) {
+        violations.push({
+          type: ConflictType.TEACHER_UNAVAILABLE,
+          severity: allowOverride
+            ? ConflictSeverity.WARNING
+            : ConflictSeverity.BLOCKING,
+          message: `${teacherName} has approved unavailable status for this slot.`,
+          dayOfWeek,
+          periodId,
+          teacherId,
+        });
+      }
     }
 
     return violations;

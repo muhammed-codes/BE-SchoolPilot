@@ -361,7 +361,7 @@ input CreateTimetableEntryInput {
   periodId: String!
   roomId: String
   subjectId: String!
-  teacherId: String!
+  teacherId: String
   termId: String!
 }
 
@@ -1630,8 +1630,8 @@ type TimetableEntry {
   schoolId: String!
   subject: Subject!
   subjectId: String!
-  teacher: User!
-  teacherId: String!
+  teacher: User
+  teacherId: String
   term: Term!
   termId: String!
   updatedAt: DateTime!

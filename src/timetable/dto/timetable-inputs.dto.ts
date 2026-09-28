@@ -499,9 +499,10 @@ export class CreateTimetableEntryInput {
   @IsUUID()
   subjectId!: string;
 
-  @Field(() => String)
+  @Field(() => String, { nullable: true })
+  @IsOptional()
   @IsUUID()
-  teacherId!: string;
+  teacherId?: string;
 
   @Field(() => String, { nullable: true })
   @IsOptional()

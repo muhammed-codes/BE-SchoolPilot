@@ -6,7 +6,14 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, In, Not, DataSource, IsNull } from 'typeorm';
+import {
+  Repository,
+  FindOptionsWhere,
+  In,
+  Not,
+  DataSource,
+  IsNull,
+} from 'typeorm';
 import { Room } from '../entities/room.entity';
 import { SchoolDay } from '../entities/school-day.entity';
 import { Period } from '../entities/period.entity';
@@ -110,21 +117,32 @@ export class TimetableService implements OnModuleInit {
     await this.ensureTableColumns();
   }
 
-  private async validateScheduleScope(input: PreviewSchoolDayScheduleInput, schoolId: string): Promise<void> {
-    if (input.dayOfWeeks.some((day) => !Number.isInteger(day) || day < 1 || day > 7)) {
+  private async validateScheduleScope(
+    input: PreviewSchoolDayScheduleInput,
+    schoolId: string,
+  ): Promise<void> {
+    if (
+      input.dayOfWeeks.some(
+        (day) => !Number.isInteger(day) || day < 1 || day > 7,
+      )
+    ) {
       throw new BadRequestException('Select valid days from Monday to Sunday.');
     }
 
     const uniqueClassIds = new Set(input.classIds || []);
     if (uniqueClassIds.size !== (input.classIds || []).length) {
-      throw new BadRequestException('A class cannot be selected more than once.');
+      throw new BadRequestException(
+        'A class cannot be selected more than once.',
+      );
     }
     if (uniqueClassIds.size > 0) {
       const matchingClasses = await this.classRepo.count({
         where: { schoolId, id: In([...uniqueClassIds]) },
       });
       if (matchingClasses !== uniqueClassIds.size) {
-        throw new BadRequestException('One or more selected classes are invalid.');
+        throw new BadRequestException(
+          'One or more selected classes are invalid.',
+        );
       }
     }
   }
@@ -134,7 +152,9 @@ export class TimetableService implements OnModuleInit {
     schoolId: string,
   ): Promise<SchoolDaySchedulePreviewResult> {
     await this.validateScheduleScope(input, schoolId);
-    const generated = this.scheduleGenerator.generate(input as GenerateScheduleInput);
+    const generated = this.scheduleGenerator.generate(
+      input as GenerateScheduleInput,
+    );
     return {
       dayOfWeeks: [...input.dayOfWeeks].sort((a, b) => a - b),
       classIds: input.classIds || [],
@@ -164,7 +184,8 @@ export class TimetableService implements OnModuleInit {
     if (!preview.valid) {
       return {
         success: false,
-        message: 'The schedule configuration is invalid. No periods were generated.',
+        message:
+          'The schedule configuration is invalid. No periods were generated.',
         existingPeriodCount,
         existingAssignmentCount,
         preview,
@@ -186,25 +207,27 @@ export class TimetableService implements OnModuleInit {
       };
     }
 
-    const createdPeriods = await this.dataSource.transaction(async (manager) => {
-      const periodRepo = manager.getRepository(Period);
-      const entities = preview.dayOfWeeks.flatMap((dayOfWeek) =>
-        preview.blocks.map((block) =>
-          periodRepo.create({
-            schoolId,
-            name: block.name,
-            startTime: block.startTime,
-            endTime: block.endTime,
-            orderIndex: block.order,
-            isActive: true,
-            dayOfWeek,
-            slotType: block.type as any,
-            classIds: preview.classIds,
-          }),
-        ),
-      );
-      return periodRepo.save(entities);
-    });
+    const createdPeriods = await this.dataSource.transaction(
+      async (manager) => {
+        const periodRepo = manager.getRepository(Period);
+        const entities = preview.dayOfWeeks.flatMap((dayOfWeek) =>
+          preview.blocks.map((block) =>
+            periodRepo.create({
+              schoolId,
+              name: block.name,
+              startTime: block.startTime,
+              endTime: block.endTime,
+              orderIndex: block.order,
+              isActive: true,
+              dayOfWeek,
+              slotType: block.type as any,
+              classIds: preview.classIds,
+            }),
+          ),
+        );
+        return periodRepo.save(entities);
+      },
+    );
 
     return {
       success: true,
@@ -245,11 +268,19 @@ export class TimetableService implements OnModuleInit {
     }
   }
 
-  private async validateTeacherIds(teacherIds: string[] | undefined, schoolId: string): Promise<string[]> {
+  private async validateTeacherIds(
+    teacherIds: string[] | undefined,
+    schoolId: string,
+  ): Promise<string[]> {
     const ids = [...new Set(teacherIds || [])];
     if (ids.length === 0) return [];
-    const count = await this.userRepo.count({ where: { schoolId, id: In(ids) } });
-    if (count !== ids.length) throw new BadRequestException('One or more selected staff members are invalid.');
+    const count = await this.userRepo.count({
+      where: { schoolId, id: In(ids) },
+    });
+    if (count !== ids.length)
+      throw new BadRequestException(
+        'One or more selected staff members are invalid.',
+      );
     return ids;
   }
 
@@ -422,8 +453,11 @@ export class TimetableService implements OnModuleInit {
       if (excludePeriodId && p.id === excludePeriodId) return false;
       if (dayOfWeek && p.dayOfWeek && p.dayOfWeek !== dayOfWeek) return false;
       const existingClassIds = p.classIds || [];
-      return existingClassIds.length === 0 || classIds.length === 0 ||
-        existingClassIds.some((classId) => classIds.includes(classId));
+      return (
+        existingClassIds.length === 0 ||
+        classIds.length === 0 ||
+        existingClassIds.some((classId) => classIds.includes(classId))
+      );
     });
 
     for (const p of candidatePeriods) {
@@ -481,7 +515,10 @@ export class TimetableService implements OnModuleInit {
     }
     for (const group of groups.values()) {
       const dayOfWeeks = group
-        .filter((period) => period.dayOfWeek !== null && period.dayOfWeek !== undefined)
+        .filter(
+          (period) =>
+            period.dayOfWeek !== null && period.dayOfWeek !== undefined,
+        )
         .map((period) => period.dayOfWeek as number)
         .sort((a, b) => a - b);
       const groupedIds = group.map((period) => period.id);
@@ -521,10 +558,15 @@ export class TimetableService implements OnModuleInit {
         where: { schoolId, id: In(input.classIds) },
       });
       if (classCount !== new Set(input.classIds).size) {
-        throw new BadRequestException('One or more selected classes are invalid.');
+        throw new BadRequestException(
+          'One or more selected classes are invalid.',
+        );
       }
     }
-    const teacherIds = await this.validateTeacherIds(input.teacherIds, schoolId);
+    const teacherIds = await this.validateTeacherIds(
+      input.teacherIds,
+      schoolId,
+    );
     await this.validatePeriodTime(
       schoolId,
       input.startTime,
@@ -555,7 +597,7 @@ export class TimetableService implements OnModuleInit {
 
     // Older period rows may predate the non-null GraphQL fields.
     period.isActive = period.isActive ?? true;
-    period.slotType = period.slotType ?? 'TEACHING' as any;
+    period.slotType = period.slotType ?? ('TEACHING' as any);
     period.classIds = period.classIds ?? [];
     period.teacherIds = period.teacherIds ?? [];
 
@@ -564,15 +606,18 @@ export class TimetableService implements OnModuleInit {
     const newDay =
       input.dayOfWeek !== undefined ? input.dayOfWeek : period.dayOfWeek;
     const newClassIds = input.classIds ?? period.classIds ?? [];
-    const newTeacherIds = input.teacherIds !== undefined
-      ? await this.validateTeacherIds(input.teacherIds, schoolId)
-      : period.teacherIds;
+    const newTeacherIds =
+      input.teacherIds !== undefined
+        ? await this.validateTeacherIds(input.teacherIds, schoolId)
+        : period.teacherIds;
     if (input.classIds?.length) {
       const classCount = await this.classRepo.count({
         where: { schoolId, id: In(input.classIds) },
       });
       if (classCount !== new Set(input.classIds).size) {
-        throw new BadRequestException('One or more selected classes are invalid.');
+        throw new BadRequestException(
+          'One or more selected classes are invalid.',
+        );
       }
     }
 
@@ -598,7 +643,11 @@ export class TimetableService implements OnModuleInit {
     return this.periodRepo.save(period);
   }
 
-  async deletePeriod(id: string, schoolId: string, deleteGroup = true): Promise<boolean> {
+  async deletePeriod(
+    id: string,
+    schoolId: string,
+    deleteGroup = true,
+  ): Promise<boolean> {
     const period = await this.periodRepo.findOne({ where: { id, schoolId } });
     if (!period) throw new NotFoundException('Period not found');
     if (!deleteGroup) {
@@ -607,13 +656,16 @@ export class TimetableService implements OnModuleInit {
     }
     const candidates = await this.periodRepo.find({ where: { schoolId } });
     const classIds = [...(period.classIds || [])].sort();
-    const matchingPeriods = candidates.filter((candidate) =>
-      candidate.name === period.name &&
-      candidate.startTime === period.startTime &&
-      candidate.endTime === period.endTime &&
-      candidate.orderIndex === period.orderIndex &&
-      (candidate.slotType || 'TEACHING') === (period.slotType || 'TEACHING') &&
-      JSON.stringify([...(candidate.classIds || [])].sort()) === JSON.stringify(classIds),
+    const matchingPeriods = candidates.filter(
+      (candidate) =>
+        candidate.name === period.name &&
+        candidate.startTime === period.startTime &&
+        candidate.endTime === period.endTime &&
+        candidate.orderIndex === period.orderIndex &&
+        (candidate.slotType || 'TEACHING') ===
+          (period.slotType || 'TEACHING') &&
+        JSON.stringify([...(candidate.classIds || [])].sort()) ===
+          JSON.stringify(classIds),
     );
     await this.periodRepo.remove(matchingPeriods);
     return true;
@@ -664,7 +716,10 @@ export class TimetableService implements OnModuleInit {
     });
     if (!slot) throw new NotFoundException('Slot not found');
     if (input.teacherIds !== undefined) {
-      input.teacherIds = await this.validateTeacherIds(input.teacherIds, schoolId);
+      input.teacherIds = await this.validateTeacherIds(
+        input.teacherIds,
+        schoolId,
+      );
     }
     Object.assign(slot, input);
     return this.nonTeachingSlotRepo.save(slot);
@@ -727,7 +782,11 @@ export class TimetableService implements OnModuleInit {
       if (!teacher) throw new NotFoundException('Teacher not found');
     }
     const teacherIds = await this.validateTeacherIds(
-      input.teacherIds?.length ? input.teacherIds : input.teacherId ? [input.teacherId] : [],
+      input.teacherIds?.length
+        ? input.teacherIds
+        : input.teacherId
+          ? [input.teacherId]
+          : [],
       schoolId,
     );
 
@@ -737,7 +796,9 @@ export class TimetableService implements OnModuleInit {
 
     if (mapping) {
       mapping.subjectTeacherId = input.teacherId || mapping.subjectTeacherId;
-      mapping.teacherIds = teacherIds.length ? teacherIds : (mapping.teacherIds || []);
+      mapping.teacherIds = teacherIds.length
+        ? teacherIds
+        : mapping.teacherIds || [];
       mapping.isDoublePeriod = input.isDoublePeriod;
       mapping.periodsPerWeek = input.periodsPerWeek;
       mapping.schoolId = schoolId;
@@ -780,7 +841,10 @@ export class TimetableService implements OnModuleInit {
       mapping.subjectTeacherId = input.teacherId || '';
     }
     if (input.teacherIds !== undefined) {
-      mapping.teacherIds = await this.validateTeacherIds(input.teacherIds, schoolId);
+      mapping.teacherIds = await this.validateTeacherIds(
+        input.teacherIds,
+        schoolId,
+      );
       mapping.subjectTeacherId = mapping.teacherIds[0] || '';
     }
     mapping.teacherIds = mapping.teacherIds || [];
@@ -1111,7 +1175,7 @@ export class TimetableService implements OnModuleInit {
       termId: input.termId,
       classId: input.classId,
       subjectId: input.subjectId,
-      teacherId: input.teacherId,
+      teacherId: input.teacherId || null,
       roomId: input.roomId,
       dayOfWeek: input.dayOfWeek,
       periodId: input.periodId,
@@ -1127,7 +1191,7 @@ export class TimetableService implements OnModuleInit {
         termId: input.termId,
         classId: input.classId,
         subjectId: input.subjectId,
-        teacherId: input.teacherId,
+        teacherId: input.teacherId || null,
         roomId: input.roomId,
         dayOfWeek: input.dayOfWeek,
         periodId: nextPeriod.id,
@@ -1166,7 +1230,10 @@ export class TimetableService implements OnModuleInit {
 
     const targetClassId = existing.classId;
     const targetSubjectId = input.subjectId || existing.subjectId;
-    const targetTeacherId = input.teacherId || existing.teacherId;
+    const targetTeacherId =
+      input.teacherId !== undefined
+        ? input.teacherId || null
+        : existing.teacherId;
     const targetRoomId =
       input.roomId !== undefined ? input.roomId : existing.roomId;
     const targetDayOfWeek = input.dayOfWeek ?? existing.dayOfWeek;
@@ -1240,16 +1307,19 @@ export class TimetableService implements OnModuleInit {
     // If double period, also delete adjacent partner slot if present
     if (existing.isDoublePeriod) {
       const curOrder = existing.period?.orderIndex;
+      const partnerWhere: any = {
+        schoolId,
+        termId: existing.termId,
+        classId: existing.classId,
+        subjectId: existing.subjectId,
+        dayOfWeek: existing.dayOfWeek,
+        isDoublePeriod: true,
+      };
+      if (existing.teacherId) {
+        partnerWhere.teacherId = existing.teacherId;
+      }
       const partnerEntries = await this.entryRepo.find({
-        where: {
-          schoolId,
-          termId: existing.termId,
-          classId: existing.classId,
-          subjectId: existing.subjectId,
-          teacherId: existing.teacherId,
-          dayOfWeek: existing.dayOfWeek,
-          isDoublePeriod: true,
-        },
+        where: partnerWhere,
         relations: ['period'],
       });
 

@@ -23,13 +23,19 @@ const baseParams = {
   periodId: 'period-new',
 };
 
-function makeValidator(existingEntries: Entry[], targetPeriod: { startTime: string; endTime: string }) {
+function makeValidator(
+  existingEntries: Entry[],
+  targetPeriod: { startTime: string; endTime: string },
+) {
   const entryRepo = {
     count: jest.fn().mockResolvedValue(0),
-    find: jest.fn(async ({ where }: { where: Record<string, string | number> }) =>
-      existingEntries.filter((entry) =>
-        Object.entries(where).every(([key, value]) => entry[key as keyof Entry] === value),
-      ),
+    find: jest.fn(
+      async ({ where }: { where: Record<string, string | number> }) =>
+        existingEntries.filter((entry) =>
+          Object.entries(where).every(
+            ([key, value]) => entry[key as keyof Entry] === value,
+          ),
+        ),
     ),
   };
 
@@ -79,10 +85,15 @@ describe('ConflictValidatorService class time conflicts', () => {
     ['overlap at the end', '09:30', '10:30'],
     ['containing overlap', '09:00', '12:00'],
     ['contained overlap', '10:15', '10:45'],
-  ])('%s is rejected for the same class and day', async (_label, startTime, endTime) => {
-    const violations = await validate({ startTime, endTime });
-    expect(violations.some((v) => v.type === ConflictType.CLASS_DUPLICATE_SLOT)).toBe(true);
-  });
+  ])(
+    '%s is rejected for the same class and day',
+    async (_label, startTime, endTime) => {
+      const violations = await validate({ startTime, endTime });
+      expect(
+        violations.some((v) => v.type === ConflictType.CLASS_DUPLICATE_SLOT),
+      ).toBe(true);
+    },
+  );
 
   it('allows a different day', async () => {
     const violations = await validate(
@@ -90,7 +101,9 @@ describe('ConflictValidatorService class time conflicts', () => {
       [existing()],
       { dayOfWeek: 2 },
     );
-    expect(violations.some((v) => v.type === ConflictType.CLASS_DUPLICATE_SLOT)).toBe(false);
+    expect(
+      violations.some((v) => v.type === ConflictType.CLASS_DUPLICATE_SLOT),
+    ).toBe(false);
   });
 
   it('allows a different class at the same time', async () => {
@@ -98,7 +111,9 @@ describe('ConflictValidatorService class time conflicts', () => {
       { startTime: '10:00', endTime: '11:00' },
       [existing({ classId: 'class-b' })],
     );
-    expect(violations.some((v) => v.type === ConflictType.CLASS_DUPLICATE_SLOT)).toBe(false);
+    expect(
+      violations.some((v) => v.type === ConflictType.CLASS_DUPLICATE_SLOT),
+    ).toBe(false);
   });
 
   it('does not treat the entry being updated as its own conflict', async () => {
@@ -107,7 +122,9 @@ describe('ConflictValidatorService class time conflicts', () => {
       [existing({ id: 'entry-being-updated' })],
       { entryId: 'entry-being-updated' },
     );
-    expect(violations.some((v) => v.type === ConflictType.CLASS_DUPLICATE_SLOT)).toBe(false);
+    expect(
+      violations.some((v) => v.type === ConflictType.CLASS_DUPLICATE_SLOT),
+    ).toBe(false);
   });
 
   it('rejects an update into another overlapping entry', async () => {
@@ -116,6 +133,17 @@ describe('ConflictValidatorService class time conflicts', () => {
       [existing({ id: 'other-entry' })],
       { entryId: 'entry-being-updated' },
     );
-    expect(violations.some((v) => v.type === ConflictType.CLASS_DUPLICATE_SLOT)).toBe(true);
+    expect(
+      violations.some((v) => v.type === ConflictType.CLASS_DUPLICATE_SLOT),
+    ).toBe(true);
+  });
+
+  it('validates slot successfully when teacherId is not provided', async () => {
+    const violations = await validate(
+      { startTime: '10:00', endTime: '11:00' },
+      [],
+      { teacherId: undefined },
+    );
+    expect(violations).toEqual([]);
   });
 });
