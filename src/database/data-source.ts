@@ -27,7 +27,21 @@ import { join } from 'path';
  */
 
 const host = process.env.SUPABASE_DB_HOST || process.env.DB_HOST || '';
-const endpointId = host.includes('neon.tech') ? host.split('.')[0] : undefined;
+let endpointId = host.includes('neon.tech') ? host.split('.')[0] : undefined;
+if (
+  !endpointId &&
+  process.env.DATABASE_URL &&
+  process.env.DATABASE_URL.includes('neon.tech')
+) {
+  try {
+    const urlObj = new URL(process.env.DATABASE_URL);
+    if (urlObj.hostname.includes('neon.tech')) {
+      endpointId = urlObj.hostname.split('.')[0];
+    }
+  } catch {
+    // ignore
+  }
+}
 
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',

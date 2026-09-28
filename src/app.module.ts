@@ -46,12 +46,25 @@ import { CommunicationModule } from './communication/communication.module';
           config.get<string>('SUPABASE_DB_HOST') ||
           config.get<string>('DB_HOST') ||
           '';
-        const endpointId = host.includes('neon.tech')
+        let endpointId = host.includes('neon.tech')
           ? host.split('.')[0]
           : undefined;
 
+        if (!endpointId && databaseUrl && databaseUrl.includes('neon.tech')) {
+          try {
+            const urlObj = new URL(databaseUrl);
+            if (urlObj.hostname.includes('neon.tech')) {
+              endpointId = urlObj.hostname.split('.')[0];
+            }
+          } catch {
+            // ignore invalid URL fallback
+          }
+        }
+
         return {
           type: 'postgres',
+          retryAttempts: 10,
+          retryDelay: 3000,
           ...(databaseUrl
             ? { url: databaseUrl }
             : {
@@ -72,9 +85,11 @@ import { CommunicationModule } from './communication/communication.module';
               }),
           extra: {
             ...(endpointId ? { options: `endpoint=${endpointId}` } : {}),
-            connectionTimeoutMillis: 15000,
+            connectionTimeoutMillis: 20000,
             idleTimeoutMillis: 30000,
             max: 25,
+            keepAlive: true,
+            keepAliveInitialDelayMillis: 10000,
           },
           ssl: { rejectUnauthorized: false },
           synchronize: false,
