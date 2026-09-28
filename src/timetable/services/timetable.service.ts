@@ -440,10 +440,33 @@ export class TimetableService implements OnModuleInit {
     await this.ensureTableColumns();
     const periods = await this.periodRepo.find({
       where: { schoolId },
-      order: { orderIndex: 'ASC' },
+      order: { orderIndex: 'ASC', createdAt: 'ASC' },
     });
-    const groups = new Map<string, Period[]>();
+
+    // Prune exact duplicates for the same day and timeslot
+    const seenExactKeys = new Set<string>();
+    const toDeleteIds: string[] = [];
+    const uniquePeriods: Period[] = [];
+
     for (const period of periods) {
+      const classKey = [...(period.classIds || [])].sort().join(',');
+      const exactKey = `${period.name}_${period.startTime}_${period.endTime}_${period.dayOfWeek ?? 'ALL'}_${classKey}_${period.slotType || 'TEACHING'}`;
+      if (seenExactKeys.has(exactKey)) {
+        toDeleteIds.push(period.id);
+      } else {
+        seenExactKeys.add(exactKey);
+        uniquePeriods.push(period);
+      }
+    }
+
+    if (toDeleteIds.length > 0) {
+      this.periodRepo.delete(toDeleteIds).catch((err) => {
+        console.warn('Failed to prune duplicate period rows from DB:', err);
+      });
+    }
+
+    const groups = new Map<string, Period[]>();
+    for (const period of uniquePeriods) {
       const key = JSON.stringify([
         period.name,
         period.startTime,
@@ -467,7 +490,7 @@ export class TimetableService implements OnModuleInit {
         period.groupedIds = groupedIds;
       }
     }
-    return periods;
+    return uniquePeriods;
   }
 
   async initDefaultPeriods(schoolId: string): Promise<Period[]> {
