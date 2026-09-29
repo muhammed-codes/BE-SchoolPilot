@@ -456,6 +456,7 @@ enum FeeRecurrence {
 
 type FeeStructure {
   amount: Int!
+  classEntity: ClassEntity
   classId: String
   createdAt: DateTime!
   createdBy: String
@@ -838,6 +839,7 @@ type PaymentSubmissionStudentShare {
   id: ID!
   rejectionReason: String
   status: PaymentShareStatus!
+  student: Student
   studentId: String!
   updatedAt: DateTime!
 }
@@ -957,6 +959,7 @@ type Query {
   adminAnnouncementsPage(limit: Int! = 50, page: Int! = 1): PaginatedAnnouncement!
   allFeeCategories: [FeeCategory!]!
   allRolePermissions: [RolePermission!]!
+  announcement(id: String!): Announcement
   announcements: [Announcement!]!
   announcementsPage(limit: Int! = 50, page: Int! = 1): PaginatedAnnouncement!
   approvalConfigs: [FeeApprovalConfig!]!
@@ -964,11 +967,13 @@ type Query {
   archivedStudents: [Student!]!
   bankAccounts: [SchoolBankAccount!]!
   childTimetable(studentId: String!, termId: String): ChildTimetableResult!
+  class(id: String!): ClassEntity!
   classAttendance(classId: String!, date: String!): [StudentAttendance!]!
   classById(id: String!): ClassEntity!
   classInvoices(classId: String!, sessionId: String, termId: String): [StudentInvoice!]!
   classScores(classId: String!, search: String, skip: Int! = 0, subjectId: String, take: Int! = 50, termId: String!): PaginatedClassScores!
   classSubjectAssignments(classId: String!): [ClassSubject!]!
+  classes(limit: Int! = 50, page: Int! = 1, search: String): PaginatedClassEntity!
   dashboardOverview: DashboardOverview!
   exportTimetablePdf(input: ExportTimetablePdfInput!): TimetablePdfResult!
   feeCategories: [FeeCategory!]!
@@ -1014,6 +1019,7 @@ type Query {
   schoolUsers(limit: Int! = 50, page: Int! = 1, role: UserRole, search: String): PaginatedUser!
   schools(limit: Int! = 50, page: Int! = 1, search: String): PaginatedSchool!
   searchStudents(limit: Int = 5, query: String!): [Student!]!
+  session(id: String!): Session
   sessions: [Session!]!
   staffAttendanceHistory(from: String!, to: String!, userId: String!): [StaffAttendance!]!
   staffAttendanceLog(date: String!): [StaffAttendance!]!
@@ -1026,7 +1032,10 @@ type Query {
   studentStatistics(archived: Boolean! = false, classId: String, query: String! = ""): StudentStatistics!
   studentsByClass(classId: String!): [Student!]!
   studentsPage(archived: Boolean! = false, classId: String, gender: Gender, limit: Int! = 50, page: Int! = 1, query: String! = "", status: StudentStatus): PaginatedStudent!
+  subject(id: String!): Subject
+  subjects(limit: Int! = 50, page: Int! = 1, search: String): PaginatedSubject!
   teacherAvailabilities(approvalStatus: ApprovalStatus, teacherId: String): [TeacherAvailability!]!
+  term(id: String!): Term
   termsBySession(sessionId: String!): [Term!]!
   timetableEntries(classId: String, roomId: String, teacherId: String, termId: String!): [TimetableEntry!]!
   unmarkedClasses(date: String!): [ClassEntity!]!
@@ -1429,9 +1438,12 @@ type StudentInvoice {
   id: ID!
   items: [StudentInvoiceItem!]
   schoolId: String!
+  session: Session
   sessionId: String!
   status: InvoiceStatus!
+  student: Student
   studentId: String!
+  term: Term
   termId: String
   totalAmount: Int!
   totalPaid: Int!

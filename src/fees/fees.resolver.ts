@@ -24,6 +24,9 @@ import { PaginationArgs, createPaginatedType } from '../common/pagination';
 const PaginatedPaymentSubmissionBatch = createPaginatedType(
   PaymentSubmissionBatch,
 );
+const PaginatedStudentInvoice = createPaginatedType(StudentInvoice);
+
+import { FeeOverview } from './dto/fee-overview.type';
 
 import {
   CreateFeeCategoryInput,
@@ -39,6 +42,8 @@ import {
   RejectShareInput,
   UpsertApprovalConfigInput,
   UpdateVisibilityConfigInput,
+  InvoiceFilterInput,
+  UpdateFeeStructureInput,
 } from './dto/fees.input';
 import { ObjectType, Field } from '@nestjs/graphql';
 
@@ -148,6 +153,16 @@ export class FeesResolver {
     @CurrentUser() user: AuthUser,
   ) {
     return this.feesService.getFeeStructures(user.schoolId, sessionId, termId);
+  }
+
+  @Query(() => FeeStructure, { nullable: true })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, PermissionAction.READ)
+  feeStructure(
+    @Args('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.feesService.getFeeStructureById(id, user.schoolId);
   }
 
   @Mutation(() => FeeStructure)
@@ -272,6 +287,58 @@ export class FeesResolver {
     return this.feesService.generateInvoices(input, user.schoolId);
   }
 
+  @Query(() => StudentInvoice, { nullable: true })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, PermissionAction.READ)
+  invoice(
+    @Args('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.feesService.getInvoiceById(
+      id,
+      user.schoolId,
+      user.sub,
+      user.role,
+    );
+  }
+
+  @Query(() => PaginatedStudentInvoice)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, PermissionAction.READ)
+  invoices(
+    @CurrentUser() user: AuthUser,
+    @Args('filter', { type: () => InvoiceFilterInput, nullable: true })
+    filter?: InvoiceFilterInput,
+    @Args() pagination?: PaginationArgs,
+  ) {
+    return this.feesService.getPaginatedInvoices(
+      user.schoolId,
+      filter,
+      pagination,
+    );
+  }
+
+  @Query(() => FeeOverview)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, PermissionAction.READ)
+  feeOverview(
+    @Args('sessionId') sessionId: string,
+    @CurrentUser() user: AuthUser,
+    @Args('termId', { type: () => String, nullable: true })
+    termId?: string,
+    @Args('classId', { type: () => String, nullable: true })
+    classId?: string,
+  ) {
+    return this.feesService.getFeeOverview(
+      user.schoolId,
+      sessionId,
+      termId,
+      classId,
+      user.sub,
+      user.role,
+    );
+  }
+
   @Query(() => [StudentInvoice])
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermission(AppResource.FEES, PermissionAction.READ)
@@ -318,6 +385,21 @@ export class FeesResolver {
     @CurrentUser() user: AuthUser,
   ) {
     return this.feesService.submitPaymentBatch(input, user.schoolId, user.sub);
+  }
+
+  @Query(() => PaymentSubmissionBatch, { nullable: true })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, PermissionAction.READ)
+  paymentSubmission(
+    @Args('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.feesService.getPaymentSubmissionById(
+      id,
+      user.schoolId,
+      user.sub,
+      user.role,
+    );
   }
 
   @Query(() => [PaymentSubmissionBatch])

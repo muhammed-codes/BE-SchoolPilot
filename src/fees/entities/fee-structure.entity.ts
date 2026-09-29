@@ -2,6 +2,7 @@ import { ObjectType, Field, Int } from '@nestjs/graphql';
 import { Entity, Column, Index, ManyToOne, JoinColumn, Unique } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { FeeCategory } from './fee-category.entity';
+import { ClassEntity } from '../../classes/entities/class.entity';
 
 @ObjectType()
 @Entity('fee_structures')
@@ -20,6 +21,11 @@ export class FeeStructure extends BaseEntity {
   @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })
   classId!: string | null;
+
+  @Field(() => ClassEntity, { nullable: true })
+  @ManyToOne(() => ClassEntity, { nullable: true, eager: false })
+  @JoinColumn({ name: 'classId' })
+  classEntity?: ClassEntity;
 
   @Field()
   @Column({ type: 'uuid' })

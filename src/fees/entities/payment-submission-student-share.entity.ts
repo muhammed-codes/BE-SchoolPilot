@@ -10,6 +10,7 @@ import {
 import { BaseEntity } from '../../common/entities/base.entity';
 import { PaymentSubmissionBatch } from './payment-submission-batch.entity';
 import { PaymentAllocation } from './payment-allocation.entity';
+import { Student } from '../../students/entities/student.entity';
 
 export enum PaymentShareStatus {
   PENDING = 'PENDING',
@@ -32,6 +33,11 @@ export class PaymentSubmissionStudentShare extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
   studentId!: string;
+
+  @Field(() => Student, { nullable: true })
+  @ManyToOne(() => Student, { nullable: true, eager: false })
+  @JoinColumn({ name: 'studentId' })
+  student?: Student;
 
   @Field(() => Int)
   @Column({ type: 'int' })

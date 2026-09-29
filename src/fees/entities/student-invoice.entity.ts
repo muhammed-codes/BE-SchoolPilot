@@ -1,7 +1,10 @@
 import { ObjectType, Field, Int, registerEnumType } from '@nestjs/graphql';
-import { Entity, Column, Index, OneToMany, Unique } from 'typeorm';
+import { Entity, Column, Index, OneToMany, ManyToOne, JoinColumn, Unique } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { StudentInvoiceItem } from './student-invoice-item.entity';
+import { Student } from '../../students/entities/student.entity';
+import { Session } from '../../terms/entities/session.entity';
+import { Term } from '../../terms/entities/term.entity';
 
 export enum InvoiceStatus {
   OPEN = 'OPEN',
@@ -26,13 +29,28 @@ export class StudentInvoice extends BaseEntity {
   @Column({ type: 'uuid' })
   studentId!: string;
 
+  @Field(() => Student, { nullable: true })
+  @ManyToOne(() => Student, { nullable: true, eager: false })
+  @JoinColumn({ name: 'studentId' })
+  student?: Student;
+
   @Field()
   @Column({ type: 'uuid' })
   sessionId!: string;
 
+  @Field(() => Session, { nullable: true })
+  @ManyToOne(() => Session, { nullable: true, eager: false })
+  @JoinColumn({ name: 'sessionId' })
+  session?: Session;
+
   @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })
   termId!: string | null;
+
+  @Field(() => Term, { nullable: true })
+  @ManyToOne(() => Term, { nullable: true, eager: false })
+  @JoinColumn({ name: 'termId' })
+  term?: Term;
 
   @Field(() => Int)
   @Column({ type: 'int', default: 0 })

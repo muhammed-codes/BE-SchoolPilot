@@ -48,6 +48,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { StudentParent } from '../students/entities/student-parent.entity';
 import { UserRole } from '../common/enums';
 
+import { ClassEntity } from '../classes/entities/class.entity';
+
 import {
   CreateFeeCategoryInput,
   UpdateFeeCategoryInput,
@@ -62,7 +64,10 @@ import {
   RejectShareInput,
   UpsertApprovalConfigInput,
   UpdateVisibilityConfigInput,
+  InvoiceFilterInput,
+  UpdateFeeStructureInput,
 } from './dto/fees.input';
+import { ClassFeeSummary, FeeOverview } from './dto/fee-overview.type';
 
 @Injectable()
 export class FeesService {
@@ -652,6 +657,246 @@ export class FeesService {
           order: { generatedAt: 'DESC' },
         });
       });
+  }
+
+  async getInvoiceById(
+    id: string,
+    schoolId: string,
+    userId: string,
+    role: UserRole,
+  ) {
+    const invoice = await this.invoiceRepo.findOne({
+      where: { id, schoolId },
+      relations: [
+        'items',
+        'student',
+        'student.currentClass',
+        'session',
+        'term',
+      ],
+    });
+    if (!invoice) throw new NotFoundException('Invoice not found');
+
+    if (role === UserRole.PARENT) {
+      const link = await this.studentParentRepo.findOne({
+        where: { studentId: invoice.studentId, parentId: userId },
+      });
+      if (!link) {
+        throw new ForbiddenException('You do not have access to this invoice');
+      }
+    } else {
+      const isFinanceOwner =
+        role === UserRole.SCHOOL_ADMIN ||
+        role === UserRole.BURSAR ||
+        role === UserRole.SUPER_ADMIN;
+      if (!isFinanceOwner) {
+        const cfg = await this.visibilityRepo.findOne({
+          where: { schoolId, role },
+        });
+        if (!cfg || !cfg.canViewPaymentRecords) {
+          throw new ForbiddenException(
+            'Your role does not have permission to view payment records',
+          );
+        }
+      }
+    }
+
+    return invoice;
+  }
+
+  getFeeStructureById(id: string, schoolId: string) {
+    return this.feeStructureRepo.findOne({
+      where: { id, schoolId },
+      relations: ['feeCategory', 'classEntity'],
+    });
+  }
+
+  async getPaymentSubmissionById(
+    id: string,
+    schoolId: string,
+    userId: string,
+    role: UserRole,
+  ) {
+    const batch = await this.batchRepo.findOne({
+      where: { id, schoolId },
+      relations: [
+        'bankAccount',
+        'shares',
+        'shares.allocations',
+        'shares.student',
+      ],
+    });
+    if (!batch) throw new NotFoundException('Payment submission not found');
+    if (role === UserRole.PARENT && batch.parentId !== userId) {
+      throw new ForbiddenException(
+        'You do not have access to this payment submission',
+      );
+    }
+    return batch;
+  }
+
+  async getPaginatedInvoices(
+    schoolId: string,
+    filter?: InvoiceFilterInput,
+    pagination?: PaginationArgs,
+  ) {
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 50;
+
+    const qb = this.invoiceRepo
+      .createQueryBuilder('invoice')
+      .leftJoinAndSelect('invoice.student', 'student')
+      .leftJoinAndSelect('student.currentClass', 'classEntity')
+      .leftJoinAndSelect('invoice.session', 'session')
+      .leftJoinAndSelect('invoice.term', 'term')
+      .leftJoinAndSelect('invoice.items', 'items')
+      .where('invoice.schoolId = :schoolId', { schoolId });
+
+    if (filter?.sessionId) {
+      qb.andWhere('invoice.sessionId = :sessionId', {
+        sessionId: filter.sessionId,
+      });
+    }
+    if (filter?.termId) {
+      qb.andWhere('invoice.termId = :termId', { termId: filter.termId });
+    }
+    if (filter?.studentId) {
+      qb.andWhere('invoice.studentId = :studentId', {
+        studentId: filter.studentId,
+      });
+    }
+    if (filter?.classId) {
+      qb.andWhere('student.currentClassId = :classId', {
+        classId: filter.classId,
+      });
+    }
+    if (filter?.search?.trim()) {
+      qb.andWhere(
+        '(student.firstName ILIKE :search OR student.lastName ILIKE :search OR student.admissionNumber ILIKE :search)',
+        { search: `%${filter.search.trim()}%` },
+      );
+    }
+
+    const [items, total] = await qb
+      .orderBy('invoice.generatedAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      items,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getFeeOverview(
+    schoolId: string,
+    sessionId: string,
+    termId?: string,
+    classId?: string,
+    userId?: string,
+    role?: UserRole,
+  ) {
+    if (role && role !== UserRole.PARENT) {
+      const isFinanceOwner =
+        role === UserRole.SCHOOL_ADMIN ||
+        role === UserRole.BURSAR ||
+        role === UserRole.SUPER_ADMIN;
+      if (!isFinanceOwner) {
+        const cfg = await this.visibilityRepo.findOne({
+          where: { schoolId, role },
+        });
+        if (!cfg || !cfg.canViewPaymentRecords) {
+          throw new ForbiddenException(
+            'Your role does not have permission to view payment records',
+          );
+        }
+      }
+    }
+
+    const classEntities = classId
+      ? await this.studentRepo.manager.find(ClassEntity, {
+          where: { id: classId, schoolId },
+          order: { name: 'ASC' },
+        })
+      : await this.studentRepo.manager.find(ClassEntity, {
+          where: { schoolId },
+          order: { name: 'ASC' },
+        });
+
+    const classSummaries: ClassFeeSummary[] = [];
+    let totalBilled = 0;
+    let totalCollected = 0;
+    let totalOutstanding = 0;
+    let paidInvoicesCount = 0;
+    let partiallyPaidInvoicesCount = 0;
+    let openInvoicesCount = 0;
+
+    for (const cls of classEntities) {
+      const qb = this.invoiceRepo
+        .createQueryBuilder('inv')
+        .innerJoin('students', 'st', 'st.id = inv.studentId')
+        .where('inv.schoolId = :schoolId', { schoolId })
+        .andWhere('inv.sessionId = :sessionId', { sessionId })
+        .andWhere('st.currentClassId = :classId', { classId: cls.id })
+        .andWhere('st.isArchived = false');
+
+      if (termId) {
+        qb.andWhere('inv.termId = :termId', { termId });
+      }
+
+      const invoices = await qb.getMany();
+      const studentCount = await this.studentRepo.count({
+        where: { schoolId, currentClassId: cls.id, isArchived: false },
+      });
+
+      const clsBilled = invoices.reduce((s, i) => s + (i.totalAmount || 0), 0);
+      const clsPaid = invoices.reduce((s, i) => s + (i.totalPaid || 0), 0);
+      const clsOutstanding = invoices.reduce(
+        (s, i) => s + (i.balance || 0),
+        0,
+      );
+      const clsPaidCount = invoices.filter(
+        (i) => i.status === InvoiceStatus.PAID,
+      ).length;
+      const clsPartialCount = invoices.filter(
+        (i) => i.status === InvoiceStatus.PARTIALLY_PAID,
+      ).length;
+      const clsOpenCount = invoices.filter(
+        (i) => i.status === InvoiceStatus.OPEN,
+      ).length;
+
+      totalBilled += clsBilled;
+      totalCollected += clsPaid;
+      totalOutstanding += clsOutstanding;
+      paidInvoicesCount += clsPaidCount;
+      partiallyPaidInvoicesCount += clsPartialCount;
+      openInvoicesCount += clsOpenCount;
+
+      classSummaries.push({
+        classId: cls.id,
+        className: cls.name,
+        totalStudents: studentCount,
+        totalBilled: clsBilled,
+        totalPaid: clsPaid,
+        totalOutstanding: clsOutstanding,
+        paidCount: clsPaidCount,
+        partiallyPaidCount: clsPartialCount,
+        openCount: clsOpenCount,
+      });
+    }
+
+    return {
+      totalBilled,
+      totalCollected,
+      totalOutstanding,
+      paidInvoicesCount,
+      partiallyPaidInvoicesCount,
+      openInvoicesCount,
+      classSummaries,
+    };
   }
 
   // ─── BE-FM-7: Payment Submission ─────────────────────────────────────────

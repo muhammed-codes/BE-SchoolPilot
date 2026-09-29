@@ -347,3 +347,45 @@ export class UpdateVisibilityConfigInput {
   @IsBoolean()
   canViewPaymentRecords!: boolean;
 }
+
+@InputType()
+export class InvoiceFilterInput {
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  sessionId?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  termId?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  classId?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  studentId?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  search?: string;
+}
+
+@InputType()
+export class UpdateFeeStructureInput {
+  @Field(() => Int, { nullable: true })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  amount?: number;
+
+  @Field(() => Boolean, { nullable: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
