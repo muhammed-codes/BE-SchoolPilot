@@ -1544,10 +1544,6 @@ export class TimetableService implements OnModuleInit {
       return [];
     }
 
-    const targetAssignments = await this.classSubjectRepo.find({
-      where: { classId: input.targetClassId, schoolId },
-    });
-
     const results: TimetableMutationResult[] = [];
 
     for (const src of sourceEntries) {
@@ -1555,20 +1551,8 @@ export class TimetableService implements OnModuleInit {
       let teacherIds = src.teacherIds || [];
       let useClassTeacher = src.useClassTeacher;
       if (!input.copyTeachers) {
-        const assigned = targetAssignments.find(
-          (a) => a.subjectId === src.subjectId,
-        );
-        if (assigned?.subjectTeacherId || assigned?.teacherIds?.length) {
-          teacherId =
-            assigned.subjectTeacherId ||
-            (assigned.teacherIds ? assigned.teacherIds[0] : null);
-          teacherIds =
-            assigned.teacherIds ||
-            (assigned.subjectTeacherId ? [assigned.subjectTeacherId] : []);
-        } else {
-          teacherId = null;
-          teacherIds = [];
-        }
+        teacherId = null;
+        teacherIds = [];
         useClassTeacher = false;
       }
 
