@@ -228,29 +228,106 @@ export class FeesService {
       .then(() => true);
   }
 
+  private async syncStudentInvoiceForStructure(
+    manager: EntityManager,
+    schoolId: string,
+    studentId: string,
+    struct: FeeStructure,
+    newAmount: number,
+  ) {
+    const whereCondition: any = {
+      schoolId,
+      studentId,
+      sessionId: struct.sessionId,
+    };
+    if (struct.termId) {
+      whereCondition.termId = struct.termId;
+    }
+
+    const invoices = await manager.find(StudentInvoice, {
+      where: whereCondition,
+      relations: ['items'],
+    });
+
+    for (const invoice of invoices) {
+      if (!invoice.items || invoice.items.length === 0) continue;
+      const item = invoice.items.find(
+        (i) => i.feeCategoryId === struct.feeCategoryId,
+      );
+      if (item) {
+        item.amount = newAmount;
+        item.balance = Math.max(0, item.amount - item.amountPaid);
+        await manager.save(StudentInvoiceItem, item);
+
+        // Recalculate invoice totals
+        const totalAmount = invoice.items.reduce((sum, i) => sum + i.amount, 0);
+        const totalPaid = invoice.items.reduce((sum, i) => sum + i.amountPaid, 0);
+        invoice.totalAmount = totalAmount;
+        invoice.totalPaid = totalPaid;
+        invoice.balance = Math.max(0, totalAmount - totalPaid);
+        invoice.status =
+          invoice.balance === 0
+            ? InvoiceStatus.PAID
+            : totalPaid > 0
+              ? InvoiceStatus.PARTIALLY_PAID
+              : InvoiceStatus.OPEN;
+
+        await manager.save(StudentInvoice, invoice);
+      }
+    }
+  }
+
   // ─── BE-FM-3 + FM-4: Overrides / Discounts / Scholarships ────────────────
 
-  bulkCreateOverrides(
+  async bulkCreateOverrides(
     input: BulkCreateOverrideInput,
     schoolId: string,
     userId: string,
   ) {
-    return this.dataSource.transaction((manager) =>
-      Promise.all(
-        input.studentIds.map((studentId) => {
-          const override = manager.create(StudentFeeOverride, {
+    return this.dataSource.transaction(async (manager) => {
+      const struct = await manager.findOne(FeeStructure, {
+        where: { id: input.feeStructureId, schoolId },
+      });
+      if (!struct) throw new NotFoundException('Fee structure not found');
+
+      const savedOverrides = await Promise.all(
+        input.studentIds.map(async (studentId) => {
+          let override = await manager.findOne(StudentFeeOverride, {
+            where: { studentId, feeStructureId: input.feeStructureId, schoolId },
+          });
+          if (override) {
+            override.overrideAmount = input.overrideAmount;
+            override.reason = input.reason ?? null;
+            override.type = input.type ?? FeeOverrideType.ADJUSTMENT;
+            override.createdBy = userId;
+          } else {
+            override = manager.create(StudentFeeOverride, {
+              schoolId,
+              studentId,
+              feeStructureId: input.feeStructureId,
+              overrideAmount: input.overrideAmount,
+              reason: input.reason ?? null,
+              type: input.type ?? FeeOverrideType.ADJUSTMENT,
+              createdBy: userId,
+            });
+          }
+          const saved = await manager.save(StudentFeeOverride, override);
+
+          // Update existing invoices for this student in this session/term
+          await this.syncStudentInvoiceForStructure(
+            manager,
             schoolId,
             studentId,
-            feeStructureId: input.feeStructureId,
-            overrideAmount: input.overrideAmount,
-            reason: input.reason ?? null,
-            type: input.type ?? FeeOverrideType.ADJUSTMENT,
-            createdBy: userId,
-          });
-          return manager.save(StudentFeeOverride, override);
+            struct,
+            input.overrideAmount,
+          );
+
+          return saved;
         }),
-      ),
-    );
+      );
+
+      return savedOverrides;
+    });
   }
 
   getOverrides(
@@ -284,10 +361,31 @@ export class FeesService {
     return qb.getMany();
   }
 
-  removeOverride(id: string, schoolId: string) {
-    return this.overrideRepo.findOne({ where: { id, schoolId } }).then((o) => {
-      if (!o) throw new NotFoundException('Override not found');
-      return this.overrideRepo.remove(o).then(() => true);
+  async removeOverride(id: string, schoolId: string) {
+    return this.dataSource.transaction(async (manager) => {
+      const override = await manager.findOne(StudentFeeOverride, {
+        where: { id, schoolId },
+        relations: ['feeStructure'],
+      });
+      if (!override) throw new NotFoundException('Override not found');
+
+      const struct = override.feeStructure;
+      const studentId = override.studentId;
+
+      await manager.remove(StudentFeeOverride, override);
+
+      if (struct) {
+        // Revert invoice back to base structure amount
+        await this.syncStudentInvoiceForStructure(
+          manager,
+          schoolId,
+          studentId,
+          struct,
+          struct.amount,
+        );
+      }
+
+      return true;
     });
   }
 
