@@ -24,10 +24,7 @@ import {
   StudentScoreRecord,
 } from './dto/paginated-class-scores.type';
 import { ComponentScore } from './dto/component-score.type';
-import {
-  TeacherScoringAssignment,
-  ScoringSubject,
-} from './dto/teacher-scoring-assignment.type';
+import { TeacherScoringAssignment } from './dto/teacher-scoring-assignment.type';
 import { ClassEntity } from '../classes/entities/class.entity';
 import { ClassSubject } from '../classes/entities/class-subject.entity';
 import { Student } from '../students/entities/student.entity';

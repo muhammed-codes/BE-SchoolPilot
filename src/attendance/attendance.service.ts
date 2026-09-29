@@ -485,8 +485,12 @@ export class AttendanceService {
         userId: teacher.id,
         user: teacher,
         date,
-        clockInTime: log?.clockInTime ? new Date(log.clockInTime).toISOString() : undefined,
-        clockOutTime: log?.clockOutTime ? new Date(log.clockOutTime).toISOString() : undefined,
+        clockInTime: log?.clockInTime
+          ? new Date(log.clockInTime).toISOString()
+          : undefined,
+        clockOutTime: log?.clockOutTime
+          ? new Date(log.clockOutTime).toISOString()
+          : undefined,
         isLate: !!log?.isLate,
         isManual: !!log?.isManual,
       };
@@ -546,7 +550,7 @@ export class AttendanceService {
       .where('s.schoolId = :schoolId', { schoolId })
       .andWhere('s.isArchived = false')
       .groupBy('s.currentClassId')
-      .getRawMany();
+      .getRawMany<{ classId: string; count: string }>();
 
     const countMap = new Map<string, number>(
       studentCounts.map((sc) => [sc.classId, parseInt(sc.count, 10)]),

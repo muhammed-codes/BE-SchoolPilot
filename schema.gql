@@ -1051,6 +1051,7 @@ type Query {
   myPaymentSubmissionsPage(limit: Int! = 50, page: Int! = 1): PaginatedPaymentSubmissionBatch!
   myPermissions: [RolePermission!]!
   mySchool: School!
+  myScoringAssignments(termId: String): [TeacherScoringAssignment!]!
   myStudentInvoices(studentId: String!): [StudentInvoice!]!
   mySubjectScores(resultSheetId: String!): [SubjectScore!]!
   myTimetable(termId: String): TeacherTimetableResult!
@@ -1074,7 +1075,7 @@ type Query {
   school(id: String!): School!
   schoolClasses(limit: Int! = 50, page: Int! = 1, search: String): PaginatedClassEntity!
   schoolDays: [SchoolDay!]!
-  schoolResultSheets(status: ResultStatus): [ResultSheet!]!
+  schoolResultSheets(classId: String, status: ResultStatus, termId: String): [ResultSheet!]!
   schoolSubjects(limit: Int! = 50, page: Int! = 1, search: String): PaginatedSubject!
   schoolTeachers: [User!]!
   schoolUsers(limit: Int! = 50, page: Int! = 1, role: UserRole, search: String): PaginatedUser!
@@ -1373,6 +1374,13 @@ type ScoreComponentConfig {
 input ScoreComponentConfigInput {
   component: ScoreComponent!
   maxScore: Float!
+}
+
+type ScoringSubject {
+  id: String!
+  subjectCode: String
+  subjectId: String!
+  subjectName: String!
 }
 
 type Session {
@@ -1682,6 +1690,15 @@ type TeacherAvailability {
   teacher: User!
   teacherId: String!
   updatedAt: DateTime!
+}
+
+type TeacherScoringAssignment {
+  activeSheetId: String
+  classId: String!
+  className: String!
+  hasActiveSheet: Boolean!
+  sheetStatus: String
+  subjects: [ScoringSubject!]!
 }
 
 type TeacherTimetableResult {

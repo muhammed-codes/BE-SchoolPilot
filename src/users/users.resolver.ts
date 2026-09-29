@@ -9,7 +9,11 @@ import {
 } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
 import { PermissionAction } from '../access/enums/permission-action.enum';
-import { UseGuards, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  UseGuards,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';

@@ -43,7 +43,6 @@ import {
   UpsertApprovalConfigInput,
   UpdateVisibilityConfigInput,
   InvoiceFilterInput,
-  UpdateFeeStructureInput,
 } from './dto/fees.input';
 import { ObjectType, Field } from '@nestjs/graphql';
 
@@ -158,10 +157,7 @@ export class FeesResolver {
   @Query(() => FeeStructure, { nullable: true })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermission(AppResource.FEES, PermissionAction.READ)
-  feeStructure(
-    @Args('id') id: string,
-    @CurrentUser() user: AuthUser,
-  ) {
+  feeStructure(@Args('id') id: string, @CurrentUser() user: AuthUser) {
     return this.feesService.getFeeStructureById(id, user.schoolId);
   }
 
@@ -290,10 +286,7 @@ export class FeesResolver {
   @Query(() => StudentInvoice, { nullable: true })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermission(AppResource.FEES, PermissionAction.READ)
-  invoice(
-    @Args('id') id: string,
-    @CurrentUser() user: AuthUser,
-  ) {
+  invoice(@Args('id') id: string, @CurrentUser() user: AuthUser) {
     return this.feesService.getInvoiceById(
       id,
       user.schoolId,
@@ -390,10 +383,7 @@ export class FeesResolver {
   @Query(() => PaymentSubmissionBatch, { nullable: true })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermission(AppResource.FEES, PermissionAction.READ)
-  paymentSubmission(
-    @Args('id') id: string,
-    @CurrentUser() user: AuthUser,
-  ) {
+  paymentSubmission(@Args('id') id: string, @CurrentUser() user: AuthUser) {
     return this.feesService.getPaymentSubmissionById(
       id,
       user.schoolId,

@@ -1,5 +1,13 @@
 import { ObjectType, Field, Int, registerEnumType } from '@nestjs/graphql';
-import { Entity, Column, Index, OneToMany, ManyToOne, JoinColumn, Unique } from 'typeorm';
+import {
+  Entity,
+  Column,
+  Index,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+  Unique,
+} from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { StudentInvoiceItem } from './student-invoice-item.entity';
 import { Student } from '../../students/entities/student.entity';

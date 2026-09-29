@@ -5,7 +5,14 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, EntityManager, In, IsNull } from 'typeorm';
+import {
+  Repository,
+  DataSource,
+  EntityManager,
+  In,
+  IsNull,
+  FindOptionsWhere,
+} from 'typeorm';
 
 import { FeeCategory } from './entities/fee-category.entity';
 import { FeeStructure } from './entities/fee-structure.entity';
@@ -65,7 +72,6 @@ import {
   UpsertApprovalConfigInput,
   UpdateVisibilityConfigInput,
   InvoiceFilterInput,
-  UpdateFeeStructureInput,
 } from './dto/fees.input';
 import { ClassFeeSummary, FeeOverview } from './dto/fee-overview.type';
 
@@ -240,7 +246,7 @@ export class FeesService {
     struct: FeeStructure,
     newAmount: number,
   ) {
-    const whereCondition: any = {
+    const whereCondition: FindOptionsWhere<StudentInvoice> = {
       schoolId,
       studentId,
       sessionId: struct.sessionId,
@@ -266,7 +272,10 @@ export class FeesService {
 
         // Recalculate invoice totals
         const totalAmount = invoice.items.reduce((sum, i) => sum + i.amount, 0);
-        const totalPaid = invoice.items.reduce((sum, i) => sum + i.amountPaid, 0);
+        const totalPaid = invoice.items.reduce(
+          (sum, i) => sum + i.amountPaid,
+          0,
+        );
         invoice.totalAmount = totalAmount;
         invoice.totalPaid = totalPaid;
         invoice.balance = Math.max(0, totalAmount - totalPaid);
@@ -298,7 +307,11 @@ export class FeesService {
       const savedOverrides = await Promise.all(
         input.studentIds.map(async (studentId) => {
           let override = await manager.findOne(StudentFeeOverride, {
-            where: { studentId, feeStructureId: input.feeStructureId, schoolId },
+            where: {
+              studentId,
+              feeStructureId: input.feeStructureId,
+              schoolId,
+            },
           });
           if (override) {
             override.overrideAmount = input.overrideAmount;
@@ -798,7 +811,7 @@ export class FeesService {
     classId?: string,
     userId?: string,
     role?: UserRole,
-  ) {
+  ): Promise<FeeOverview> {
     if (role && role !== UserRole.PARENT) {
       const isFinanceOwner =
         role === UserRole.SCHOOL_ADMIN ||
@@ -854,10 +867,7 @@ export class FeesService {
 
       const clsBilled = invoices.reduce((s, i) => s + (i.totalAmount || 0), 0);
       const clsPaid = invoices.reduce((s, i) => s + (i.totalPaid || 0), 0);
-      const clsOutstanding = invoices.reduce(
-        (s, i) => s + (i.balance || 0),
-        0,
-      );
+      const clsOutstanding = invoices.reduce((s, i) => s + (i.balance || 0), 0);
       const clsPaidCount = invoices.filter(
         (i) => i.status === InvoiceStatus.PAID,
       ).length;
