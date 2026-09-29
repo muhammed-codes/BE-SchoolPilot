@@ -13,8 +13,25 @@ const input = {
 function makeService(periodCount: number, assignmentCount: number) {
   const service = Object.create(TimetableService.prototype);
   service.scheduleGenerator = new ScheduleGeneratorService();
-  service.periodRepo = { count: jest.fn().mockResolvedValue(periodCount) };
-  service.entryRepo = { count: jest.fn().mockResolvedValue(assignmentCount) };
+  const periods = Array.from({ length: periodCount }, (_, i) => ({
+    id: `period-${i}`,
+    dayOfWeek: 1,
+    classIds: [],
+    isActive: true,
+  }));
+  const entries = Array.from({ length: assignmentCount }, (_, i) => ({
+    id: `entry-${i}`,
+    dayOfWeek: 1,
+    classId: 'class-1',
+  }));
+  service.periodRepo = {
+    count: jest.fn().mockResolvedValue(periodCount),
+    find: jest.fn().mockResolvedValue(periods),
+  };
+  service.entryRepo = {
+    count: jest.fn().mockResolvedValue(assignmentCount),
+    find: jest.fn().mockResolvedValue(entries),
+  };
   service.classRepo = { count: jest.fn().mockResolvedValue(0) };
   service.dataSource = { transaction: jest.fn() };
   return service;

@@ -176,30 +176,65 @@ export class TimetableService implements OnModuleInit {
     schoolId: string,
   ): Promise<SchoolDayScheduleGenerationResult> {
     const preview = await this.previewSchedule(input, schoolId);
-    const [existingPeriodCount, existingAssignmentCount] = await Promise.all([
-      this.periodRepo.count({ where: { schoolId } }),
-      this.entryRepo.count({ where: { schoolId } }),
-    ]);
 
     if (!preview.valid) {
       return {
         success: false,
         message:
           'The schedule configuration is invalid. No periods were generated.',
-        existingPeriodCount,
-        existingAssignmentCount,
+        existingPeriodCount: 0,
+        existingAssignmentCount: 0,
         preview,
         createdPeriods: [],
       };
     }
+
+    const targetDays = new Set(preview.dayOfWeeks);
+    const targetClassIds = preview.classIds || [];
+
+    const [allPeriods, allEntries] = await Promise.all([
+      this.periodRepo.find({
+        where: { schoolId, isActive: true },
+      }),
+      this.entryRepo.find({
+        where: { schoolId },
+      }),
+    ]);
+
+    const conflictingPeriods = allPeriods.filter((p) => {
+      if (p.dayOfWeek && !targetDays.has(p.dayOfWeek)) return false;
+      const pClassIds = p.classIds || [];
+      if (
+        targetClassIds.length > 0 &&
+        pClassIds.length > 0 &&
+        !pClassIds.some((cId) => targetClassIds.includes(cId))
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    const conflictingEntries = allEntries.filter((e) => {
+      if (!targetDays.has(e.dayOfWeek)) return false;
+      if (
+        targetClassIds.length > 0 &&
+        !targetClassIds.includes(e.classId)
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    const existingPeriodCount = conflictingPeriods.length;
+    const existingAssignmentCount = conflictingEntries.length;
 
     if (existingPeriodCount > 0 || existingAssignmentCount > 0) {
       return {
         success: false,
         message:
           existingAssignmentCount > 0
-            ? 'Existing timetable assignments were found. Generation was stopped to protect them.'
-            : 'Existing timetable periods were found. Generation was stopped to avoid duplicate schedules.',
+            ? 'Existing timetable assignments were found for the selected day(s). Generation was stopped to protect them.'
+            : 'Existing timetable periods were found for the selected day(s). Generation was stopped to avoid duplicate schedules.',
         existingPeriodCount,
         existingAssignmentCount,
         preview,
