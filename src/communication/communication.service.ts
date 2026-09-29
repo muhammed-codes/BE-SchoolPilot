@@ -63,6 +63,10 @@ export class CommunicationService {
     return announcement;
   }
 
+  getById(id: string, schoolId: string) {
+    return this.announcementRepo.findOne({ where: { id, schoolId } });
+  }
+
   create = async (
     input: CreateAnnouncementInput,
     schoolId: string,

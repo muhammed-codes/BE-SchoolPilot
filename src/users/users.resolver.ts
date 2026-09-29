@@ -9,7 +9,7 @@ import {
 } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
 import { PermissionAction } from '../access/enums/permission-action.enum';
-import { UseGuards, ForbiddenException } from '@nestjs/common';
+import { UseGuards, ForbiddenException, NotFoundException } from '@nestjs/common';
 
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
@@ -36,8 +36,16 @@ export class UsersResolver {
   @Query(() => User)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.USERS, PermissionAction.READ)
-  user(@Args('id') id: string) {
-    return this.usersService.findById(id);
+  user(
+    @Args('id') id: string,
+    @CurrentUser() user: { role: UserRole; schoolId?: string },
+  ) {
+    return this.usersService
+      .findByIdAndSchool(id, user.role, user.schoolId)
+      .then((res) => {
+        if (!res) throw new NotFoundException('User not found');
+        return res;
+      });
   }
 
   @Query(() => PaginatedUser)

@@ -65,11 +65,41 @@ export class ClassesResolver {
     );
   }
 
+  @Query(() => PaginatedClass, { name: 'classes' })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.CLASSES, PermissionAction.READ)
+  classes(
+    @Args() pagination: PaginationArgs,
+    @Args('search', { type: () => String, nullable: true }) search: string,
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+  ) {
+    if (TEACHER_ROLES.includes(user.role)) {
+      return this.classesService.getClassesForTeacherPaginated(
+        user.sub,
+        user.schoolId,
+        pagination,
+        search,
+      );
+    }
+    return this.classesService.getClassesBySchool(
+      user.schoolId,
+      pagination,
+      search,
+    );
+  }
+
   @Query(() => [ClassEntity])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.CLASSES, PermissionAction.READ)
   myClasses(@CurrentUser() user: { sub: string; schoolId: string }) {
     return this.classesService.getClassesForTeacher(user.sub, user.schoolId);
+  }
+
+  @Query(() => ClassEntity, { name: 'class' })
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.CLASSES, PermissionAction.READ)
+  class(@Args('id') id: string, @CurrentUser() user: { schoolId: string }) {
+    return this.classesService.getClassById(id, user.schoolId);
   }
 
   @Query(() => ClassEntity)

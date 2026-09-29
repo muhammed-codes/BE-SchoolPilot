@@ -50,6 +50,28 @@ export class SubjectsResolver {
     );
   }
 
+  @Query(() => Subject, { nullable: true })
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.SUBJECTS, PermissionAction.READ)
+  subject(@Args('id') id: string, @CurrentUser() user: { schoolId: string }) {
+    return this.subjectsService.getSubjectById(id, user.schoolId);
+  }
+
+  @Query(() => PaginatedSubject, { name: 'subjects' })
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.SUBJECTS, PermissionAction.READ)
+  subjects(
+    @Args() pagination: PaginationArgs,
+    @Args('search', { type: () => String, nullable: true }) search: string,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.subjectsService.getSubjectsBySchool(
+      user.schoolId,
+      pagination,
+      search,
+    );
+  }
+
   @Query(() => PaginatedSubject)
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission(AppResource.SUBJECTS, PermissionAction.READ)

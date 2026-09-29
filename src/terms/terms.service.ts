@@ -128,6 +128,20 @@ export class TermsService {
       });
   };
 
+  getTermById = (id: string, schoolId: string) => {
+    return this.termsRepository.findOne({
+      where: { id, schoolId },
+      relations: ['session'],
+    });
+  };
+
+  getSessionById = (id: string, schoolId: string) => {
+    return this.sessionsRepository.findOne({
+      where: { id, schoolId },
+      relations: ['terms'],
+    });
+  };
+
   getSessionsBySchool = (schoolId: string) => {
     return this.sessionsRepository.find({
       where: { schoolId },

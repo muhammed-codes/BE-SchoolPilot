@@ -47,6 +47,20 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { id } });
   };
 
+  findByIdAndSchool = (
+    id: string,
+    role: UserRole,
+    schoolId?: string,
+  ): Promise<User | null> => {
+    if (role === UserRole.SUPER_ADMIN) {
+      return this.usersRepository.findOne({ where: { id } });
+    }
+    if (!schoolId) {
+      return Promise.resolve(null);
+    }
+    return this.usersRepository.findOne({ where: { id, schoolId } });
+  };
+
   findByResetToken = (token: string) => {
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     return this.usersRepository.findOne({

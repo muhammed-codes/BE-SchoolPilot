@@ -21,6 +21,20 @@ export class TermsResolver {
     return this.termsService.getActiveTerm(user.schoolId);
   }
 
+  @Query(() => Term, { nullable: true })
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.SETTINGS, PermissionAction.READ)
+  term(@Args('id') id: string, @CurrentUser() user: { schoolId: string }) {
+    return this.termsService.getTermById(id, user.schoolId);
+  }
+
+  @Query(() => Session, { nullable: true })
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission(AppResource.SETTINGS, PermissionAction.READ)
+  session(@Args('id') id: string, @CurrentUser() user: { schoolId: string }) {
+    return this.termsService.getSessionById(id, user.schoolId);
+  }
+
   @Query(() => [Session])
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission(AppResource.SETTINGS, PermissionAction.READ)

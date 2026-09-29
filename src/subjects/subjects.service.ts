@@ -130,6 +130,10 @@ export class SubjectsService {
     return this.subjectsRepository.save(subject);
   };
 
+  getSubjectById = (id: string, schoolId: string) => {
+    return this.subjectsRepository.findOne({ where: { id, schoolId } });
+  };
+
   getSubjectsBySchool = (
     schoolId: string,
     pagination?: PaginationArgs,

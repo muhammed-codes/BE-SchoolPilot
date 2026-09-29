@@ -22,6 +22,13 @@ type AuthUser = { sub: string; schoolId?: string; role: UserRole };
 export class CommunicationResolver {
   constructor(private readonly communicationService: CommunicationService) {}
 
+  @Query(() => Announcement, { nullable: true })
+  @RequirePermission(AppResource.COMMUNICATION, PermissionAction.READ)
+  announcement(@Args('id') id: string, @CurrentUser() user: AuthUser) {
+    if (!user.schoolId) return null;
+    return this.communicationService.getById(id, user.schoolId);
+  }
+
   @Query(() => [Announcement])
   @RequirePermission(AppResource.COMMUNICATION, PermissionAction.READ)
   announcements(@CurrentUser() user: AuthUser) {
