@@ -11,6 +11,10 @@ import {
   ManualStaffAttendanceInput,
   AttendanceSummary,
 } from './dto/attendance.dto';
+import {
+  StaffAttendanceOverview,
+  ClassAttendanceOverview,
+} from './dto/attendance-overview.type';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission } from '../common/decorators';
 import { UserRole } from '../common/enums';
@@ -113,6 +117,32 @@ export class AttendanceResolver {
     @CurrentUser() user: { schoolId: string },
   ) {
     return this.attendanceService.getUnmarkedClasses(user.schoolId, date);
+  }
+
+  @Query(() => StaffAttendanceOverview)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
+  staffAttendanceOverview(
+    @Args('date') date: string,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.attendanceService.getStaffAttendanceOverview(
+      user.schoolId,
+      date,
+    );
+  }
+
+  @Query(() => ClassAttendanceOverview)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
+  classAttendanceOverview(
+    @Args('date') date: string,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.attendanceService.getClassAttendanceOverview(
+      user.schoolId,
+      date,
+    );
   }
 
   @Mutation(() => [StudentAttendance])

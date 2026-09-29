@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, Not } from 'typeorm';
 import { StudentAttendance } from './entities/student-attendance.entity';
 import { StaffAttendance } from './entities/staff-attendance.entity';
 import { ClassEntity } from '../classes/entities/class.entity';
@@ -13,11 +13,18 @@ import { School } from '../schools/entities/school.entity';
 import { User } from '../users/entities/user.entity';
 import { Term } from '../terms/entities/term.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
+import { Student } from '../students/entities/student.entity';
 import {
   MarkAttendanceInput,
   ManualStaffAttendanceInput,
   AttendanceSummary,
 } from './dto/attendance.dto';
+import {
+  StaffAttendanceOverview,
+  StaffAttendanceRecord,
+  ClassAttendanceOverview,
+  ClassAttendanceStatus,
+} from './dto/attendance-overview.type';
 import { AttendanceStatus, UserRole } from '../common/enums';
 import { UploadService } from '../upload/upload.service';
 import { JwtService } from '@nestjs/jwt';
@@ -40,6 +47,8 @@ export class AttendanceService {
     private readonly termRepo: Repository<Term>,
     @InjectRepository(StudentParent)
     private readonly studentParentRepo: Repository<StudentParent>,
+    @InjectRepository(Student)
+    private readonly studentRepo: Repository<Student>,
     private readonly uploadService: UploadService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -451,5 +460,132 @@ export class AttendanceService {
           }
         });
       });
+  };
+
+  getStaffAttendanceOverview = async (
+    schoolId: string,
+    date: string,
+  ): Promise<StaffAttendanceOverview> => {
+    const teachers = await this.userRepo.find({
+      where: { schoolId, role: Not(UserRole.PARENT) },
+      order: { firstName: 'ASC' },
+    });
+
+    const logs = await this.staffAttendanceRepo.find({
+      where: { schoolId, date },
+      relations: ['user'],
+    });
+
+    const logMap = new Map(logs.map((l) => [l.userId, l]));
+
+    const records: StaffAttendanceRecord[] = teachers.map((teacher) => {
+      const log = logMap.get(teacher.id);
+      return {
+        id: log?.id,
+        userId: teacher.id,
+        user: teacher,
+        date,
+        clockInTime: log?.clockInTime ? new Date(log.clockInTime).toISOString() : undefined,
+        clockOutTime: log?.clockOutTime ? new Date(log.clockOutTime).toISOString() : undefined,
+        isLate: !!log?.isLate,
+        isManual: !!log?.isManual,
+      };
+    });
+
+    records.sort((a, b) => {
+      const aPresent = !!a.clockInTime;
+      const bPresent = !!b.clockInTime;
+      if (aPresent && !bPresent) return -1;
+      if (!aPresent && bPresent) return 1;
+      if (a.isLate && !b.isLate) return -1;
+      if (!a.isLate && b.isLate) return 1;
+      return (a.user?.fullName || a.user?.firstName || '').localeCompare(
+        b.user?.fullName || b.user?.firstName || '',
+      );
+    });
+
+    const presentCount = records.filter((r) => !!r.clockInTime).length;
+    const lateCount = records.filter((r) => r.isLate).length;
+    const absentCount = records.length - presentCount;
+
+    return {
+      records,
+      totalStaff: records.length,
+      presentCount,
+      absentCount,
+      lateCount,
+    };
+  };
+
+  getClassAttendanceOverview = async (
+    schoolId: string,
+    date: string,
+  ): Promise<ClassAttendanceOverview> => {
+    const classes = await this.classRepo.find({
+      where: { schoolId },
+      relations: ['classTeacher'],
+      order: { name: 'ASC' },
+    });
+
+    const attendanceRecords = await this.studentAttendanceRepo.find({
+      where: { schoolId, date },
+    });
+
+    const recordsByClass = new Map<string, StudentAttendance[]>();
+    for (const rec of attendanceRecords) {
+      if (!recordsByClass.has(rec.classId)) {
+        recordsByClass.set(rec.classId, []);
+      }
+      recordsByClass.get(rec.classId)!.push(rec);
+    }
+
+    const studentCounts = await this.studentRepo
+      .createQueryBuilder('s')
+      .select('s.currentClassId', 'classId')
+      .addSelect('COUNT(s.id)', 'count')
+      .where('s.schoolId = :schoolId', { schoolId })
+      .andWhere('s.isArchived = false')
+      .groupBy('s.currentClassId')
+      .getRawMany();
+
+    const countMap = new Map<string, number>(
+      studentCounts.map((sc) => [sc.classId, parseInt(sc.count, 10)]),
+    );
+
+    const classStatuses: ClassAttendanceStatus[] = classes.map((cls) => {
+      const records = recordsByClass.get(cls.id) || [];
+      const isMarked = records.length > 0;
+      const totalStudents = countMap.get(cls.id) || 0;
+      const presentStudents = records.filter(
+        (r) => r.status === AttendanceStatus.PRESENT,
+      ).length;
+      const absentStudents = records.filter(
+        (r) => r.status === AttendanceStatus.ABSENT,
+      ).length;
+      const lateStudents = records.filter(
+        (r) => r.status === AttendanceStatus.LATE,
+      ).length;
+
+      return {
+        classId: cls.id,
+        className: cls.name,
+        classTeacher: cls.classTeacher,
+        isMarked,
+        totalStudents,
+        presentStudents,
+        absentStudents,
+        lateStudents,
+      };
+    });
+
+    const markedClassesCount = classStatuses.filter((c) => c.isMarked).length;
+    const unmarkedClassesCount = classStatuses.length - markedClassesCount;
+
+    return {
+      classes: classStatuses,
+      totalClasses: classStatuses.length,
+      markedClassesCount,
+      unmarkedClassesCount,
+    };
   };
 }

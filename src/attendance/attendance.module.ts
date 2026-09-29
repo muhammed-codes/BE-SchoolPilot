@@ -8,6 +8,7 @@ import { School } from '../schools/entities/school.entity';
 import { User } from '../users/entities/user.entity';
 import { Term } from '../terms/entities/term.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
+import { Student } from '../students/entities/student.entity';
 import { AttendanceService } from './attendance.service';
 import { AttendanceResolver } from './attendance.resolver';
 import { UploadModule } from '../upload/upload.module';
@@ -22,6 +23,7 @@ import { UploadModule } from '../upload/upload.module';
       User,
       Term,
       StudentParent,
+      Student,
     ]),
     UploadModule,
     JwtModule.register({}),
