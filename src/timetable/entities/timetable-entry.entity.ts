@@ -76,4 +76,15 @@ export class TimetableEntry extends BaseEntity {
   @Field(() => Boolean)
   @Column({ default: false })
   isDoublePeriod!: boolean;
+
+  @Field(() => Boolean, { defaultValue: false })
+  @Column({ type: 'boolean', default: false })
+  useClassTeacher!: boolean;
+
+  @Field(() => [String], { defaultValue: [] })
+  @Column({ type: 'uuid', array: true, default: '{}' })
+  teacherIds!: string[];
+
+  @Field(() => [User], { nullable: true })
+  teachers?: User[];
 }

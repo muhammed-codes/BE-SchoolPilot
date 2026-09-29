@@ -523,6 +523,16 @@ export class CreateTimetableEntryInput {
   @IsBoolean()
   isDoublePeriod!: boolean;
 
+  @Field(() => Boolean, { nullable: true, defaultValue: false })
+  @IsOptional()
+  @IsBoolean()
+  useClassTeacher?: boolean;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  teacherIds?: string[];
+
   @Field(() => Boolean, { defaultValue: false })
   @IsBoolean()
   allowOverride!: boolean;
@@ -543,6 +553,16 @@ export class UpdateTimetableEntryInput {
   @IsOptional()
   @IsUUID()
   teacherId?: string;
+
+  @Field(() => Boolean, { nullable: true })
+  @IsOptional()
+  @IsBoolean()
+  useClassTeacher?: boolean;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  teacherIds?: string[];
 
   @Field(() => String, { nullable: true })
   @IsOptional()

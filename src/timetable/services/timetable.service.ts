@@ -216,10 +216,7 @@ export class TimetableService implements OnModuleInit {
 
     const conflictingEntries = allEntries.filter((e) => {
       if (!targetDays.has(e.dayOfWeek)) return false;
-      if (
-        targetClassIds.length > 0 &&
-        !targetClassIds.includes(e.classId)
-      ) {
+      if (targetClassIds.length > 0 && !targetClassIds.includes(e.classId)) {
         return false;
       }
       return true;
@@ -287,12 +284,16 @@ export class TimetableService implements OnModuleInit {
         ALTER TABLE "periods" ADD COLUMN IF NOT EXISTS "teacherIds" uuid[] NOT NULL DEFAULT '{}';
         ALTER TABLE "non_teaching_slots" ADD COLUMN IF NOT EXISTS "teacherIds" uuid[] NOT NULL DEFAULT '{}';
         ALTER TABLE "class_subjects" ADD COLUMN IF NOT EXISTS "teacherIds" uuid[] NOT NULL DEFAULT '{}';
+        ALTER TABLE "timetable_entries" ADD COLUMN IF NOT EXISTS "useClassTeacher" boolean NOT NULL DEFAULT false;
+        ALTER TABLE "timetable_entries" ADD COLUMN IF NOT EXISTS "teacherIds" uuid[] NOT NULL DEFAULT '{}';
         UPDATE "periods" SET "isActive" = true WHERE "isActive" IS NULL;
         UPDATE "periods" SET "slotType" = 'TEACHING' WHERE "slotType" IS NULL;
         UPDATE "periods" SET "classIds" = '{}' WHERE "classIds" IS NULL;
         UPDATE "periods" SET "teacherIds" = '{}' WHERE "teacherIds" IS NULL;
         UPDATE "non_teaching_slots" SET "teacherIds" = '{}' WHERE "teacherIds" IS NULL;
         UPDATE "class_subjects" SET "teacherIds" = '{}' WHERE "teacherIds" IS NULL;
+        UPDATE "timetable_entries" SET "useClassTeacher" = false WHERE "useClassTeacher" IS NULL;
+        UPDATE "timetable_entries" SET "teacherIds" = '{}' WHERE "teacherIds" IS NULL;
         ALTER TABLE "periods" ALTER COLUMN "isActive" SET DEFAULT true;
         ALTER TABLE "periods" ALTER COLUMN "isActive" SET NOT NULL;
         ALTER TABLE "rooms" ALTER COLUMN "capacity" DROP NOT NULL;
@@ -1108,6 +1109,69 @@ export class TimetableService implements OnModuleInit {
   // ══════════════════════════════════════════════════════════════════════════
   // TIMETABLE BUILDER & CONFLICT VALIDATION
   // ══════════════════════════════════════════════════════════════════════════
+  private async populateTeachersForEntries(
+    entries: TimetableEntry[],
+    schoolId: string,
+  ): Promise<TimetableEntry[]> {
+    if (entries.length === 0) return entries;
+
+    const allTeacherIds = new Set<string>();
+    entries.forEach((e) => {
+      if (e.teacherId) allTeacherIds.add(e.teacherId);
+      (e.teacherIds || []).forEach((tId) => allTeacherIds.add(tId));
+      if (e.classEntity?.classTeacherId) {
+        allTeacherIds.add(e.classEntity.classTeacherId);
+      }
+    });
+
+    const teachersMap = new Map<string, User>();
+    if (allTeacherIds.size > 0) {
+      const users = await this.userRepo.find({
+        where: { schoolId, id: In(Array.from(allTeacherIds)) },
+      });
+      users.forEach((u) => teachersMap.set(u.id, u));
+    }
+
+    for (const e of entries) {
+      const teacherList: User[] = [];
+      const seen = new Set<string>();
+
+      // 1. If useClassTeacher is true, include the class teacher
+      if (e.useClassTeacher) {
+        const ctId = e.classEntity?.classTeacherId;
+        const ct = ctId
+          ? teachersMap.get(ctId) || e.classEntity?.classTeacher
+          : null;
+        if (ct && !seen.has(ct.id)) {
+          seen.add(ct.id);
+          teacherList.push(ct);
+        }
+      }
+
+      // 2. Include all specific teacherIds
+      for (const tId of e.teacherIds || []) {
+        const t = teachersMap.get(tId);
+        if (t && !seen.has(t.id)) {
+          seen.add(t.id);
+          teacherList.push(t);
+        }
+      }
+
+      // 3. Fallback to e.teacher or e.teacherId if not already included
+      if (e.teacherId && !seen.has(e.teacherId)) {
+        const t = teachersMap.get(e.teacherId) || e.teacher;
+        if (t) {
+          seen.add(t.id);
+          teacherList.push(t);
+        }
+      }
+
+      e.teachers = teacherList;
+    }
+
+    return entries;
+  }
+
   async getTimetableEntries(params: {
     schoolId: string;
     termId: string;
@@ -1115,26 +1179,35 @@ export class TimetableService implements OnModuleInit {
     teacherId?: string;
     roomId?: string;
   }): Promise<TimetableEntry[]> {
-    const where: FindOptionsWhere<TimetableEntry> = {
-      schoolId: params.schoolId,
-      termId: params.termId,
-    };
-    if (params.classId) where.classId = params.classId;
-    if (params.teacherId) where.teacherId = params.teacherId;
-    if (params.roomId) where.roomId = params.roomId;
+    const qb = this.entryRepo
+      .createQueryBuilder('entry')
+      .leftJoinAndSelect('entry.term', 'term')
+      .leftJoinAndSelect('entry.classEntity', 'classEntity')
+      .leftJoinAndSelect('classEntity.classTeacher', 'classTeacher')
+      .leftJoinAndSelect('entry.subject', 'subject')
+      .leftJoinAndSelect('entry.teacher', 'teacher')
+      .leftJoinAndSelect('entry.room', 'room')
+      .leftJoinAndSelect('entry.period', 'period')
+      .where('entry.schoolId = :schoolId', { schoolId: params.schoolId })
+      .andWhere('entry.termId = :termId', { termId: params.termId });
 
-    return this.entryRepo.find({
-      where,
-      relations: [
-        'term',
-        'classEntity',
-        'subject',
-        'teacher',
-        'room',
-        'period',
-      ],
-      order: { dayOfWeek: 'ASC' },
-    });
+    if (params.classId) {
+      qb.andWhere('entry.classId = :classId', { classId: params.classId });
+    }
+    if (params.teacherId) {
+      qb.andWhere(
+        '(entry.teacherId = :teacherId OR :teacherId = ANY(entry.teacherIds) OR (entry.useClassTeacher = true AND classEntity.classTeacherId = :teacherId))',
+        { teacherId: params.teacherId },
+      );
+    }
+    if (params.roomId) {
+      qb.andWhere('entry.roomId = :roomId', { roomId: params.roomId });
+    }
+
+    qb.orderBy('entry.dayOfWeek', 'ASC');
+
+    const entries = await qb.getMany();
+    return this.populateTeachersForEntries(entries, params.schoolId);
   }
 
   async createTimetableEntry(
@@ -1161,13 +1234,22 @@ export class TimetableService implements OnModuleInit {
       }
     }
 
+    const validatedTeacherIds = await this.validateTeacherIds(
+      input.teacherIds,
+      schoolId,
+    );
+    const useClassTeacher = !!input.useClassTeacher;
+    const primaryTeacherId = validatedTeacherIds[0] || input.teacherId || null;
+
     // 2. Run conflict validation on primary slot
     const violations = await this.conflictValidator.validateSlot({
       schoolId,
       termId: input.termId,
       classId: input.classId,
       subjectId: input.subjectId,
-      teacherId: input.teacherId,
+      teacherId: primaryTeacherId,
+      teacherIds: validatedTeacherIds,
+      useClassTeacher,
       roomId: input.roomId,
       dayOfWeek: input.dayOfWeek,
       periodId: input.periodId,
@@ -1182,7 +1264,9 @@ export class TimetableService implements OnModuleInit {
         termId: input.termId,
         classId: input.classId,
         subjectId: input.subjectId,
-        teacherId: input.teacherId,
+        teacherId: primaryTeacherId,
+        teacherIds: validatedTeacherIds,
+        useClassTeacher,
         roomId: input.roomId,
         dayOfWeek: input.dayOfWeek,
         periodId: nextPeriod.id,
@@ -1210,7 +1294,9 @@ export class TimetableService implements OnModuleInit {
       termId: input.termId,
       classId: input.classId,
       subjectId: input.subjectId,
-      teacherId: input.teacherId || null,
+      teacherId: primaryTeacherId,
+      teacherIds: validatedTeacherIds,
+      useClassTeacher,
       roomId: input.roomId,
       dayOfWeek: input.dayOfWeek,
       periodId: input.periodId,
@@ -1226,7 +1312,9 @@ export class TimetableService implements OnModuleInit {
         termId: input.termId,
         classId: input.classId,
         subjectId: input.subjectId,
-        teacherId: input.teacherId || null,
+        teacherId: primaryTeacherId,
+        teacherIds: validatedTeacherIds,
+        useClassTeacher,
         roomId: input.roomId,
         dayOfWeek: input.dayOfWeek,
         periodId: nextPeriod.id,
@@ -1240,12 +1328,17 @@ export class TimetableService implements OnModuleInit {
       relations: [
         'term',
         'classEntity',
+        'classEntity.classTeacher',
         'subject',
         'teacher',
         'room',
         'period',
       ],
     });
+
+    if (loaded) {
+      await this.populateTeachersForEntries([loaded], schoolId);
+    }
 
     return {
       success: true,
@@ -1265,10 +1358,18 @@ export class TimetableService implements OnModuleInit {
 
     const targetClassId = existing.classId;
     const targetSubjectId = input.subjectId || existing.subjectId;
+    const targetUseClassTeacher =
+      input.useClassTeacher !== undefined
+        ? input.useClassTeacher
+        : existing.useClassTeacher;
+    const targetTeacherIds =
+      input.teacherIds !== undefined
+        ? await this.validateTeacherIds(input.teacherIds, schoolId)
+        : existing.teacherIds || [];
     const targetTeacherId =
       input.teacherId !== undefined
         ? input.teacherId || null
-        : existing.teacherId;
+        : targetTeacherIds[0] || existing.teacherId;
     const targetRoomId =
       input.roomId !== undefined ? input.roomId : existing.roomId;
     const targetDayOfWeek = input.dayOfWeek ?? existing.dayOfWeek;
@@ -1286,6 +1387,8 @@ export class TimetableService implements OnModuleInit {
       classId: targetClassId,
       subjectId: targetSubjectId,
       teacherId: targetTeacherId,
+      teacherIds: targetTeacherIds,
+      useClassTeacher: targetUseClassTeacher,
       roomId: targetRoomId,
       dayOfWeek: targetDayOfWeek,
       periodId: targetPeriodId,
@@ -1307,6 +1410,8 @@ export class TimetableService implements OnModuleInit {
 
     existing.subjectId = targetSubjectId;
     existing.teacherId = targetTeacherId;
+    existing.teacherIds = targetTeacherIds;
+    existing.useClassTeacher = targetUseClassTeacher;
     existing.roomId = targetRoomId;
     existing.dayOfWeek = targetDayOfWeek;
     existing.periodId = targetPeriodId;
@@ -1318,12 +1423,17 @@ export class TimetableService implements OnModuleInit {
       relations: [
         'term',
         'classEntity',
+        'classEntity.classTeacher',
         'subject',
         'teacher',
         'room',
         'period',
       ],
     });
+
+    if (loaded) {
+      await this.populateTeachersForEntries([loaded], schoolId);
+    }
 
     return {
       success: true,
@@ -1402,6 +1512,8 @@ export class TimetableService implements OnModuleInit {
           classId: src.classId,
           subjectId: src.subjectId,
           teacherId: src.teacherId || undefined,
+          teacherIds: src.teacherIds || [],
+          useClassTeacher: src.useClassTeacher,
           roomId: src.roomId || undefined,
           dayOfWeek: input.toDayOfWeek,
           periodId: src.periodId,
@@ -1440,13 +1552,24 @@ export class TimetableService implements OnModuleInit {
 
     for (const src of sourceEntries) {
       let teacherId = src.teacherId;
+      let teacherIds = src.teacherIds || [];
+      let useClassTeacher = src.useClassTeacher;
       if (!input.copyTeachers) {
         const assigned = targetAssignments.find(
           (a) => a.subjectId === src.subjectId,
         );
-        if (assigned?.subjectTeacherId) {
-          teacherId = assigned.subjectTeacherId;
+        if (assigned?.subjectTeacherId || assigned?.teacherIds?.length) {
+          teacherId =
+            assigned.subjectTeacherId ||
+            (assigned.teacherIds ? assigned.teacherIds[0] : null);
+          teacherIds =
+            assigned.teacherIds ||
+            (assigned.subjectTeacherId ? [assigned.subjectTeacherId] : []);
+        } else {
+          teacherId = null;
+          teacherIds = [];
         }
+        useClassTeacher = false;
       }
 
       const res = await this.createTimetableEntry(
@@ -1455,6 +1578,8 @@ export class TimetableService implements OnModuleInit {
           classId: input.targetClassId,
           subjectId: src.subjectId,
           teacherId: teacherId || undefined,
+          teacherIds: teacherIds,
+          useClassTeacher: useClassTeacher,
           roomId: src.roomId || undefined,
           dayOfWeek: src.dayOfWeek,
           periodId: src.periodId,
@@ -1501,17 +1626,10 @@ export class TimetableService implements OnModuleInit {
 
     if (assignedClass) {
       // Return full timetable of their assigned class
-      const entries = await this.entryRepo.find({
-        where: { schoolId, termId: effectiveTermId, classId: assignedClass.id },
-        relations: [
-          'term',
-          'classEntity',
-          'subject',
-          'teacher',
-          'room',
-          'period',
-        ],
-        order: { dayOfWeek: 'ASC' },
+      const entries = await this.getTimetableEntries({
+        schoolId,
+        termId: effectiveTermId,
+        classId: assignedClass.id,
       });
 
       return {
@@ -1520,18 +1638,11 @@ export class TimetableService implements OnModuleInit {
         entries,
       };
     } else {
-      // Subject teacher: return only the periods they personally teach
-      const entries = await this.entryRepo.find({
-        where: { schoolId, termId: effectiveTermId, teacherId: userId },
-        relations: [
-          'term',
-          'classEntity',
-          'subject',
-          'teacher',
-          'room',
-          'period',
-        ],
-        order: { dayOfWeek: 'ASC' },
+      // Subject teacher: return periods they teach
+      const entries = await this.getTimetableEntries({
+        schoolId,
+        termId: effectiveTermId,
+        teacherId: userId,
       });
 
       return {
@@ -1581,21 +1692,10 @@ export class TimetableService implements OnModuleInit {
       };
     }
 
-    const entries = await this.entryRepo.find({
-      where: {
-        schoolId,
-        termId: effectiveTermId,
-        classId: student.currentClassId,
-      },
-      relations: [
-        'term',
-        'classEntity',
-        'subject',
-        'teacher',
-        'room',
-        'period',
-      ],
-      order: { dayOfWeek: 'ASC' },
+    const entries = await this.getTimetableEntries({
+      schoolId,
+      termId: effectiveTermId,
+      classId: student.currentClassId,
     });
 
     return {
@@ -1650,15 +1750,10 @@ export class TimetableService implements OnModuleInit {
     const activeDays = days.filter((d) => d.isTeachingDay);
     const activePeriods = periods.filter((p) => p.isActive);
 
-    const where: FindOptionsWhere<TimetableEntry> = {
-      schoolId,
-      termId: input.termId,
-    };
     let title = 'Master Timetable';
     const subtitle = '';
 
     if (input.viewType === TimetableExportView.CLASS && input.targetId) {
-      where.classId = input.targetId;
       const targetClass = await this.classRepo.findOne({
         where: { id: input.targetId },
       });
@@ -1667,22 +1762,32 @@ export class TimetableService implements OnModuleInit {
       input.viewType === TimetableExportView.TEACHER &&
       input.targetId
     ) {
-      where.teacherId = input.targetId;
       const targetTeacher = await this.userRepo.findOne({
         where: { id: input.targetId },
       });
       title = `Teacher Schedule: ${targetTeacher?.fullName || 'Teacher'}`;
     } else if (input.viewType === TimetableExportView.ROOM && input.targetId) {
-      where.roomId = input.targetId;
       const targetRoom = await this.roomRepo.findOne({
         where: { id: input.targetId },
       });
       title = `Room Allocation: ${targetRoom?.name || 'Room'}`;
     }
 
-    const entries = await this.entryRepo.find({
-      where,
-      relations: ['classEntity', 'subject', 'teacher', 'room'],
+    const entries = await this.getTimetableEntries({
+      schoolId,
+      termId: input.termId,
+      classId:
+        input.viewType === TimetableExportView.CLASS
+          ? input.targetId
+          : undefined,
+      teacherId:
+        input.viewType === TimetableExportView.TEACHER
+          ? input.targetId
+          : undefined,
+      roomId:
+        input.viewType === TimetableExportView.ROOM
+          ? input.targetId
+          : undefined,
     });
 
     const cellMap = new Map<
@@ -1692,10 +1797,16 @@ export class TimetableService implements OnModuleInit {
     entries.forEach((e) => {
       const key = `${e.dayOfWeek}_${e.periodId}`;
       if (!cellMap.has(key)) cellMap.set(key, []);
+      const teacherNames = e.teachers?.length
+        ? e.teachers
+            .map((t) => t.fullName || `${t.firstName} ${t.lastName}`.trim())
+            .join(', ')
+        : e.teacher?.fullName || '';
+
       cellMap.get(key)!.push({
         subjectName: e.subject?.name || 'Subject',
         className: e.classEntity?.name || '',
-        teacherName: e.teacher?.fullName || '',
+        teacherName: teacherNames,
         roomName: e.room?.name,
         isDoublePeriod: e.isDoublePeriod,
       });

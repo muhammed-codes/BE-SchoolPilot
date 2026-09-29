@@ -362,7 +362,9 @@ input CreateTimetableEntryInput {
   roomId: String
   subjectId: String!
   teacherId: String
+  teacherIds: [String!]
   termId: String!
+  useClassTeacher: Boolean = false
 }
 
 input CreateUserInput {
@@ -1632,9 +1634,12 @@ type TimetableEntry {
   subjectId: String!
   teacher: User
   teacherId: String
+  teacherIds: [String!]!
+  teachers: [User!]
   term: Term!
   termId: String!
   updatedAt: DateTime!
+  useClassTeacher: Boolean!
 }
 
 enum TimetableExportView {
@@ -1800,6 +1805,8 @@ input UpdateTimetableEntryInput {
   roomId: String
   subjectId: String
   teacherId: String
+  teacherIds: [String!]
+  useClassTeacher: Boolean
 }
 
 input UpdateUserInput {
