@@ -11,6 +11,7 @@ import { SaveSubjectScoresInput } from './dto/save-subject-scores.input';
 import { ResultStats } from './dto/result-stats.type';
 import { ResultAnalytics } from './dto/result-analytics.type';
 import { PaginatedClassScores } from './dto/paginated-class-scores.type';
+import { TeacherScoringAssignment } from './dto/teacher-scoring-assignment.type';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission } from '../common/decorators';
 import { UserRole, ResultStatus } from '../common/enums';
@@ -63,12 +64,34 @@ export class ResultsResolver {
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
     @Args('status', { type: () => ResultStatus, nullable: true })
     status?: ResultStatus,
+    @Args('termId', { nullable: true })
+    termId?: string,
+    @Args('classId', { nullable: true })
+    classId?: string,
   ) {
     return this.resultsService.getSchoolResultSheets(
       user.schoolId,
       user.sub,
       user.role,
       status,
+      termId,
+      classId,
+    );
+  }
+
+  @Query(() => [TeacherScoringAssignment])
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
+  myScoringAssignments(
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+    @Args('termId', { nullable: true })
+    termId?: string,
+  ) {
+    return this.resultsService.getMyScoringAssignments(
+      user.schoolId,
+      user.sub,
+      user.role,
+      termId,
     );
   }
 

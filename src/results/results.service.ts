@@ -24,6 +24,10 @@ import {
   StudentScoreRecord,
 } from './dto/paginated-class-scores.type';
 import { ComponentScore } from './dto/component-score.type';
+import {
+  TeacherScoringAssignment,
+  ScoringSubject,
+} from './dto/teacher-scoring-assignment.type';
 import { ClassEntity } from '../classes/entities/class.entity';
 import { ClassSubject } from '../classes/entities/class-subject.entity';
 import { Student } from '../students/entities/student.entity';
@@ -844,6 +848,13 @@ export class ResultsService {
   getPendingApprovals = (schoolId: string) => {
     return this.resultSheetRepo.find({
       where: { schoolId, status: ResultStatus.PENDING_PRINCIPAL_APPROVAL },
+      relations: [
+        'classEntity',
+        'term',
+        'studentResults',
+        'studentResults.student',
+        'studentResults.subjectScores',
+      ],
       order: { createdAt: 'DESC' },
     });
   };
@@ -853,6 +864,8 @@ export class ResultsService {
     userId: string,
     role: UserRole,
     status?: ResultStatus,
+    termId?: string,
+    classId?: string,
   ) => {
     const isLeadership = [
       UserRole.SUPER_ADMIN,
@@ -863,15 +876,13 @@ export class ResultsService {
     ].includes(role);
 
     if (isLeadership) {
-      const where: {
-        schoolId: string;
-        isArchived: boolean;
-        status?: ResultStatus;
-      } = {
+      const where: FindOptionsWhere<ResultSheet> = {
         schoolId,
         isArchived: false,
       };
       if (status) where.status = status;
+      if (termId) where.termId = termId;
+      if (classId) where.classId = classId;
       return this.resultSheetRepo.find({
         where,
         relations: [
@@ -902,12 +913,17 @@ export class ResultsService {
       return [];
     }
 
+    if (classId && !classIds.has(classId)) {
+      return [];
+    }
+
     const where: FindOptionsWhere<ResultSheet> = {
       schoolId,
       isArchived: false,
     };
     if (status) where.status = status;
-    where.classId = In(Array.from(classIds));
+    if (termId) where.termId = termId;
+    where.classId = classId ? classId : In(Array.from(classIds));
 
     return this.resultSheetRepo.find({
       where,
@@ -920,6 +936,88 @@ export class ResultsService {
       ],
       order: { createdAt: 'DESC' },
     });
+  };
+
+  getMyScoringAssignments = async (
+    schoolId: string,
+    userId: string,
+    role: UserRole,
+    termId?: string,
+  ): Promise<TeacherScoringAssignment[]> => {
+    let targetTermId = termId;
+    if (!targetTermId) {
+      const activeTerm = await this.termRepo.findOne({
+        where: { schoolId, status: TermStatus.ACTIVE },
+      });
+      if (activeTerm) {
+        targetTermId = activeTerm.id;
+      } else {
+        const latestTerm = await this.termRepo.findOne({
+          where: { schoolId },
+          order: { createdAt: 'DESC' },
+        });
+        targetTermId = latestTerm?.id;
+      }
+    }
+
+    if (!targetTermId) {
+      return [];
+    }
+
+    const isLeadership = [
+      UserRole.SUPER_ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.PRINCIPAL,
+      UserRole.VICE_PRINCIPAL,
+      UserRole.HEAD_TEACHER,
+    ].includes(role);
+
+    const allClasses = await this.classRepo.find({
+      where: { schoolId },
+      relations: ['classSubjects', 'classSubjects.subject'],
+      order: { name: 'ASC' },
+    });
+
+    const sheets = await this.resultSheetRepo.find({
+      where: { schoolId, termId: targetTermId, isArchived: false },
+    });
+    const sheetByClassId = new Map(sheets.map((s) => [s.classId, s]));
+
+    const assignments: TeacherScoringAssignment[] = [];
+
+    for (const cls of allClasses) {
+      const isClassTeacher = cls.classTeacherId === userId;
+      let relevantSubjects = cls.classSubjects || [];
+
+      if (!isLeadership && !isClassTeacher) {
+        relevantSubjects = relevantSubjects.filter(
+          (cs) => cs.subjectTeacherId === userId,
+        );
+        if (relevantSubjects.length === 0) {
+          continue;
+        }
+      }
+
+      const activeSheet = sheetByClassId.get(cls.id);
+      const isSheetActive =
+        activeSheet && activeSheet.status !== ResultStatus.PUBLISHED;
+
+      assignments.push({
+        classId: cls.id,
+        className: cls.name,
+        hasActiveSheet: Boolean(activeSheet && isSheetActive),
+        activeSheetId: activeSheet?.id,
+        sheetStatus: activeSheet?.status,
+        subjects: relevantSubjects.map((cs) => ({
+          id: cs.id,
+          subjectId: cs.subjectId,
+          subjectName: cs.subject?.name || `Subject ${cs.subjectId}`,
+          subjectCode: cs.subject?.code,
+        })),
+      });
+    }
+
+    return assignments;
   };
 
   getResultStats = async (
