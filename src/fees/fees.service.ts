@@ -73,7 +73,12 @@ import {
   UpdateVisibilityConfigInput,
   InvoiceFilterInput,
 } from './dto/fees.input';
-import { ClassFeeSummary, FeeOverview } from './dto/fee-overview.type';
+import {
+  ClassFeeSummary,
+  FeeOverview,
+  ClassFeeLedger,
+  StudentFeeLedger,
+} from './dto/fee-overview.type';
 
 @Injectable()
 export class FeesService {
@@ -504,94 +509,91 @@ export class FeesService {
         );
       }
 
-      // Group structures by classId
-      const byClass = new Map<string | null, FeeStructure[]>();
-      for (const s of structures) {
-        const key = s.classId ?? null;
-        if (!byClass.has(key)) byClass.set(key, []);
-        byClass.get(key)!.push(s);
-      }
+      // Fetch all non-archived students in the school
+      const students = await manager.find(Student, {
+        where: { schoolId, isArchived: false },
+      });
 
       let generated = 0;
       let skipped = 0;
 
-      for (const [classId, classStructures] of byClass) {
-        // Get all non-archived students in this class (or whole school if classId null)
-        const students = classId
-          ? await manager.find(Student, {
-              where: { schoolId, currentClassId: classId, isArchived: false },
-            })
-          : await manager.find(Student, {
-              where: { schoolId, isArchived: false },
-            });
+      for (const student of students) {
+        // Match structures applicable to this student: school-wide (classId null) or student's current class
+        const applicableStructures = structures.filter(
+          (s) => s.classId === null || s.classId === student.currentClassId,
+        );
 
-        for (const student of students) {
-          // Check if invoice already exists
-          const existing = await manager.findOne(StudentInvoice, {
-            where: {
-              studentId: student.id,
-              sessionId,
-              ...(termId ? { termId } : { termId: IsNull() }),
-            },
+        if (applicableStructures.length === 0) {
+          continue;
+        }
+
+        // Check if invoice already exists
+        const existing = await manager.findOne(StudentInvoice, {
+          where: {
+            studentId: student.id,
+            sessionId,
+            ...(termId ? { termId } : { termId: IsNull() }),
+          },
+        });
+
+        if (existing && !forceRegenerate) {
+          skipped++;
+          continue;
+        }
+
+        if (existing && forceRegenerate) {
+          // Void existing items and invoice
+          await manager.delete(StudentInvoiceItem, {
+            studentInvoiceId: existing.id,
           });
+          await manager.remove(StudentInvoice, existing);
+        }
 
-          if (existing && !forceRegenerate) {
-            skipped++;
-            continue;
-          }
+        // Fetch overrides for this student
+        const structureIds = applicableStructures.map((s) => s.id);
+        const overrides = await manager.find(StudentFeeOverride, {
+          where: { studentId: student.id, feeStructureId: In(structureIds) },
+        });
+        const overrideMap = new Map(
+          overrides.map((o) => [o.feeStructureId, o]),
+        );
 
-          if (existing && forceRegenerate) {
-            // Void existing items and invoice
-            await manager.delete(StudentInvoiceItem, {
-              studentInvoiceId: existing.id,
-            });
-            await manager.remove(StudentInvoice, existing);
-          }
-
-          // Fetch overrides for this student
-          const structureIds = classStructures.map((s) => s.id);
-          const overrides = await manager.find(StudentFeeOverride, {
-            where: { studentId: student.id, feeStructureId: In(structureIds) },
-          });
-          const overrideMap = new Map(
-            overrides.map((o) => [o.feeStructureId, o]),
-          );
-
-          // Create invoice items
-          const items: StudentInvoiceItem[] = classStructures.map((struct) => {
+        // Create invoice items
+        const items: StudentInvoiceItem[] = applicableStructures.map(
+          (struct) => {
             const override = overrideMap.get(struct.id);
             const amount = override ? override.overrideAmount : struct.amount;
             return manager.create(StudentInvoiceItem, {
               feeCategoryId: struct.feeCategoryId,
-              description: struct.feeCategory.name,
+              description: struct.feeCategory?.name || 'Fee',
               amount,
               amountPaid: 0,
               balance: amount,
             });
-          });
+          },
+        );
 
-          const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+        const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
 
-          const invoice = manager.create(StudentInvoice, {
-            schoolId,
-            studentId: student.id,
-            sessionId,
-            termId: termId ?? null,
-            totalAmount,
-            totalPaid: 0,
-            balance: totalAmount,
-            status: InvoiceStatus.OPEN,
-            generatedAt: new Date(),
-          });
+        const invoice = manager.create(StudentInvoice, {
+          schoolId,
+          studentId: student.id,
+          sessionId,
+          termId: termId ?? null,
+          totalAmount,
+          totalPaid: 0,
+          balance: totalAmount,
+          status: InvoiceStatus.OPEN,
+          generatedAt: new Date(),
+        });
 
-          const savedInvoice = await manager.save(StudentInvoice, invoice);
-          for (const item of items) {
-            item.studentInvoiceId = savedInvoice.id;
-          }
-          await manager.save(StudentInvoiceItem, items);
-
-          generated++;
+        const savedInvoice = await manager.save(StudentInvoice, invoice);
+        for (const item of items) {
+          item.studentInvoiceId = savedInvoice.id;
         }
+        await manager.save(StudentInvoiceItem, items);
+
+        generated++;
       }
 
       return { generated, skipped };
@@ -906,6 +908,149 @@ export class FeesService {
       partiallyPaidInvoicesCount,
       openInvoicesCount,
       classSummaries,
+    };
+  }
+
+  async getClassFeeLedger(
+    classId: string,
+    schoolId: string,
+    sessionId?: string,
+    termId?: string,
+    role?: UserRole,
+  ): Promise<ClassFeeLedger> {
+    if (role && role !== UserRole.PARENT) {
+      const isFinanceOwner =
+        role === UserRole.SCHOOL_ADMIN ||
+        role === UserRole.BURSAR ||
+        role === UserRole.SUPER_ADMIN;
+      if (!isFinanceOwner) {
+        const cfg = await this.visibilityRepo.findOne({
+          where: { schoolId, role },
+        });
+        if (!cfg || !cfg.canViewPaymentRecords) {
+          throw new ForbiddenException(
+            'Your role does not have permission to view payment records',
+          );
+        }
+      }
+    }
+
+    const classEntity = await this.studentRepo.manager.findOne(ClassEntity, {
+      where: { id: classId, schoolId },
+    });
+    if (!classEntity) {
+      throw new NotFoundException('Class not found');
+    }
+
+    const students = await this.studentRepo.find({
+      where: { schoolId, currentClassId: classId, isArchived: false },
+      order: { firstName: 'ASC', lastName: 'ASC' },
+    });
+
+    if (students.length === 0) {
+      return {
+        classId: classEntity.id,
+        className: classEntity.name,
+        totalStudents: 0,
+        totalBilled: 0,
+        totalPaid: 0,
+        totalBalance: 0,
+        paidCount: 0,
+        partiallyPaidCount: 0,
+        openCount: 0,
+        studentLedgers: [],
+      };
+    }
+
+    const invoices = await this.invoiceRepo.find({
+      where: students.map((s) => ({
+        studentId: s.id,
+        schoolId,
+        ...(sessionId ? { sessionId } : {}),
+        ...(termId ? { termId } : {}),
+      })),
+      relations: ['items', 'student'],
+      order: { generatedAt: 'DESC' },
+    });
+
+    const invoicesByStudent = new Map<string, StudentInvoice[]>();
+    for (const inv of invoices) {
+      if (!invoicesByStudent.has(inv.studentId)) {
+        invoicesByStudent.set(inv.studentId, []);
+      }
+      invoicesByStudent.get(inv.studentId)!.push(inv);
+    }
+
+    const studentLedgers: StudentFeeLedger[] = [];
+    let totalBilled = 0;
+    let totalPaid = 0;
+    let totalBalance = 0;
+    let paidCount = 0;
+    let partiallyPaidCount = 0;
+    let openCount = 0;
+
+    for (const student of students) {
+      const studentInvoices = invoicesByStudent.get(student.id) || [];
+      const sBilled = studentInvoices.reduce(
+        (sum, inv) => sum + (inv.totalAmount || 0),
+        0,
+      );
+      const sPaid = studentInvoices.reduce(
+        (sum, inv) => sum + (inv.totalPaid || 0),
+        0,
+      );
+      const sBalance = studentInvoices.reduce(
+        (sum, inv) => sum + (inv.balance || 0),
+        0,
+      );
+
+      let status: InvoiceStatus = InvoiceStatus.OPEN;
+      if (sBilled > 0 && sBalance <= 0) {
+        status = InvoiceStatus.PAID;
+      } else if (sPaid > 0 && sBalance > 0) {
+        status = InvoiceStatus.PARTIALLY_PAID;
+      } else {
+        status = InvoiceStatus.OPEN;
+      }
+
+      if (status === InvoiceStatus.PAID) paidCount++;
+      else if (status === InvoiceStatus.PARTIALLY_PAID) partiallyPaidCount++;
+      else openCount++;
+
+      totalBilled += sBilled;
+      totalPaid += sPaid;
+      totalBalance += sBalance;
+
+      const items: StudentInvoiceItem[] = studentInvoices.flatMap(
+        (inv) => inv.items || [],
+      );
+
+      const dueDate = studentInvoices.find((i) => i.dueDate)?.dueDate;
+
+      studentLedgers.push({
+        studentId: student.id,
+        student,
+        totalBilled: sBilled,
+        totalPaid: sPaid,
+        balance: sBalance,
+        status,
+        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+        invoices: studentInvoices,
+        items,
+      });
+    }
+
+    return {
+      classId: classEntity.id,
+      className: classEntity.name,
+      totalStudents: students.length,
+      totalBilled,
+      totalPaid,
+      totalBalance,
+      paidCount,
+      partiallyPaidCount,
+      openCount,
+      studentLedgers,
     };
   }
 

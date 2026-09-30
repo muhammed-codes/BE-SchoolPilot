@@ -26,7 +26,7 @@ const PaginatedPaymentSubmissionBatch = createPaginatedType(
 );
 const PaginatedStudentInvoice = createPaginatedType(StudentInvoice);
 
-import { FeeOverview } from './dto/fee-overview.type';
+import { FeeOverview, ClassFeeLedger } from './dto/fee-overview.type';
 
 import {
   CreateFeeCategoryInput,
@@ -365,6 +365,26 @@ export class FeesResolver {
       user.schoolId,
       sessionId,
       termId,
+    );
+  }
+
+  @Query(() => ClassFeeLedger)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, PermissionAction.READ)
+  classFeeLedger(
+    @Args('classId') classId: string,
+    @CurrentUser() user: AuthUser,
+    @Args('sessionId', { type: () => String, nullable: true })
+    sessionId?: string,
+    @Args('termId', { type: () => String, nullable: true })
+    termId?: string,
+  ) {
+    return this.feesService.getClassFeeLedger(
+      classId,
+      user.schoolId,
+      sessionId,
+      termId,
+      user.role,
     );
   }
 
