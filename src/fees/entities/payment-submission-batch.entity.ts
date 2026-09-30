@@ -10,6 +10,7 @@ import {
 import { BaseEntity } from '../../common/entities/base.entity';
 import { PaymentSubmissionStudentShare } from './payment-submission-student-share.entity';
 import { SchoolBankAccount } from './school-bank-account.entity';
+import { User } from '../../users/entities/user.entity';
 
 @ObjectType()
 @Entity('payment_submission_batches')
@@ -23,6 +24,11 @@ export class PaymentSubmissionBatch extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
   parentId!: string;
+
+  @Field(() => User, { nullable: true })
+  @ManyToOne(() => User, { eager: false, nullable: true })
+  @JoinColumn({ name: 'parentId' })
+  parent!: User | null;
 
   @Field()
   @Column()

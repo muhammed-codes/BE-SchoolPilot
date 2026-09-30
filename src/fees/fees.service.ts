@@ -1192,7 +1192,14 @@ export class FeesService {
   getParentSubmissions(parentId: string, schoolId: string) {
     return this.batchRepo.find({
       where: { parentId, schoolId },
-      relations: ['shares', 'shares.allocations'],
+      relations: [
+        'shares',
+        'shares.student',
+        'shares.student.currentClass',
+        'shares.allocations',
+        'bankAccount',
+        'parent',
+      ],
       order: { submittedAt: 'DESC' },
     });
   }
@@ -1209,7 +1216,14 @@ export class FeesService {
     return this.batchRepo
       .findAndCount({
         where: { parentId, schoolId },
-        relations: ['shares', 'shares.allocations'],
+        relations: [
+          'shares',
+          'shares.student',
+          'shares.student.currentClass',
+          'shares.allocations',
+          'bankAccount',
+          'parent',
+        ],
         order: { submittedAt: 'DESC' },
         skip,
         take: limit,
@@ -1225,7 +1239,14 @@ export class FeesService {
   getShareById(shareId: string) {
     return this.shareRepo.findOne({
       where: { id: shareId },
-      relations: ['batch', 'allocations'],
+      relations: [
+        'student',
+        'student.currentClass',
+        'batch',
+        'batch.parent',
+        'batch.bankAccount',
+        'allocations',
+      ],
     });
   }
 
@@ -1259,7 +1280,14 @@ export class FeesService {
     return this.shareRepo
       .find({
         where: { status: PaymentShareStatus.PENDING, batch: { schoolId } },
-        relations: ['batch', 'batch.bankAccount', 'allocations'],
+        relations: [
+          'student',
+          'student.currentClass',
+          'batch',
+          'batch.parent',
+          'batch.bankAccount',
+          'allocations',
+        ],
         order: { createdAt: 'ASC' },
       })
       .then(async (shares) => {
