@@ -951,13 +951,17 @@ export class FeesService {
       return {
         classId: classEntity.id,
         className: classEntity.name,
+        sessionId,
+        termId,
         totalStudents: 0,
         totalBilled: 0,
         totalPaid: 0,
         totalBalance: 0,
         paidCount: 0,
+        partialCount: 0,
         partiallyPaidCount: 0,
         openCount: 0,
+        collectionRate: 0,
         studentLedgers: [],
       };
     }
@@ -1040,16 +1044,23 @@ export class FeesService {
       });
     }
 
+    const collectionRate =
+      totalBilled > 0 ? (totalPaid / totalBilled) * 100 : 0;
+
     return {
       classId: classEntity.id,
       className: classEntity.name,
+      sessionId,
+      termId,
       totalStudents: students.length,
       totalBilled,
       totalPaid,
       totalBalance,
       paidCount,
+      partialCount: partiallyPaidCount,
       partiallyPaidCount,
       openCount,
+      collectionRate,
       studentLedgers,
     };
   }

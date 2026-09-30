@@ -187,10 +187,14 @@ type ClassEntity {
 type ClassFeeLedger {
   classId: String!
   className: String!
+  collectionRate: Float
   openCount: Int!
   paidCount: Int!
+  partialCount: Int!
   partiallyPaidCount: Int!
+  sessionId: String
   studentLedgers: [StudentFeeLedger!]!
+  termId: String
   totalBalance: Int!
   totalBilled: Int!
   totalPaid: Int!

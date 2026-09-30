@@ -1,4 +1,4 @@
-import { ObjectType, Field, Int } from '@nestjs/graphql';
+import { ObjectType, Field, Int, Float } from '@nestjs/graphql';
 import { Student } from '../../students/entities/student.entity';
 import {
   StudentInvoice,
@@ -98,6 +98,12 @@ export class ClassFeeLedger {
   @Field()
   className!: string;
 
+  @Field({ nullable: true })
+  sessionId?: string;
+
+  @Field({ nullable: true })
+  termId?: string;
+
   @Field(() => Int)
   totalStudents!: number;
 
@@ -114,10 +120,16 @@ export class ClassFeeLedger {
   paidCount!: number;
 
   @Field(() => Int)
+  partialCount!: number;
+
+  @Field(() => Int)
   partiallyPaidCount!: number;
 
   @Field(() => Int)
   openCount!: number;
+
+  @Field(() => Float, { nullable: true })
+  collectionRate?: number;
 
   @Field(() => [StudentFeeLedger])
   studentLedgers!: StudentFeeLedger[];
