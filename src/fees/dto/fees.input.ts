@@ -389,3 +389,46 @@ export class UpdateFeeStructureInput {
   @IsBoolean()
   isActive?: boolean;
 }
+
+@InputType()
+export class RecordOfflinePaymentInput {
+  @Field()
+  @IsString()
+  @IsNotEmpty()
+  studentId!: string;
+
+  @Field(() => Int)
+  @IsInt()
+  @Min(1)
+  amount!: number;
+
+  @Field(() => String, { defaultValue: 'CASH' })
+  @IsString()
+  @IsNotEmpty()
+  paymentMethod!: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  bankAccountId?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  reference?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  note?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  proofUrl?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  paidAt?: string;
+}

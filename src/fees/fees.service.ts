@@ -72,6 +72,7 @@ import {
   UpsertApprovalConfigInput,
   UpdateVisibilityConfigInput,
   InvoiceFilterInput,
+  RecordOfflinePaymentInput,
 } from './dto/fees.input';
 import {
   ClassFeeSummary,
@@ -1338,6 +1339,110 @@ export class FeesService {
       });
   }
 
+  /** Get all payment shares for the school, optionally filtered by status */
+  getSchoolPaymentShares(schoolId: string, status?: PaymentShareStatus) {
+    return this.shareRepo.find({
+      where: {
+        ...(status ? { status } : {}),
+        batch: { schoolId },
+      },
+      relations: [
+        'student',
+        'student.currentClass',
+        'batch',
+        'batch.parent',
+        'batch.bankAccount',
+        'allocations',
+        'finalizedByUser',
+      ],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /** Record offline payment directly by school admin / bursar */
+  async recordOfflinePayment(
+    input: RecordOfflinePaymentInput,
+    userId: string,
+    schoolId: string,
+  ): Promise<PaymentSubmissionStudentShare> {
+    return this.dataSource.transaction(async (manager) => {
+      const student = await manager.findOne(Student, {
+        where: { id: input.studentId, schoolId, isArchived: false },
+        relations: ['currentClass'],
+      });
+      if (!student) {
+        throw new NotFoundException('Student not found in this school');
+      }
+
+      // Check if student has parent linked or use recording staff userId
+      const parentLink = await manager.findOne(StudentParent, {
+        where: { studentId: student.id },
+      });
+      const parentId = parentLink?.parentId || userId;
+
+      // Create PaymentSubmissionBatch
+      const batch = manager.create(PaymentSubmissionBatch, {
+        schoolId,
+        parentId,
+        proofUrl: input.proofUrl || '',
+        proofType: input.paymentMethod || 'CASH',
+        bankAccountId: input.bankAccountId || null,
+        totalAmount: input.amount,
+        note: input.note || `Recorded offline payment (${input.paymentMethod})`,
+        submittedAt: input.paidAt ? new Date(input.paidAt) : new Date(),
+      });
+      const savedBatch = await manager.save(PaymentSubmissionBatch, batch);
+
+      // Create PaymentSubmissionStudentShare directly APPROVED
+      const share = manager.create(PaymentSubmissionStudentShare, {
+        batchId: savedBatch.id,
+        studentId: student.id,
+        amount: input.amount,
+        status: PaymentShareStatus.APPROVED,
+        finalizedAt: new Date(),
+        finalizedBy: userId,
+      });
+      const savedShare = await manager.save(
+        PaymentSubmissionStudentShare,
+        share,
+      );
+
+      // Record approval decision
+      await manager.save(
+        PaymentApprovalDecision,
+        manager.create(PaymentApprovalDecision, {
+          studentShareId: savedShare.id,
+          approvalStepId: null,
+          decidedBy: userId,
+          decision: ApprovalDecision.APPROVED,
+          decidedAt: new Date(),
+        }),
+      );
+
+      // Apply allocations to invoices/items
+      await this.applyAllocationsToInvoice(manager, savedShare.id, schoolId);
+
+      // Generate receipt
+      await this.generateReceipt(manager, savedShare.id, schoolId);
+
+      // Re-fetch full share with relations
+      const fullShare = await manager.findOne(PaymentSubmissionStudentShare, {
+        where: { id: savedShare.id },
+        relations: [
+          'student',
+          'student.currentClass',
+          'batch',
+          'batch.parent',
+          'batch.bankAccount',
+          'allocations',
+          'finalizedByUser',
+        ],
+      });
+
+      return fullShare || savedShare;
+    });
+  }
+
   approveShare(
     input: ApproveShareInput,
     userId: string,
@@ -1512,10 +1617,18 @@ export class FeesService {
     shareId: string,
     schoolId: string,
   ) {
+    const share = await manager.findOne(PaymentSubmissionStudentShare, {
+      where: { id: shareId },
+    });
+    if (!share) return;
+
     const allocations = await manager.find(PaymentAllocation, {
       where: { studentShareId: shareId },
     });
 
+    let remainingToAllocate = share.amount;
+
+    // 1. Apply any explicit allocations targeted at specific invoice items
     for (const alloc of allocations) {
       if (!alloc.studentInvoiceItemId) continue;
 
@@ -1524,31 +1637,113 @@ export class FeesService {
       });
       if (!item) continue;
 
-      item.amountPaid = item.amountPaid + alloc.amount;
-      item.balance = item.amount - item.amountPaid;
-      if (item.balance < 0) item.balance = 0; // overpayment → credit
+      const allocAmount = Math.min(alloc.amount, remainingToAllocate);
+      if (allocAmount <= 0) continue;
+
+      item.amountPaid = (item.amountPaid || 0) + allocAmount;
+      item.balance = Math.max(0, item.amount - item.amountPaid);
       await manager.save(StudentInvoiceItem, item);
 
+      remainingToAllocate -= allocAmount;
+
       // Update parent invoice
-      const invoice = await manager.findOne(StudentInvoice, {
-        where: { id: item.studentInvoiceId, schoolId },
+      await this.recalculateInvoice(manager, item.studentInvoiceId, schoolId);
+    }
+
+    // 2. If there is remaining unallocated amount (general payment share or unlinked allocation),
+    // automatically deduct it from the student's open invoices in this school (oldest first)
+    if (remainingToAllocate > 0) {
+      const openInvoices = await manager.find(StudentInvoice, {
+        where: { studentId: share.studentId, schoolId },
         relations: ['items'],
+        order: { generatedAt: 'ASC' },
       });
-      if (!invoice) continue;
 
-      const totalPaid = invoice.items.reduce((s, i) => s + i.amountPaid, 0);
+      for (const invoice of openInvoices) {
+        if (remainingToAllocate <= 0) break;
+
+        if (!invoice.items || invoice.items.length === 0) {
+          const needed = Math.max(
+            0,
+            invoice.totalAmount - (invoice.totalPaid || 0),
+          );
+          const applied = Math.min(needed, remainingToAllocate);
+          invoice.totalPaid = (invoice.totalPaid || 0) + applied;
+          invoice.balance = Math.max(
+            0,
+            invoice.totalAmount - invoice.totalPaid,
+          );
+          invoice.status =
+            invoice.balance <= 0
+              ? InvoiceStatus.PAID
+              : invoice.totalPaid > 0
+                ? InvoiceStatus.PARTIALLY_PAID
+                : InvoiceStatus.OPEN;
+          await manager.save(StudentInvoice, invoice);
+          remainingToAllocate -= applied;
+          continue;
+        }
+
+        // Allocate across items with remaining balance
+        const sortedItems = [...invoice.items].sort(
+          (a, b) => (b.balance || 0) - (a.balance || 0),
+        );
+
+        for (const item of sortedItems) {
+          if (remainingToAllocate <= 0) break;
+          const needed = Math.max(0, item.amount - (item.amountPaid || 0));
+          if (needed <= 0) continue;
+
+          const applied = Math.min(needed, remainingToAllocate);
+          item.amountPaid = (item.amountPaid || 0) + applied;
+          item.balance = Math.max(0, item.amount - item.amountPaid);
+          await manager.save(StudentInvoiceItem, item);
+
+          // Record allocation
+          await manager.save(
+            PaymentAllocation,
+            manager.create(PaymentAllocation, {
+              studentShareId: share.id,
+              studentInvoiceItemId: item.id,
+              amount: applied,
+              allocatedBy: share.finalizedBy || 'SYSTEM',
+              allocatedAt: new Date(),
+            }),
+          );
+
+          remainingToAllocate -= applied;
+        }
+
+        await this.recalculateInvoice(manager, invoice.id, schoolId);
+      }
+    }
+  }
+
+  private async recalculateInvoice(
+    manager: EntityManager,
+    invoiceId: string,
+    schoolId: string,
+  ) {
+    const invoice = await manager.findOne(StudentInvoice, {
+      where: { id: invoiceId, schoolId },
+      relations: ['items'],
+    });
+    if (!invoice) return;
+
+    if (invoice.items && invoice.items.length > 0) {
+      const totalPaid = invoice.items.reduce(
+        (s, i) => s + (i.amountPaid || 0),
+        0,
+      );
       invoice.totalPaid = totalPaid;
-      invoice.balance = invoice.totalAmount - totalPaid;
-
+      invoice.balance = Math.max(0, invoice.totalAmount - totalPaid);
       if (invoice.balance <= 0) {
         invoice.status = InvoiceStatus.PAID;
-        invoice.balance = invoice.totalAmount - totalPaid; // keep credit-balance for audit
       } else if (totalPaid > 0) {
         invoice.status = InvoiceStatus.PARTIALLY_PAID;
       } else {
         invoice.status = InvoiceStatus.OPEN;
       }
-
       await manager.save(StudentInvoice, invoice);
     }
   }

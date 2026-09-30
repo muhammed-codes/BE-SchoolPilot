@@ -8,7 +8,10 @@ import { StudentFeeOverride } from './entities/student-fee-override.entity';
 import { SchoolBankAccount } from './entities/school-bank-account.entity';
 import { StudentInvoice } from './entities/student-invoice.entity';
 import { PaymentSubmissionBatch } from './entities/payment-submission-batch.entity';
-import { PaymentSubmissionStudentShare } from './entities/payment-submission-student-share.entity';
+import {
+  PaymentSubmissionStudentShare,
+  PaymentShareStatus,
+} from './entities/payment-submission-student-share.entity';
 import { FeeApprovalConfig } from './entities/fee-approval-config.entity';
 import { ReceiptTemplate } from './entities/receipt-template.entity';
 import { Receipt } from './entities/receipt.entity';
@@ -43,6 +46,7 @@ import {
   UpsertApprovalConfigInput,
   UpdateVisibilityConfigInput,
   InvoiceFilterInput,
+  RecordOfflinePaymentInput,
 } from './dto/fees.input';
 import { ObjectType, Field } from '@nestjs/graphql';
 
@@ -440,6 +444,31 @@ export class FeesResolver {
   @RequirePermission(AppResource.FEES, PermissionAction.READ)
   pendingApprovalQueue(@CurrentUser() user: AuthUser) {
     return this.feesService.getPendingQueue(user.sub, user.role, user.schoolId);
+  }
+
+  @Query(() => [PaymentSubmissionStudentShare])
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, PermissionAction.READ)
+  schoolPaymentShares(
+    @CurrentUser() user: AuthUser,
+    @Args('status', { type: () => PaymentShareStatus, nullable: true })
+    status?: PaymentShareStatus,
+  ) {
+    return this.feesService.getSchoolPaymentShares(user.schoolId, status);
+  }
+
+  @Mutation(() => PaymentSubmissionStudentShare)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission(AppResource.FEES, PermissionAction.CREATE)
+  recordOfflinePayment(
+    @Args('input') input: RecordOfflinePaymentInput,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.feesService.recordOfflinePayment(
+      input,
+      user.sub,
+      user.schoolId,
+    );
   }
 
   @Mutation(() => PaymentSubmissionStudentShare)

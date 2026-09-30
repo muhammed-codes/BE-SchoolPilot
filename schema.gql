@@ -704,6 +704,7 @@ type Mutation {
   promoteStudents(input: PromoteStudentsInput!): PromotionResult!
   publishAnnouncement(id: String!): Announcement!
   publishResultSheet(resultSheetId: String!): ResultSheet!
+  recordOfflinePayment(input: RecordOfflinePaymentInput!): PaymentSubmissionStudentShare!
   refreshTokens(refreshToken: String!): AuthResponse!
   regenerateQrCode(schoolId: String!): School!
   register(input: RegisterInput!): AuthResponse!
@@ -909,6 +910,7 @@ type PaymentSubmissionStudentShare {
   createdAt: DateTime!
   finalizedAt: String
   finalizedBy: String
+  finalizedByUser: User
   id: ID!
   rejectionReason: String
   status: PaymentShareStatus!
@@ -1094,6 +1096,7 @@ type Query {
   school(id: String!): School!
   schoolClasses(limit: Int! = 50, page: Int! = 1, search: String): PaginatedClassEntity!
   schoolDays: [SchoolDay!]!
+  schoolPaymentShares(status: PaymentShareStatus): [PaymentSubmissionStudentShare!]!
   schoolResultSheets(classId: String, status: ResultStatus, termId: String): [ResultSheet!]!
   schoolSubjects(limit: Int! = 50, page: Int! = 1, search: String): PaginatedSubject!
   schoolTeachers: [User!]!
@@ -1148,6 +1151,17 @@ type ReceiptTemplate {
   templateKey: String!
   thumbnailUrl: String
   updatedAt: DateTime!
+}
+
+input RecordOfflinePaymentInput {
+  amount: Int!
+  bankAccountId: String
+  note: String
+  paidAt: String
+  paymentMethod: String! = "CASH"
+  proofUrl: String
+  reference: String
+  studentId: String!
 }
 
 input RegisterInput {
