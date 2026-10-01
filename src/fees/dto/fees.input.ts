@@ -119,7 +119,7 @@ export class BulkCreateOverrideInput {
 
   @Field(() => Int)
   @IsInt()
-  @Min(1)
+  @Min(0)
   overrideAmount!: number;
 
   @Field({ nullable: true })
