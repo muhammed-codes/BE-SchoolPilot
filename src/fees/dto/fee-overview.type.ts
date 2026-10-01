@@ -4,7 +4,45 @@ import {
   StudentInvoice,
   InvoiceStatus,
 } from '../entities/student-invoice.entity';
-import { StudentInvoiceItem } from '../entities/student-invoice-item.entity';
+
+@ObjectType()
+export class StudentFeeLedgerItem {
+  @Field()
+  id!: string;
+
+  @Field()
+  studentInvoiceId!: string;
+
+  @Field()
+  feeCategoryId!: string;
+
+  @Field()
+  description!: string;
+
+  @Field(() => Int)
+  amount!: number;
+
+  @Field(() => Int)
+  amountPaid!: number;
+
+  @Field(() => Int)
+  balance!: number;
+
+  @Field(() => Int, { defaultValue: 0 })
+  originalAmount!: number;
+
+  @Field(() => Int, { defaultValue: 0 })
+  discountAmount!: number;
+
+  @Field(() => Boolean, { defaultValue: false })
+  hasDiscount!: boolean;
+
+  @Field(() => String, { nullable: true })
+  discountType?: string;
+
+  @Field(() => String, { nullable: true })
+  discountReason?: string;
+}
 
 @ObjectType()
 export class ClassFeeSummary {
@@ -26,6 +64,9 @@ export class ClassFeeSummary {
   @Field(() => Int)
   totalOutstanding!: number;
 
+  @Field(() => Int, { defaultValue: 0 })
+  totalDiscounts!: number;
+
   @Field(() => Int)
   paidCount!: number;
 
@@ -46,6 +87,9 @@ export class FeeOverview {
 
   @Field(() => Int)
   totalOutstanding!: number;
+
+  @Field(() => Int, { defaultValue: 0 })
+  totalDiscounts!: number;
 
   @Field(() => Int)
   paidInvoicesCount!: number;
@@ -77,6 +121,21 @@ export class StudentFeeLedger {
   @Field(() => Int)
   balance!: number;
 
+  @Field(() => Int, { defaultValue: 0 })
+  totalOriginalBilled!: number;
+
+  @Field(() => Int, { defaultValue: 0 })
+  totalDiscount!: number;
+
+  @Field(() => Boolean, { defaultValue: false })
+  hasDiscount!: boolean;
+
+  @Field(() => String, { nullable: true })
+  discountType?: string;
+
+  @Field(() => String, { nullable: true })
+  discountReason?: string;
+
   @Field(() => InvoiceStatus)
   status!: InvoiceStatus;
 
@@ -86,8 +145,8 @@ export class StudentFeeLedger {
   @Field(() => [StudentInvoice])
   invoices!: StudentInvoice[];
 
-  @Field(() => [StudentInvoiceItem])
-  items!: StudentInvoiceItem[];
+  @Field(() => [StudentFeeLedgerItem])
+  items!: StudentFeeLedgerItem[];
 }
 
 @ObjectType()
@@ -116,6 +175,12 @@ export class ClassFeeLedger {
   @Field(() => Int)
   totalBalance!: number;
 
+  @Field(() => Int, { defaultValue: 0 })
+  totalDiscounts!: number;
+
+  @Field(() => Int, { defaultValue: 0 })
+  discountedStudentsCount!: number;
+
   @Field(() => Int)
   paidCount!: number;
 
@@ -134,3 +199,4 @@ export class ClassFeeLedger {
   @Field(() => [StudentFeeLedger])
   studentLedgers!: StudentFeeLedger[];
 }
+

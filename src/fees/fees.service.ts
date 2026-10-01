@@ -79,6 +79,7 @@ import {
   FeeOverview,
   ClassFeeLedger,
   StudentFeeLedger,
+  StudentFeeLedgerItem,
 } from './dto/fee-overview.type';
 
 @Injectable()
@@ -597,7 +598,7 @@ export class FeesService {
           totalAmount,
           totalPaid: 0,
           balance: totalAmount,
-          status: InvoiceStatus.OPEN,
+          status: totalAmount === 0 ? InvoiceStatus.PAID : InvoiceStatus.OPEN,
           generatedAt: new Date(),
         });
 
@@ -859,13 +860,32 @@ export class FeesService {
     let totalBilled = 0;
     let totalCollected = 0;
     let totalOutstanding = 0;
+    let totalDiscounts = 0;
     let paidInvoicesCount = 0;
     let partiallyPaidInvoicesCount = 0;
     let openInvoicesCount = 0;
 
+    // Load fee structures to compute discount differences against base prices
+    const allStructures = await this.feeStructureRepo.find({
+      where: {
+        schoolId,
+        ...(sessionId ? { sessionId } : {}),
+        isActive: true,
+      },
+    });
+    const structureMap = new Map<string, number>();
+    for (const st of allStructures) {
+      if (st.classId) {
+        structureMap.set(`${st.feeCategoryId}_${st.classId}`, st.amount);
+      } else {
+        structureMap.set(`${st.feeCategoryId}_null`, st.amount);
+      }
+    }
+
     for (const cls of classEntities) {
       const qb = this.invoiceRepo
         .createQueryBuilder('inv')
+        .leftJoinAndSelect('inv.items', 'items')
         .innerJoin('students', 'st', 'st.id = inv.studentId')
         .where('inv.schoolId = :schoolId', { schoolId })
         .andWhere('st.currentClassId = :classId', { classId: cls.id })
@@ -896,9 +916,23 @@ export class FeesService {
         (i) => i.status === InvoiceStatus.OPEN,
       ).length;
 
+      let clsDiscounts = 0;
+      for (const inv of invoices) {
+        for (const item of inv.items || []) {
+          const basePrice =
+            structureMap.get(`${item.feeCategoryId}_${cls.id}`) ??
+            structureMap.get(`${item.feeCategoryId}_null`) ??
+            item.amount;
+          if (basePrice > item.amount) {
+            clsDiscounts += basePrice - item.amount;
+          }
+        }
+      }
+
       totalBilled += clsBilled;
       totalCollected += clsPaid;
       totalOutstanding += clsOutstanding;
+      totalDiscounts += clsDiscounts;
       paidInvoicesCount += clsPaidCount;
       partiallyPaidInvoicesCount += clsPartialCount;
       openInvoicesCount += clsOpenCount;
@@ -910,6 +944,7 @@ export class FeesService {
         totalBilled: clsBilled,
         totalPaid: clsPaid,
         totalOutstanding: clsOutstanding,
+        totalDiscounts: clsDiscounts,
         paidCount: clsPaidCount,
         partiallyPaidCount: clsPartialCount,
         openCount: clsOpenCount,
@@ -920,6 +955,7 @@ export class FeesService {
       totalBilled,
       totalCollected,
       totalOutstanding,
+      totalDiscounts,
       paidInvoicesCount,
       partiallyPaidInvoicesCount,
       openInvoicesCount,
@@ -976,6 +1012,8 @@ export class FeesService {
         totalBilled: 0,
         totalPaid: 0,
         totalBalance: 0,
+        totalDiscounts: 0,
+        discountedStudentsCount: 0,
         paidCount: 0,
         partialCount: 0,
         partiallyPaidCount: 0,
@@ -996,6 +1034,43 @@ export class FeesService {
       order: { generatedAt: 'DESC' },
     });
 
+    // Query fee structures for this class & session
+    const classStructures = await this.feeStructureRepo.find({
+      where: {
+        schoolId,
+        ...(sessionId ? { sessionId } : {}),
+        isActive: true,
+      },
+      relations: ['feeCategory'],
+    });
+
+    const structureByCat = new Map<string, FeeStructure>();
+    for (const st of classStructures) {
+      if (st.classId === classId) {
+        structureByCat.set(st.feeCategoryId, st);
+      } else if (!st.classId && !structureByCat.has(st.feeCategoryId)) {
+        structureByCat.set(st.feeCategoryId, st);
+      }
+    }
+
+    // Query active student overrides
+    const studentIds = students.map((s) => s.id);
+    const overrides = await this.overrideRepo.find({
+      where: {
+        schoolId,
+        studentId: In(studentIds),
+      },
+      relations: ['feeStructure', 'feeStructure.feeCategory'],
+    });
+
+    const overridesByStudent = new Map<string, StudentFeeOverride[]>();
+    for (const ov of overrides) {
+      if (!overridesByStudent.has(ov.studentId)) {
+        overridesByStudent.set(ov.studentId, []);
+      }
+      overridesByStudent.get(ov.studentId)!.push(ov);
+    }
+
     const invoicesByStudent = new Map<string, StudentInvoice[]>();
     for (const inv of invoices) {
       if (!invoicesByStudent.has(inv.studentId)) {
@@ -1008,12 +1083,22 @@ export class FeesService {
     let totalBilled = 0;
     let totalPaid = 0;
     let totalBalance = 0;
+    let totalDiscounts = 0;
+    let discountedStudentsCount = 0;
     let paidCount = 0;
     let partiallyPaidCount = 0;
     let openCount = 0;
 
     for (const student of students) {
       const studentInvoices = invoicesByStudent.get(student.id) || [];
+      const studentOverrides = overridesByStudent.get(student.id) || [];
+      const overrideMap = new Map<string, StudentFeeOverride>();
+      for (const ov of studentOverrides) {
+        if (ov.feeStructure) {
+          overrideMap.set(ov.feeStructure.feeCategoryId, ov);
+        }
+      }
+
       const sBilled = studentInvoices.reduce(
         (sum, inv) => sum + (inv.totalAmount || 0),
         0,
@@ -1028,7 +1113,7 @@ export class FeesService {
       );
 
       let status: InvoiceStatus = InvoiceStatus.OPEN;
-      if (sBilled > 0 && sBalance <= 0) {
+      if (studentInvoices.length > 0 && sBalance <= 0) {
         status = InvoiceStatus.PAID;
       } else if (sPaid > 0 && sBalance > 0) {
         status = InvoiceStatus.PARTIALLY_PAID;
@@ -1044,9 +1129,73 @@ export class FeesService {
       totalPaid += sPaid;
       totalBalance += sBalance;
 
-      const items: StudentInvoiceItem[] = studentInvoices.flatMap(
-        (inv) => inv.items || [],
+      let studentOriginalBilled = 0;
+      let studentDiscountAmount = 0;
+      let studentHasDiscount = false;
+      let studentDiscountType: string | undefined = undefined;
+      let studentDiscountReason: string | undefined = undefined;
+
+      const items: StudentFeeLedgerItem[] = studentInvoices.flatMap((inv) =>
+        (inv.items || []).map((item) => {
+          const struct = structureByCat.get(item.feeCategoryId);
+          const override = overrideMap.get(item.feeCategoryId);
+
+          let originalAmount = item.amount;
+          let discountAmount = 0;
+          let hasDiscount = false;
+          let discountType: string | undefined = undefined;
+          let discountReason: string | undefined = undefined;
+
+          if (override && struct) {
+            originalAmount = struct.amount;
+            discountAmount = Math.max(0, struct.amount - item.amount);
+            hasDiscount = discountAmount > 0;
+            discountType = override.type;
+            discountReason = override.reason || undefined;
+          } else if (struct && struct.amount > item.amount) {
+            originalAmount = struct.amount;
+            discountAmount = struct.amount - item.amount;
+            hasDiscount = true;
+          } else if (override && override.overrideAmount < item.amount) {
+            originalAmount = item.amount;
+            discountAmount = item.amount - override.overrideAmount;
+            hasDiscount = true;
+            discountType = override.type;
+            discountReason = override.reason || undefined;
+          }
+
+          if (hasDiscount) {
+            studentHasDiscount = true;
+            if (!studentDiscountType && discountType) studentDiscountType = discountType;
+            if (!studentDiscountReason && discountReason) studentDiscountReason = discountReason;
+          }
+
+          studentOriginalBilled += originalAmount;
+          studentDiscountAmount += discountAmount;
+
+          return {
+            id: item.id,
+            studentInvoiceId: item.studentInvoiceId,
+            feeCategoryId: item.feeCategoryId,
+            description: item.description,
+            amount: item.amount,
+            amountPaid: item.amountPaid,
+            balance: item.balance,
+            originalAmount,
+            discountAmount,
+            hasDiscount,
+            discountType,
+            discountReason,
+          };
+        }),
       );
+
+      if (items.length === 0) {
+        studentOriginalBilled = sBilled;
+      }
+
+      totalDiscounts += studentDiscountAmount;
+      if (studentHasDiscount) discountedStudentsCount++;
 
       const dueDate = studentInvoices.find((i) => i.dueDate)?.dueDate;
 
@@ -1056,6 +1205,11 @@ export class FeesService {
         totalBilled: sBilled,
         totalPaid: sPaid,
         balance: sBalance,
+        totalOriginalBilled: studentOriginalBilled,
+        totalDiscount: studentDiscountAmount,
+        hasDiscount: studentHasDiscount,
+        discountType: studentDiscountType,
+        discountReason: studentDiscountReason,
         status,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
         invoices: studentInvoices,
@@ -1118,6 +1272,8 @@ export class FeesService {
       totalBilled,
       totalPaid,
       totalBalance,
+      totalDiscounts,
+      discountedStudentsCount,
       paidCount,
       partialCount: partiallyPaidCount,
       partiallyPaidCount,
