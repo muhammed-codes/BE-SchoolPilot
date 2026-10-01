@@ -56,7 +56,7 @@ export class PaymentSubmissionStudentShare extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   rejectionReason!: string | null;
 
-  @Field(() => String, { nullable: true })
+  @Field({ nullable: true })
   @Column({ type: 'timestamp', nullable: true })
   finalizedAt!: Date | null;
 

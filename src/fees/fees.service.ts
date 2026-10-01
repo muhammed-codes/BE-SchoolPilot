@@ -1374,16 +1374,10 @@ export class FeesService {
         throw new NotFoundException('Student not found in this school');
       }
 
-      // Check if student has parent linked or use recording staff userId
-      const parentLink = await manager.findOne(StudentParent, {
-        where: { studentId: student.id },
-      });
-      const parentId = parentLink?.parentId || userId;
-
-      // Create PaymentSubmissionBatch
+      // Create PaymentSubmissionBatch with the recording staff/admin userId as submitter
       const batch = manager.create(PaymentSubmissionBatch, {
         schoolId,
-        parentId,
+        parentId: userId,
         proofUrl: input.proofUrl || '',
         proofType: input.paymentMethod || 'CASH',
         bankAccountId: input.bankAccountId || null,
@@ -1803,8 +1797,13 @@ export class FeesService {
     if (!share || share.batch.schoolId !== schoolId) {
       throw new NotFoundException('Receipt not found');
     }
-    if (role === UserRole.PARENT && share.batch.parentId !== userId) {
-      throw new ForbiddenException('You do not have access to this receipt');
+    if (role === UserRole.PARENT) {
+      const isParentLinked = await this.studentParentRepo.findOne({
+        where: { studentId: share.studentId, parentId: userId },
+      });
+      if (!isParentLinked && share.batch.parentId !== userId) {
+        throw new ForbiddenException('You do not have access to this receipt');
+      }
     }
     return this.receiptRepo.findOne({
       where: { studentShareId: shareId },
