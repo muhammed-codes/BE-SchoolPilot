@@ -329,8 +329,9 @@ export class FeesResolver {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermission(AppResource.FEES, PermissionAction.READ)
   feeOverview(
-    @Args('sessionId') sessionId: string,
     @CurrentUser() user: AuthUser,
+    @Args('sessionId', { type: () => String, nullable: true })
+    sessionId?: string,
     @Args('termId', { type: () => String, nullable: true })
     termId?: string,
     @Args('classId', { type: () => String, nullable: true })

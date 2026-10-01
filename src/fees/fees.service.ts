@@ -815,7 +815,7 @@ export class FeesService {
 
   async getFeeOverview(
     schoolId: string,
-    sessionId: string,
+    sessionId?: string,
     termId?: string,
     classId?: string,
     userId?: string,
@@ -861,10 +861,12 @@ export class FeesService {
         .createQueryBuilder('inv')
         .innerJoin('students', 'st', 'st.id = inv.studentId')
         .where('inv.schoolId = :schoolId', { schoolId })
-        .andWhere('inv.sessionId = :sessionId', { sessionId })
         .andWhere('st.currentClassId = :classId', { classId: cls.id })
         .andWhere('st.isArchived = false');
 
+      if (sessionId) {
+        qb.andWhere('inv.sessionId = :sessionId', { sessionId });
+      }
       if (termId) {
         qb.andWhere('inv.termId = :termId', { termId });
       }
