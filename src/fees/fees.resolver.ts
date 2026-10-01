@@ -6,7 +6,10 @@ import { FeeCategory } from './entities/fee-category.entity';
 import { FeeStructure } from './entities/fee-structure.entity';
 import { StudentFeeOverride } from './entities/student-fee-override.entity';
 import { SchoolBankAccount } from './entities/school-bank-account.entity';
-import { StudentInvoice } from './entities/student-invoice.entity';
+import {
+  StudentInvoice,
+  InvoiceStatus,
+} from './entities/student-invoice.entity';
 import { PaymentSubmissionBatch } from './entities/payment-submission-batch.entity';
 import {
   PaymentSubmissionStudentShare,
@@ -154,8 +157,15 @@ export class FeesResolver {
     @Args('termId', { type: () => String, nullable: true })
     termId: string | undefined,
     @CurrentUser() user: AuthUser,
+    @Args('classId', { type: () => String, nullable: true })
+    classId?: string,
   ) {
-    return this.feesService.getFeeStructures(user.schoolId, sessionId, termId);
+    return this.feesService.getFeeStructures(
+      user.schoolId,
+      sessionId,
+      termId,
+      classId,
+    );
   }
 
   @Query(() => FeeStructure, { nullable: true })
@@ -382,6 +392,12 @@ export class FeesResolver {
     sessionId?: string,
     @Args('termId', { type: () => String, nullable: true })
     termId?: string,
+    @Args('search', { type: () => String, nullable: true })
+    search?: string,
+    @Args('status', { type: () => InvoiceStatus, nullable: true })
+    status?: InvoiceStatus,
+    @Args('sortBy', { type: () => String, nullable: true })
+    sortBy?: string,
   ) {
     return this.feesService.getClassFeeLedger(
       classId,
@@ -389,6 +405,9 @@ export class FeesResolver {
       sessionId,
       termId,
       user.role,
+      search,
+      status,
+      sortBy,
     );
   }
 
@@ -453,8 +472,14 @@ export class FeesResolver {
     @CurrentUser() user: AuthUser,
     @Args('status', { type: () => PaymentShareStatus, nullable: true })
     status?: PaymentShareStatus,
+    @Args('search', { type: () => String, nullable: true })
+    search?: string,
   ) {
-    return this.feesService.getSchoolPaymentShares(user.schoolId, status);
+    return this.feesService.getSchoolPaymentShares(
+      user.schoolId,
+      status,
+      search,
+    );
   }
 
   @Mutation(() => PaymentSubmissionStudentShare)

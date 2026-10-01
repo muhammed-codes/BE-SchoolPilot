@@ -216,15 +216,21 @@ export class FeesService {
     return this.feeStructureRepo.save(structs);
   }
 
-  getFeeStructures(schoolId: string, sessionId: string, termId?: string) {
+  getFeeStructures(
+    schoolId: string,
+    sessionId: string,
+    termId?: string,
+    classId?: string,
+  ) {
     return this.feeStructureRepo.find({
       where: {
         schoolId,
         sessionId,
         ...(termId ? { termId } : {}),
+        ...(classId ? { classId } : {}),
         isActive: true,
       },
-      relations: ['feeCategory'],
+      relations: ['feeCategory', 'classEntity'],
       order: { createdAt: 'ASC' },
     });
   }
@@ -918,6 +924,9 @@ export class FeesService {
     sessionId?: string,
     termId?: string,
     role?: UserRole,
+    search?: string,
+    statusFilter?: InvoiceStatus,
+    sortBy?: string,
   ): Promise<ClassFeeLedger> {
     if (role && role !== UserRole.PARENT) {
       const isFinanceOwner =
@@ -986,7 +995,7 @@ export class FeesService {
       invoicesByStudent.get(inv.studentId)!.push(inv);
     }
 
-    const studentLedgers: StudentFeeLedger[] = [];
+    const allStudentLedgers: StudentFeeLedger[] = [];
     let totalBilled = 0;
     let totalPaid = 0;
     let totalBalance = 0;
@@ -1032,7 +1041,7 @@ export class FeesService {
 
       const dueDate = studentInvoices.find((i) => i.dueDate)?.dueDate;
 
-      studentLedgers.push({
+      allStudentLedgers.push({
         studentId: student.id,
         student,
         totalBilled: sBilled,
@@ -1042,6 +1051,49 @@ export class FeesService {
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
         invoices: studentInvoices,
         items,
+      });
+    }
+
+    let filteredLedgers = allStudentLedgers;
+    if (statusFilter) {
+      filteredLedgers = filteredLedgers.filter(
+        (sl) => sl.status === statusFilter,
+      );
+    }
+
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      filteredLedgers = filteredLedgers.filter((sl) => {
+        const stu = sl.student;
+        const fullName =
+          `${stu?.firstName || ''} ${stu?.middleName || ''} ${stu?.lastName || ''}`.toLowerCase();
+        const adm = (stu?.admissionNumber || '').toLowerCase();
+        return fullName.includes(q) || adm.includes(q);
+      });
+    }
+
+    if (sortBy) {
+      filteredLedgers.sort((a, b) => {
+        const nameA =
+          `${a.student?.firstName || ''} ${a.student?.lastName || ''}`.trim();
+        const nameB =
+          `${b.student?.firstName || ''} ${b.student?.lastName || ''}`.trim();
+        switch (sortBy) {
+          case 'name':
+            return nameA.localeCompare(nameB);
+          case 'admission':
+            return (a.student?.admissionNumber || '').localeCompare(
+              b.student?.admissionNumber || '',
+            );
+          case 'balance_desc':
+            return b.balance - a.balance;
+          case 'balance_asc':
+            return a.balance - b.balance;
+          case 'billed_desc':
+            return b.totalBilled - a.totalBilled;
+          default:
+            return 0;
+        }
       });
     }
 
@@ -1062,7 +1114,7 @@ export class FeesService {
       partiallyPaidCount,
       openCount,
       collectionRate,
-      studentLedgers,
+      studentLedgers: filteredLedgers,
     };
   }
 
@@ -1339,24 +1391,37 @@ export class FeesService {
       });
   }
 
-  /** Get all payment shares for the school, optionally filtered by status */
-  getSchoolPaymentShares(schoolId: string, status?: PaymentShareStatus) {
-    return this.shareRepo.find({
-      where: {
-        ...(status ? { status } : {}),
-        batch: { schoolId },
-      },
-      relations: [
-        'student',
-        'student.currentClass',
-        'batch',
-        'batch.parent',
-        'batch.bankAccount',
-        'allocations',
-        'finalizedByUser',
-      ],
-      order: { createdAt: 'DESC' },
-    });
+  /** Get all payment shares for the school, optionally filtered by status and search */
+  getSchoolPaymentShares(
+    schoolId: string,
+    status?: PaymentShareStatus,
+    search?: string,
+  ) {
+    const qb = this.shareRepo
+      .createQueryBuilder('share')
+      .innerJoinAndSelect('share.batch', 'batch')
+      .leftJoinAndSelect('share.student', 'student')
+      .leftJoinAndSelect('student.currentClass', 'currentClass')
+      .leftJoinAndSelect('batch.parent', 'parent')
+      .leftJoinAndSelect('batch.bankAccount', 'bankAccount')
+      .leftJoinAndSelect('share.allocations', 'allocations')
+      .leftJoinAndSelect('share.finalizedByUser', 'finalizedByUser')
+      .where('batch.schoolId = :schoolId', { schoolId });
+
+    if (status) {
+      qb.andWhere('share.status = :status', { status });
+    }
+
+    if (search && search.trim()) {
+      const q = `%${search.trim().toLowerCase()}%`;
+      qb.andWhere(
+        "(LOWER(student.firstName) LIKE :q OR LOWER(student.lastName) LIKE :q OR LOWER(COALESCE(student.admissionNumber, '')) LIKE :q OR LOWER(COALESCE(parent.firstName, '')) LIKE :q OR LOWER(COALESCE(parent.lastName, '')) LIKE :q)",
+        { q },
+      );
+    }
+
+    qb.orderBy('share.createdAt', 'DESC');
+    return qb.getMany();
   }
 
   /** Record offline payment directly by school admin / bursar */
