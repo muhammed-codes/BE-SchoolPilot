@@ -222,17 +222,24 @@ export class FeesService {
     termId?: string,
     classId?: string,
   ) {
-    return this.feeStructureRepo.find({
-      where: {
-        schoolId,
-        sessionId,
-        ...(termId ? { termId } : {}),
-        ...(classId ? { classId } : {}),
-        isActive: true,
-      },
-      relations: ['feeCategory', 'classEntity'],
-      order: { createdAt: 'ASC' },
-    });
+    const qb = this.feeStructureRepo
+      .createQueryBuilder('fs')
+      .leftJoinAndSelect('fs.feeCategory', 'fc')
+      .leftJoinAndSelect('fs.classEntity', 'cls')
+      .where('fs.schoolId = :schoolId', { schoolId })
+      .andWhere('fs.sessionId = :sessionId', { sessionId })
+      .andWhere('fs.isActive = true');
+
+    if (classId) {
+      qb.andWhere('(fs.classId = :classId OR fs.classId IS NULL)', { classId });
+    }
+
+    if (termId) {
+      qb.andWhere('(fs.termId = :termId OR fs.termId IS NULL)', { termId });
+    }
+
+    qb.orderBy('fs.createdAt', 'ASC');
+    return qb.getMany();
   }
 
   updateFeeStructure(id: string, amount: number, schoolId: string) {

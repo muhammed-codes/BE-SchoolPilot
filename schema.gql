@@ -908,7 +908,7 @@ type PaymentSubmissionStudentShare {
   batch: PaymentSubmissionBatch!
   batchId: String!
   createdAt: DateTime!
-  finalizedAt: String
+  finalizedAt: DateTime
   finalizedBy: String
   finalizedByUser: User
   id: ID!
@@ -1046,7 +1046,7 @@ type Query {
   classAttendance(classId: String!, date: String!): [StudentAttendance!]!
   classAttendanceOverview(date: String!): ClassAttendanceOverview!
   classById(id: String!): ClassEntity!
-  classFeeLedger(classId: String!, sessionId: String, termId: String): ClassFeeLedger!
+  classFeeLedger(classId: String!, search: String, sessionId: String, sortBy: String, status: InvoiceStatus, termId: String): ClassFeeLedger!
   classInvoices(classId: String!, sessionId: String, termId: String): [StudentInvoice!]!
   classScores(classId: String!, search: String, skip: Int! = 0, subjectId: String, take: Int! = 50, termId: String!): PaginatedClassScores!
   classSubjectAssignments(classId: String!): [ClassSubject!]!
@@ -1055,9 +1055,9 @@ type Query {
   exportTimetablePdf(input: ExportTimetablePdfInput!): TimetablePdfResult!
   feeCategories: [FeeCategory!]!
   feeOverrides(classId: String, feeStructureId: String, sessionId: String, studentId: String, termId: String): [StudentFeeOverride!]!
-  feeOverview(classId: String, sessionId: String!, termId: String): FeeOverview!
+  feeOverview(classId: String, sessionId: String, termId: String): FeeOverview!
   feeStructure(id: String!): FeeStructure
-  feeStructures(sessionId: String!, termId: String): [FeeStructure!]!
+  feeStructures(classId: String, sessionId: String!, termId: String): [FeeStructure!]!
   guardianStudents(guardianId: String!): [Student!]!
   invoice(id: String!): StudentInvoice
   invoices(filter: InvoiceFilterInput, limit: Int! = 50, page: Int! = 1): PaginatedStudentInvoice!
@@ -1096,7 +1096,7 @@ type Query {
   school(id: String!): School!
   schoolClasses(limit: Int! = 50, page: Int! = 1, search: String): PaginatedClassEntity!
   schoolDays: [SchoolDay!]!
-  schoolPaymentShares(status: PaymentShareStatus): [PaymentSubmissionStudentShare!]!
+  schoolPaymentShares(search: String, status: PaymentShareStatus): [PaymentSubmissionStudentShare!]!
   schoolResultSheets(classId: String, status: ResultStatus, termId: String): [ResultSheet!]!
   schoolSubjects(limit: Int! = 50, page: Int! = 1, search: String): PaginatedSubject!
   schoolTeachers: [User!]!
