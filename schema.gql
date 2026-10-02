@@ -188,6 +188,7 @@ type ClassFeeLedger {
   classId: String!
   className: String!
   collectionRate: Float
+  discountedStudentsCount: Int!
   openCount: Int!
   paidCount: Int!
   partialCount: Int!
@@ -197,6 +198,7 @@ type ClassFeeLedger {
   termId: String
   totalBalance: Int!
   totalBilled: Int!
+  totalDiscounts: Int!
   totalPaid: Int!
   totalStudents: Int!
 }
@@ -208,6 +210,7 @@ type ClassFeeSummary {
   paidCount: Int!
   partiallyPaidCount: Int!
   totalBilled: Int!
+  totalDiscounts: Int!
   totalOutstanding: Int!
   totalPaid: Int!
   totalStudents: Int!
@@ -502,6 +505,7 @@ type FeeOverview {
   partiallyPaidInvoicesCount: Int!
   totalBilled: Int!
   totalCollected: Int!
+  totalDiscounts: Int!
   totalOutstanding: Int!
 }
 
@@ -1539,14 +1543,34 @@ input StudentAttendanceRecordInput {
 
 type StudentFeeLedger {
   balance: Int!
+  discountReason: String
+  discountType: String
   dueDate: String
+  hasDiscount: Boolean!
   invoices: [StudentInvoice!]!
-  items: [StudentInvoiceItem!]!
+  items: [StudentFeeLedgerItem!]!
   status: InvoiceStatus!
   student: Student
   studentId: String!
   totalBilled: Int!
+  totalDiscount: Int!
+  totalOriginalBilled: Int!
   totalPaid: Int!
+}
+
+type StudentFeeLedgerItem {
+  amount: Int!
+  amountPaid: Int!
+  balance: Int!
+  description: String!
+  discountAmount: Int!
+  discountReason: String
+  discountType: String
+  feeCategoryId: String!
+  hasDiscount: Boolean!
+  id: String!
+  originalAmount: Int!
+  studentInvoiceId: String!
 }
 
 type StudentFeeOverride {
