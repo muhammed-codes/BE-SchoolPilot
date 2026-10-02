@@ -1166,8 +1166,10 @@ export class FeesService {
 
           if (hasDiscount) {
             studentHasDiscount = true;
-            if (!studentDiscountType && discountType) studentDiscountType = discountType;
-            if (!studentDiscountReason && discountReason) studentDiscountReason = discountReason;
+            if (!studentDiscountType && discountType)
+              studentDiscountType = discountType;
+            if (!studentDiscountReason && discountReason)
+              studentDiscountReason = discountReason;
           }
 
           studentOriginalBilled += originalAmount;
