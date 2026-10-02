@@ -3,8 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PaymentSubmissionStudentShare, PaymentShareStatus } from '../../fees/entities/payment-submission-student-share.entity';
 import { StudentInvoice, InvoiceStatus } from '../../fees/entities/student-invoice.entity';
+import { Student } from '../../students/entities/student.entity';
 import { Term } from '../../terms/entities/term.entity';
-import { TermStatus } from '../../common/enums';
+import { TermStatus, StudentStatus } from '../../common/enums';
 import {
   DashboardIncomeAnalytics,
   DashboardFeeCollectionOverview,
@@ -336,22 +337,43 @@ export class FinancialAnalyticsService {
     termId?: string,
     sessionId?: string,
   ): Promise<DashboardFeeCollectionOverview> {
-    const qb = this.invoiceRepo
-      .createQueryBuilder('invoice')
-      .where('invoice.schoolId = :schoolId', { schoolId });
-
+    let activeTerm: Term | null = null;
     if (termId) {
-      qb.andWhere('invoice.termId = :termId', { termId });
+      activeTerm = await this.termRepo.findOne({
+        where: { id: termId, schoolId },
+      });
     } else if (sessionId) {
-      qb.andWhere('invoice.sessionId = :sessionId', { sessionId });
-    } else {
-      // Filter by active term if available
-      const activeTerm = await this.termRepo.findOne({
+      activeTerm = await this.termRepo.findOne({
+        where: { sessionId, schoolId, status: TermStatus.ACTIVE },
+      });
+    }
+
+    if (!activeTerm && !sessionId) {
+      activeTerm = await this.termRepo.findOne({
         where: { schoolId, status: TermStatus.ACTIVE },
       });
-      if (activeTerm) {
-        qb.andWhere('invoice.termId = :termId', { termId: activeTerm.id });
-      }
+    }
+
+    if (!activeTerm && !sessionId) {
+      activeTerm = await this.termRepo.findOne({
+        where: { schoolId },
+        order: { createdAt: 'DESC' },
+      });
+    }
+
+    const qb = this.invoiceRepo
+      .createQueryBuilder('invoice')
+      .innerJoin(Student, 'st', 'st.id = invoice.studentId')
+      .where('invoice.schoolId = :schoolId', { schoolId })
+      .andWhere('st.isArchived = false')
+      .andWhere('st.status = :studentStatus', {
+        studentStatus: StudentStatus.ACTIVE,
+      });
+
+    if (activeTerm) {
+      qb.andWhere('invoice.termId = :termId', { termId: activeTerm.id });
+    } else if (sessionId) {
+      qb.andWhere('invoice.sessionId = :sessionId', { sessionId });
     }
 
     const invoices = await qb.getMany();

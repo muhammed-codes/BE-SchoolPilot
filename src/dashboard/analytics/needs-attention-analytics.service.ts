@@ -2,8 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, IsNull } from 'typeorm';
 import { StudentInvoice, InvoiceStatus } from '../../fees/entities/student-invoice.entity';
+import { Student } from '../../students/entities/student.entity';
 import { ResultSheet } from '../../results/entities/result-sheet.entity';
-import { ResultStatus } from '../../common/enums';
+import { ResultStatus, StudentStatus } from '../../common/enums';
 import { User } from '../../users/entities/user.entity';
 import { ClassEntity } from '../../classes/entities/class.entity';
 import { Term } from '../../terms/entities/term.entity';
@@ -38,31 +39,51 @@ export class NeedsAttentionAnalyticsService {
     const items: DashboardNeedsAttentionItem[] = [];
 
     // 1. Students with outstanding fees
-    let activeTermId = termId;
-    if (!activeTermId) {
-      const activeTerm = await this.termRepo.findOne({
+    let activeTerm: Term | null = null;
+    if (termId) {
+      activeTerm = await this.termRepo.findOne({
+        where: { id: termId, schoolId },
+      });
+    }
+    if (!activeTerm) {
+      activeTerm = await this.termRepo.findOne({
         where: { schoolId, status: TermStatus.ACTIVE },
       });
-      activeTermId = activeTerm?.id;
+    }
+    if (!activeTerm) {
+      activeTerm = await this.termRepo.findOne({
+        where: { schoolId },
+        order: { createdAt: 'DESC' },
+      });
     }
 
     const outstandingInvoicesQb = this.invoiceRepo
       .createQueryBuilder('inv')
+      .innerJoin(Student, 'st', 'st.id = inv.studentId')
       .where('inv.schoolId = :schoolId', { schoolId })
+      .andWhere('st.isArchived = false')
+      .andWhere('st.status = :studentStatus', {
+        studentStatus: StudentStatus.ACTIVE,
+      })
       .andWhere('inv.status IN (:...statuses)', {
         statuses: [InvoiceStatus.OPEN, InvoiceStatus.PARTIALLY_PAID],
       })
       .andWhere('inv.balance > 0');
 
-    if (activeTermId) {
+    if (activeTerm) {
       outstandingInvoicesQb.andWhere('inv.termId = :termId', {
-        termId: activeTermId,
+        termId: activeTerm.id,
       });
     }
 
-    const outstandingCount = await outstandingInvoicesQb.getCount();
+    const outstandingRaw = await outstandingInvoicesQb
+      .select('COUNT(DISTINCT inv.studentId)', 'count')
+      .getRawOne();
+
+    const outstandingCount = parseInt(outstandingRaw?.count || '0', 10);
 
     if (outstandingCount > 0) {
+      const termSuffix = activeTerm?.name ? ` for ${activeTerm.name}` : ' for this term';
       items.push({
         id: 'outstanding-fees',
         type: 'OUTSTANDING_FEES',
@@ -71,7 +92,7 @@ export class NeedsAttentionAnalyticsService {
           outstandingCount > 20
             ? AttentionSeverity.CRITICAL
             : AttentionSeverity.WARNING,
-        label: `${outstandingCount} student${outstandingCount === 1 ? '' : 's'} have outstanding fees for this term`,
+        label: `${outstandingCount} active student${outstandingCount === 1 ? '' : 's'} have outstanding fees${termSuffix}`,
         actionLabel: 'View fee ledger',
         actionRoute: '/fees',
       });
@@ -84,9 +105,9 @@ export class NeedsAttentionAnalyticsService {
       .andWhere('sheet.status = :status', { status: ResultStatus.DRAFT })
       .andWhere('sheet.isArchived = false');
 
-    if (activeTermId) {
+    if (activeTerm) {
       pendingSheetsQb.andWhere('sheet.termId = :termId', {
-        termId: activeTermId,
+        termId: activeTerm.id,
       });
     }
 
