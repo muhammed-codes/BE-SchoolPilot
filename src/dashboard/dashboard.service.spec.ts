@@ -15,6 +15,7 @@ import { Student } from '../students/entities/student.entity';
 import { User } from '../users/entities/user.entity';
 import { ClassEntity } from '../classes/entities/class.entity';
 import { Term } from '../terms/entities/term.entity';
+import { Session } from '../terms/entities/session.entity';
 import { DashboardTimeFilter, AttendancePeriodFilter } from './dto/dashboard-analytics.input';
 import { AttentionSeverity } from './dto/dashboard-analytics.type';
 
@@ -268,6 +269,7 @@ describe('DashboardService & Analytics Services', () => {
         { provide: getRepositoryToken(User), useValue: mockRepo },
         { provide: getRepositoryToken(ClassEntity), useValue: mockRepo },
         { provide: getRepositoryToken(Term), useValue: mockRepo },
+        { provide: getRepositoryToken(Session), useValue: mockRepo },
         { provide: ClassesService, useValue: mockClassesService },
       ],
     }).compile();

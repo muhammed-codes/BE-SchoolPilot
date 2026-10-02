@@ -5,6 +5,7 @@ import { PaymentSubmissionStudentShare, PaymentShareStatus } from '../../fees/en
 import { StudentInvoice, InvoiceStatus } from '../../fees/entities/student-invoice.entity';
 import { Student } from '../../students/entities/student.entity';
 import { Term } from '../../terms/entities/term.entity';
+import { Session } from '../../terms/entities/session.entity';
 import { TermStatus, StudentStatus } from '../../common/enums';
 import {
   DashboardIncomeAnalytics,
@@ -22,6 +23,8 @@ export class FinancialAnalyticsService {
     private readonly invoiceRepo: Repository<StudentInvoice>,
     @InjectRepository(Term)
     private readonly termRepo: Repository<Term>,
+    @InjectRepository(Session)
+    private readonly sessionRepo: Repository<Session>,
   ) {}
 
   private getUtcDateRangeForFilter(
@@ -337,25 +340,37 @@ export class FinancialAnalyticsService {
     termId?: string,
     sessionId?: string,
   ): Promise<DashboardFeeCollectionOverview> {
+    let activeSession: Session | null = null;
     let activeTerm: Term | null = null;
+
     if (termId) {
       activeTerm = await this.termRepo.findOne({
         where: { id: termId, schoolId },
+        relations: ['session'],
       });
+      activeSession = activeTerm?.session || null;
     } else if (sessionId) {
-      activeTerm = await this.termRepo.findOne({
-        where: { sessionId, schoolId, status: TermStatus.ACTIVE },
+      activeSession = await this.sessionRepo.findOne({
+        where: { id: sessionId, schoolId },
       });
     }
 
-    if (!activeTerm && !sessionId) {
+    if (!activeTerm && !activeSession) {
       activeTerm = await this.termRepo.findOne({
         where: { schoolId, status: TermStatus.ACTIVE },
+        relations: ['session'],
+      });
+      activeSession = activeTerm?.session || null;
+    }
+
+    if (!activeSession) {
+      activeSession = await this.sessionRepo.findOne({
+        where: { schoolId, isActive: true },
       });
     }
 
-    if (!activeTerm && !sessionId) {
-      activeTerm = await this.termRepo.findOne({
+    if (!activeSession) {
+      activeSession = await this.sessionRepo.findOne({
         where: { schoolId },
         order: { createdAt: 'DESC' },
       });
@@ -370,10 +385,14 @@ export class FinancialAnalyticsService {
         studentStatus: StudentStatus.ACTIVE,
       });
 
-    if (activeTerm) {
-      qb.andWhere('invoice.termId = :termId', { termId: activeTerm.id });
+    if (termId) {
+      qb.andWhere('invoice.termId = :termId', { termId });
     } else if (sessionId) {
       qb.andWhere('invoice.sessionId = :sessionId', { sessionId });
+    } else if (activeSession) {
+      qb.andWhere('invoice.sessionId = :sessionId', {
+        sessionId: activeSession.id,
+      });
     }
 
     const invoices = await qb.getMany();

@@ -8,6 +8,7 @@ import { ResultStatus, StudentStatus } from '../../common/enums';
 import { User } from '../../users/entities/user.entity';
 import { ClassEntity } from '../../classes/entities/class.entity';
 import { Term } from '../../terms/entities/term.entity';
+import { Session } from '../../terms/entities/session.entity';
 import { TermStatus } from '../../common/enums';
 import { SCHOOL_STAFF_ROLES } from '../../common/constants/roles.constant';
 import {
@@ -29,6 +30,8 @@ export class NeedsAttentionAnalyticsService {
     private readonly classRepo: Repository<ClassEntity>,
     @InjectRepository(Term)
     private readonly termRepo: Repository<Term>,
+    @InjectRepository(Session)
+    private readonly sessionRepo: Repository<Session>,
     private readonly guardianAnalyticsService: GuardianAnalyticsService,
   ) {}
 
@@ -39,19 +42,33 @@ export class NeedsAttentionAnalyticsService {
     const items: DashboardNeedsAttentionItem[] = [];
 
     // 1. Students with outstanding fees
+    let activeSession: Session | null = null;
     let activeTerm: Term | null = null;
+
     if (termId) {
       activeTerm = await this.termRepo.findOne({
         where: { id: termId, schoolId },
+        relations: ['session'],
       });
+      activeSession = activeTerm?.session || null;
     }
-    if (!activeTerm) {
+
+    if (!activeTerm && !activeSession) {
       activeTerm = await this.termRepo.findOne({
         where: { schoolId, status: TermStatus.ACTIVE },
+        relations: ['session'],
+      });
+      activeSession = activeTerm?.session || null;
+    }
+
+    if (!activeSession) {
+      activeSession = await this.sessionRepo.findOne({
+        where: { schoolId, isActive: true },
       });
     }
-    if (!activeTerm) {
-      activeTerm = await this.termRepo.findOne({
+
+    if (!activeSession) {
+      activeSession = await this.sessionRepo.findOne({
         where: { schoolId },
         order: { createdAt: 'DESC' },
       });
@@ -70,9 +87,13 @@ export class NeedsAttentionAnalyticsService {
       })
       .andWhere('inv.balance > 0');
 
-    if (activeTerm) {
+    if (termId) {
       outstandingInvoicesQb.andWhere('inv.termId = :termId', {
-        termId: activeTerm.id,
+        termId,
+      });
+    } else if (activeSession) {
+      outstandingInvoicesQb.andWhere('inv.sessionId = :sessionId', {
+        sessionId: activeSession.id,
       });
     }
 
@@ -83,7 +104,12 @@ export class NeedsAttentionAnalyticsService {
     const outstandingCount = parseInt(outstandingRaw?.count || '0', 10);
 
     if (outstandingCount > 0) {
-      const termSuffix = activeTerm?.name ? ` for ${activeTerm.name}` : ' for this term';
+      let scopeLabel = 'this academic session';
+      if (termId && activeTerm?.name) {
+        scopeLabel = activeTerm.name;
+      } else if (activeSession?.name) {
+        scopeLabel = activeSession.name;
+      }
       items.push({
         id: 'outstanding-fees',
         type: 'OUTSTANDING_FEES',
@@ -92,7 +118,7 @@ export class NeedsAttentionAnalyticsService {
           outstandingCount > 20
             ? AttentionSeverity.CRITICAL
             : AttentionSeverity.WARNING,
-        label: `${outstandingCount} active student${outstandingCount === 1 ? '' : 's'} have outstanding fees${termSuffix}`,
+        label: `${outstandingCount} active student${outstandingCount === 1 ? '' : 's'} have outstanding fees for ${scopeLabel}`,
         actionLabel: 'View fee ledger',
         actionRoute: '/fees',
       });
