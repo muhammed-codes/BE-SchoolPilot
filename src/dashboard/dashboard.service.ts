@@ -12,7 +12,28 @@ import {
 } from '../common/constants/roles.constant';
 import { ClassesService } from '../classes/classes.service';
 import { DashboardOverview } from './dto/dashboard-overview.type';
+import {
+  DashboardAnalytics,
+  DashboardIncomeAnalytics,
+  DashboardAttendanceAnalytics,
+  DashboardFeeCollectionOverview,
+} from './dto/dashboard-analytics.type';
+import {
+  DashboardAnalyticsInput,
+  DashboardTimeFilter,
+  AttendancePeriodFilter,
+} from './dto/dashboard-analytics.input';
 import { createMetricStat } from '../common/dto/metric-stat.type';
+
+import { TermAnalyticsService } from './analytics/term-analytics.service';
+import { KpiAnalyticsService } from './analytics/kpi-analytics.service';
+import { FinancialAnalyticsService } from './analytics/financial-analytics.service';
+import { AttendanceAnalyticsService } from './analytics/attendance-analytics.service';
+import { AcademicAnalyticsService } from './analytics/academic-analytics.service';
+import { ResultSubmissionAnalyticsService } from './analytics/result-submission-analytics.service';
+import { GuardianAnalyticsService } from './analytics/guardian-analytics.service';
+import { StaffAnalyticsService } from './analytics/staff-analytics.service';
+import { NeedsAttentionAnalyticsService } from './analytics/needs-attention-analytics.service';
 
 @Injectable()
 export class DashboardService {
@@ -26,7 +47,125 @@ export class DashboardService {
     @InjectRepository(Term)
     private readonly termRepo: Repository<Term>,
     private readonly classesService: ClassesService,
+    private readonly termAnalyticsService: TermAnalyticsService,
+    private readonly kpiAnalyticsService: KpiAnalyticsService,
+    private readonly financialAnalyticsService: FinancialAnalyticsService,
+    private readonly attendanceAnalyticsService: AttendanceAnalyticsService,
+    private readonly academicAnalyticsService: AcademicAnalyticsService,
+    private readonly resultSubmissionAnalyticsService: ResultSubmissionAnalyticsService,
+    private readonly guardianAnalyticsService: GuardianAnalyticsService,
+    private readonly staffAnalyticsService: StaffAnalyticsService,
+    private readonly needsAttentionAnalyticsService: NeedsAttentionAnalyticsService,
   ) {}
+
+  async getDashboardAnalytics(
+    schoolId: string,
+    input: DashboardAnalyticsInput = {},
+  ): Promise<DashboardAnalytics> {
+    const {
+      incomeTimeFilter = DashboardTimeFilter.MONTH,
+      attendanceTimeFilter = AttendancePeriodFilter.WEEK,
+      sessionId,
+      termId,
+    } = input;
+
+    const [
+      termProgress,
+      kpis,
+      incomeAnalytics,
+      feeCollectionOverview,
+      studentDemographics,
+      classDistribution,
+      attendanceAnalytics,
+      academicPerformance,
+      resultSubmissionStatus,
+      guardianOverview,
+      staffOverview,
+      needsAttention,
+    ] = await Promise.all([
+      this.termAnalyticsService.getTermProgress(schoolId, termId, sessionId),
+      this.kpiAnalyticsService.getOverviewKpis(schoolId),
+      this.financialAnalyticsService.getIncomeAnalytics(
+        schoolId,
+        incomeTimeFilter,
+        termId,
+      ),
+      this.financialAnalyticsService.getFeeCollectionOverview(
+        schoolId,
+        termId,
+        sessionId,
+      ),
+      this.kpiAnalyticsService.getStudentDemographics(schoolId),
+      this.kpiAnalyticsService.getClassDistribution(schoolId),
+      this.attendanceAnalyticsService.getAttendanceAnalytics(
+        schoolId,
+        attendanceTimeFilter,
+        termId,
+      ),
+      this.academicAnalyticsService.getAcademicPerformance(schoolId, termId),
+      this.resultSubmissionAnalyticsService.getResultSubmissionStatus(
+        schoolId,
+        termId,
+      ),
+      this.guardianAnalyticsService.getGuardianOverview(schoolId),
+      this.staffAnalyticsService.getStaffOverview(schoolId),
+      this.needsAttentionAnalyticsService.getNeedsAttentionItems(
+        schoolId,
+        termId,
+      ),
+    ]);
+
+    return {
+      termProgress,
+      kpis,
+      incomeAnalytics,
+      feeCollectionOverview,
+      studentDemographics,
+      classDistribution,
+      attendanceAnalytics,
+      academicPerformance,
+      resultSubmissionStatus,
+      guardianOverview,
+      staffOverview,
+      needsAttention,
+    };
+  }
+
+  async getDashboardIncomeAnalytics(
+    schoolId: string,
+    filter: DashboardTimeFilter = DashboardTimeFilter.MONTH,
+    termId?: string,
+  ): Promise<DashboardIncomeAnalytics> {
+    return this.financialAnalyticsService.getIncomeAnalytics(
+      schoolId,
+      filter,
+      termId,
+    );
+  }
+
+  async getDashboardAttendanceAnalytics(
+    schoolId: string,
+    filter: AttendancePeriodFilter = AttendancePeriodFilter.WEEK,
+    termId?: string,
+  ): Promise<DashboardAttendanceAnalytics> {
+    return this.attendanceAnalyticsService.getAttendanceAnalytics(
+      schoolId,
+      filter,
+      termId,
+    );
+  }
+
+  async getDashboardFeeCollectionOverview(
+    schoolId: string,
+    termId?: string,
+    sessionId?: string,
+  ): Promise<DashboardFeeCollectionOverview> {
+    return this.financialAnalyticsService.getFeeCollectionOverview(
+      schoolId,
+      termId,
+      sessionId,
+    );
+  }
 
   async getDashboardOverview(
     userId: string,

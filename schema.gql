@@ -94,6 +94,13 @@ input AssignPermissionGroupInput {
   userId: String!
 }
 
+"""Time filter period for attendance analytics"""
+enum AttendancePeriodFilter {
+  MONTH
+  TODAY
+  WEEK
+}
+
 enum AttendanceStatus {
   ABSENT
   LATE
@@ -105,6 +112,23 @@ type AttendanceSummary {
   daysLate: Int!
   daysPresent: Int!
   totalMarkedDays: Int!
+}
+
+type AttendanceTrendPoint {
+  absentCount: Int!
+  attendancePercentage: Float!
+  date: String!
+  label: String!
+  lateCount: Int!
+  presentCount: Int!
+  totalCount: Int!
+}
+
+"""Severity level for items requiring administrative attention"""
+enum AttentionSeverity {
+  CRITICAL
+  INFO
+  WARNING
 }
 
 type AuthResponse {
@@ -213,6 +237,14 @@ type ClassFeeSummary {
   totalDiscounts: Int!
   totalOutstanding: Int!
   totalPaid: Int!
+  totalStudents: Int!
+}
+
+type ClassPerformanceItem {
+  averageScore: Float!
+  classId: String!
+  className: String!
+  passRate: Float!
   totalStudents: Int!
 }
 
@@ -428,11 +460,191 @@ input CreateUserInput {
   schoolId: String
 }
 
+type DashboardAcademicPerformance {
+  classPerformances: [ClassPerformanceItem!]!
+  overallAverageScore: Float!
+  overallPassRate: Float!
+  studentsNeedingAttentionCount: Int!
+  subjectPerformances: [SubjectPerformanceItem!]!
+}
+
+type DashboardAnalytics {
+  academicPerformance: DashboardAcademicPerformance!
+  attendanceAnalytics: DashboardAttendanceAnalytics!
+  classDistribution: [DashboardClassDistributionItem!]!
+  feeCollectionOverview: DashboardFeeCollectionOverview!
+  guardianOverview: DashboardGuardianOverview!
+  incomeAnalytics: DashboardIncomeAnalytics!
+  kpis: DashboardOverviewKpis!
+  needsAttention: [DashboardNeedsAttentionItem!]!
+  resultSubmissionStatus: DashboardResultSubmissionStatus!
+  staffOverview: DashboardStaffOverview!
+  studentDemographics: DashboardStudentDemographics!
+  termProgress: DashboardTermProgress!
+}
+
+input DashboardAnalyticsInput {
+  attendanceTimeFilter: AttendancePeriodFilter = WEEK
+  incomeTimeFilter: DashboardTimeFilter = MONTH
+  sessionId: String
+  termId: String
+}
+
+type DashboardAttendanceAnalytics {
+  absentCount: Int!
+  excusedCount: Int!
+  lateCount: Int!
+  lowAttendanceClasses: [LowAttendanceClassItem!]!
+  overallPercentage: Float!
+  presentCount: Int!
+  totalRecords: Int!
+  trend: [AttendanceTrendPoint!]!
+}
+
+type DashboardAttendanceKpi {
+  absentToday: Int!
+  lateToday: Int!
+  presentToday: Int!
+  todayPercentage: Float!
+  totalExpectedToday: Int!
+}
+
+type DashboardClassDistributionItem {
+  classId: String!
+  className: String!
+  studentCount: Int!
+}
+
+type DashboardFeeCollectionOverview {
+  collectedFees: Float!
+  collectionPercentage: Float!
+  expectedFees: Float!
+  fullyPaidStudentsCount: Int!
+  outstandingFees: Float!
+  partiallyPaidStudentsCount: Int!
+  unpaidStudentsCount: Int!
+}
+
+type DashboardFeeKpi {
+  changePercentage: Float
+  collectedAmount: Float!
+  previousPeriodAmount: Float!
+}
+
+type DashboardGuardianKpi {
+  active: Int!
+  studentsWithGuardian: Int!
+  studentsWithoutGuardian: Int!
+  total: Int!
+  unlinkedGuardians: Int!
+}
+
+type DashboardGuardianOverview {
+  activeGuardians: Int!
+  guardianCoveragePercentage: Float!
+  studentsWithGuardian: Int!
+  studentsWithoutGuardian: Int!
+  totalGuardians: Int!
+  unlinkedGuardians: Int!
+}
+
+type DashboardIncomeAnalytics {
+  changePercentage: Float
+  previousPeriodTotal: Float!
+  total: Float!
+  trend: [IncomeTrendPoint!]!
+}
+
+type DashboardNeedsAttentionItem {
+  actionLabel: String!
+  actionRoute: String!
+  count: Int!
+  id: String!
+  label: String!
+  severity: AttentionSeverity!
+  type: String!
+}
+
 type DashboardOverview {
   classesCount: MetricStat!
   recentStudents: [Student!]!
   studentsCount: MetricStat!
   teachersCount: MetricStat!
+}
+
+type DashboardOverviewKpis {
+  attendance: DashboardAttendanceKpi!
+  classesCount: Int!
+  fees: DashboardFeeKpi!
+  guardians: DashboardGuardianKpi!
+  staff: DashboardStaffKpi!
+  students: DashboardStudentKpi!
+}
+
+type DashboardResultSubmissionStatus {
+  completionPercentage: Float!
+  pendingSheets: Int!
+  submittedSheets: Int!
+  teachersWithPendingSubmissions: [TeacherPendingSubmissionItem!]!
+  totalExpectedSheets: Int!
+}
+
+type DashboardStaffKpi {
+  active: Int!
+  changePercentage: Float
+  nonTeachingCount: Int!
+  teachingCount: Int!
+  total: Int!
+}
+
+type DashboardStaffOverview {
+  activeStaff: Int!
+  inactiveStaff: Int!
+  nonTeachingStaff: Int!
+  teachingStaff: Int!
+  todayAttendance: StaffTodayAttendanceSummary!
+  totalStaff: Int!
+}
+
+type DashboardStudentDemographics {
+  femaleCount: Int!
+  femalePercentage: Float!
+  maleCount: Int!
+  malePercentage: Float!
+  statusDistribution: [StudentStatusCount!]!
+  totalStudents: Int!
+}
+
+type DashboardStudentKpi {
+  active: Int!
+  changePercentage: Float
+  total: Int!
+}
+
+type DashboardTermProgress {
+  currentWeek: Int!
+  endDate: String
+  schoolDayProgressPercentage: Float!
+  schoolDaysElapsed: Int!
+  sessionId: String
+  sessionName: String
+  startDate: String
+  termId: String
+  termName: String
+  termProgressPercentage: Float!
+  totalSchoolDays: Int!
+  totalWeeks: Int!
+  weeksElapsed: Int!
+  weeksRemaining: Int!
+}
+
+"""Time filter period for dashboard metrics"""
+enum DashboardTimeFilter {
+  MONTH
+  TERM
+  TODAY
+  WEEK
+  YEAR
 }
 
 """
@@ -601,6 +813,12 @@ enum GuardianRelationship {
   OTHER
 }
 
+type IncomeTrendPoint {
+  amount: Float!
+  date: String
+  label: String!
+}
+
 input InvoiceFilterInput {
   classId: String
   search: String
@@ -618,6 +836,14 @@ enum InvoiceStatus {
 input LoginInput {
   email: String!
   password: String!
+}
+
+type LowAttendanceClassItem {
+  attendancePercentage: Float!
+  classId: String!
+  className: String!
+  presentCount: Int!
+  totalCount: Int!
 }
 
 input ManualStaffAttendanceInput {
@@ -1055,6 +1281,17 @@ type Query {
   classScores(classId: String!, search: String, skip: Int! = 0, subjectId: String, take: Int! = 50, termId: String!): PaginatedClassScores!
   classSubjectAssignments(classId: String!): [ClassSubject!]!
   classes(limit: Int! = 50, page: Int! = 1, search: String): PaginatedClassEntity!
+
+  """
+  Fetches comprehensive real-time dashboard analytics for school administrators
+  """
+  dashboardAnalytics(input: DashboardAnalyticsInput): DashboardAnalytics!
+
+  """Fetches filtered attendance analytics for the specified period"""
+  dashboardAttendanceAnalytics(filter: AttendancePeriodFilter = WEEK, termId: String): DashboardAttendanceAnalytics!
+
+  """Fetches filtered income trend analytics for the specified time period"""
+  dashboardIncomeAnalytics(filter: DashboardTimeFilter = MONTH, termId: String): DashboardIncomeAnalytics!
   dashboardOverview: DashboardOverview!
   exportTimetablePdf(input: ExportTimetablePdfInput!): TimetablePdfResult!
   feeCategories: [FeeCategory!]!
@@ -1490,6 +1727,13 @@ type StaffFeeVisibilityConfig {
   updatedBy: String
 }
 
+type StaffTodayAttendanceSummary {
+  absentCount: Int!
+  attendancePercentage: Float!
+  lateCount: Int!
+  presentCount: Int!
+}
+
 type Student {
   address: String
   admissionClass: ClassEntity
@@ -1702,6 +1946,12 @@ enum StudentStatus {
   WITHDRAWN
 }
 
+type StudentStatusCount {
+  count: Int!
+  percentage: Float!
+  status: String!
+}
+
 type Subject {
   code: String
   createdAt: DateTime!
@@ -1709,6 +1959,16 @@ type Subject {
   name: String!
   schoolId: String!
   updatedAt: DateTime!
+}
+
+type SubjectPerformanceItem {
+  averageScore: Float!
+  highestScore: Float!
+  lowestScore: Float!
+  passRate: Float!
+  subjectId: String!
+  subjectName: String!
+  totalStudents: Int!
 }
 
 type SubjectScore {
@@ -1759,6 +2019,14 @@ type TeacherAvailability {
   teacher: User!
   teacherId: String!
   updatedAt: DateTime!
+}
+
+type TeacherPendingSubmissionItem {
+  classNames: [String!]!
+  pendingCount: Int!
+  subjectNames: [String!]!
+  teacherId: String!
+  teacherName: String!
 }
 
 type TeacherScoringAssignment {
