@@ -62,6 +62,16 @@ export class AcademicAnalyticsService {
       };
     }
 
+    // Map each sheet to its totalMaxPerSubject
+    const sheetMaxScoreMap = new Map<string, number>();
+    for (const s of sheets) {
+      const totalMax = (s.scoreComponents || []).reduce(
+        (sum, sc) => sum + (sc.maxScore || 0),
+        0,
+      );
+      sheetMaxScoreMap.set(s.id, totalMax > 0 ? totalMax : 100);
+    }
+
     // Fetch all student results for these sheets
     const studentResults = await this.studentResultRepo
       .createQueryBuilder('sr')
@@ -82,100 +92,143 @@ export class AcademicAnalyticsService {
       };
     }
 
-    // Pass mark standard: 40
-    const PASS_MARK = 40;
+    const PASS_MARK = 40; // 40% standard pass mark
 
-    let totalScoreSum = 0;
-    let scoredCount = 0;
-    let passedCount = 0;
-    let failingCount = 0;
+    // Student percentage map: studentId -> array of percentage scores across broadsheets
+    const studentPercentages: number[] = [];
+    let passedStudentsCount = 0;
+    let failingStudentsCount = 0;
 
-    // Student level tracking
-    const studentScoreMap = new Map<
-      string,
-      { totalScore: number; count: number }
-    >();
-
-    // Class level tracking
+    // Class level tracking: classId -> { className, studentPercentages }
     const classMap = new Map<
       string,
-      { className: string; scores: number[]; passed: number }
+      { className: string; percentages: number[]; passedCount: number }
     >();
 
-    // Subject level tracking
+    // Subject level tracking: subjectId -> { subjectName, scores (out of 100), passedCount }
     const subjectMap = new Map<
       string,
-      { subjectName: string; scores: number[]; passed: number }
+      { subjectName: string; scores: number[]; passedCount: number }
     >();
 
     for (const sr of studentResults) {
-      const score = sr.totalScore ?? sr.percentage ?? 0;
-      if (score > 0) {
-        totalScoreSum += score;
-        scoredCount++;
-        if (score >= PASS_MARK) {
-          passedCount++;
-        }
+      const sheetMaxPerSubject = sheetMaxScoreMap.get(sr.resultSheetId) || 100;
+      const subjectCount = sr.subjectScores?.length || 1;
+      const overallObtainable = sheetMaxPerSubject * subjectCount;
 
-        const prevStudent = studentScoreMap.get(sr.studentId) || {
-          totalScore: 0,
-          count: 0,
-        };
-        prevStudent.totalScore += score;
-        prevStudent.count++;
-        studentScoreMap.set(sr.studentId, prevStudent);
+      let studentPct: number | null = null;
+
+      if (
+        typeof sr.percentage === 'number' &&
+        sr.percentage > 0 &&
+        sr.percentage <= 100
+      ) {
+        studentPct = sr.percentage;
+      } else if (
+        typeof sr.totalScore === 'number' &&
+        sr.totalScore > 0 &&
+        overallObtainable > 0
+      ) {
+        // Compute normalized percentage out of 100
+        studentPct = Math.min(
+          100,
+          Math.round((sr.totalScore / overallObtainable) * 100 * 10) / 10,
+        );
+      } else if (sr.subjectScores && sr.subjectScores.length > 0) {
+        const validSubjectScores = sr.subjectScores.filter(
+          (ss) => typeof ss.totalScore === 'number' && ss.totalScore >= 0,
+        );
+        if (validSubjectScores.length > 0) {
+          const sum = validSubjectScores.reduce(
+            (acc, ss) => acc + (ss.totalScore || 0),
+            0,
+          );
+          const obtainable = sheetMaxPerSubject * validSubjectScores.length;
+          studentPct =
+            obtainable > 0
+              ? Math.min(
+                  100,
+                  Math.round((sum / obtainable) * 100 * 10) / 10,
+                )
+              : null;
+        }
       }
 
-      // Class grouping
-      const classId = sr.resultSheet?.classId;
-      const className = sr.resultSheet?.classEntity?.name || 'Class';
-      if (classId) {
-        const clsData = classMap.get(classId) || {
-          className,
-          scores: [],
-          passed: 0,
-        };
-        if (score > 0) {
-          clsData.scores.push(score);
-          if (score >= PASS_MARK) clsData.passed++;
+      if (studentPct !== null && studentPct >= 0) {
+        studentPercentages.push(studentPct);
+        if (studentPct >= PASS_MARK) {
+          passedStudentsCount++;
+        } else {
+          failingStudentsCount++;
         }
-        classMap.set(classId, clsData);
+
+        // Class grouping
+        const classId = sr.resultSheet?.classId;
+        const className = sr.resultSheet?.classEntity?.name || 'Class';
+        if (classId) {
+          const clsData = classMap.get(classId) || {
+            className,
+            percentages: [],
+            passedCount: 0,
+          };
+          clsData.percentages.push(studentPct);
+          if (studentPct >= PASS_MARK) {
+            clsData.passedCount++;
+          }
+          classMap.set(classId, clsData);
+        }
       }
 
-      // Subject scores grouping
+      // Subject scores grouping (normalized to 100%)
       if (sr.subjectScores && sr.subjectScores.length > 0) {
         for (const ss of sr.subjectScores) {
           const subId = ss.subjectId;
           const subName = ss.subject?.name || 'Subject';
-          const subScore = ss.totalScore;
-          if (subId && typeof subScore === 'number' && subScore >= 0) {
+          const rawScore = ss.totalScore;
+
+          if (subId && typeof rawScore === 'number' && rawScore >= 0) {
+            const normalizedScore =
+              sheetMaxPerSubject > 0
+                ? Math.min(
+                    100,
+                    Math.round((rawScore / sheetMaxPerSubject) * 100 * 10) / 10,
+                  )
+                : Math.min(100, rawScore);
+
             const subData = subjectMap.get(subId) || {
               subjectName: subName,
               scores: [],
-              passed: 0,
+              passedCount: 0,
             };
-            subData.scores.push(subScore);
-            if (subScore >= PASS_MARK) subData.passed++;
+            subData.scores.push(normalizedScore);
+            if (normalizedScore >= PASS_MARK) {
+              subData.passedCount++;
+            }
             subjectMap.set(subId, subData);
           }
         }
       }
     }
 
-    for (const [, stData] of studentScoreMap.entries()) {
-      const studentAvg = stData.totalScore / (stData.count || 1);
-      if (studentAvg < PASS_MARK) {
-        failingCount++;
-      }
-    }
-
+    const assessedCount = studentPercentages.length;
     const overallAverageScore =
-      scoredCount > 0
-        ? Math.round((totalScoreSum / scoredCount) * 10) / 10
+      assessedCount > 0
+        ? Math.min(
+            100,
+            Math.round(
+              (studentPercentages.reduce((a, b) => a + b, 0) /
+                assessedCount) *
+                10,
+            ) / 10,
+          )
         : 0;
+
     const overallPassRate =
-      scoredCount > 0
-        ? Math.round((passedCount / scoredCount) * 100 * 10) / 10
+      assessedCount > 0
+        ? Math.min(
+            100,
+            Math.round((passedStudentsCount / assessedCount) * 100 * 10) / 10,
+          )
         : 0;
 
     // Build subject performances
@@ -183,11 +236,15 @@ export class AcademicAnalyticsService {
     for (const [subjectId, data] of subjectMap.entries()) {
       if (data.scores.length === 0) continue;
       const subSum = data.scores.reduce((a, b) => a + b, 0);
-      const avg = Math.round((subSum / data.scores.length) * 10) / 10;
-      const highest = Math.max(...data.scores);
-      const lowest = Math.min(...data.scores);
+      const avg =
+        Math.min(100, Math.round((subSum / data.scores.length) * 10) / 10);
+      const highest = Math.min(100, Math.max(...data.scores));
+      const lowest = Math.max(0, Math.min(...data.scores));
       const passRate =
-        Math.round((data.passed / data.scores.length) * 100 * 10) / 10;
+        Math.min(
+          100,
+          Math.round((data.passedCount / data.scores.length) * 100 * 10) / 10,
+        );
 
       subjectPerformances.push({
         subjectId,
@@ -204,18 +261,24 @@ export class AcademicAnalyticsService {
     // Build class performances
     const classPerformances: ClassPerformanceItem[] = [];
     for (const [classId, data] of classMap.entries()) {
-      if (data.scores.length === 0) continue;
-      const clsSum = data.scores.reduce((a, b) => a + b, 0);
-      const avg = Math.round((clsSum / data.scores.length) * 10) / 10;
+      if (data.percentages.length === 0) continue;
+      const clsSum = data.percentages.reduce((a, b) => a + b, 0);
+      const avg =
+        Math.min(100, Math.round((clsSum / data.percentages.length) * 10) / 10);
       const passRate =
-        Math.round((data.passed / data.scores.length) * 100 * 10) / 10;
+        Math.min(
+          100,
+          Math.round(
+            (data.passedCount / data.percentages.length) * 100 * 10,
+          ) / 10,
+        );
 
       classPerformances.push({
         classId,
         className: data.className,
         averageScore: avg,
         passRate,
-        totalStudents: data.scores.length,
+        totalStudents: data.percentages.length,
       });
     }
     classPerformances.sort((a, b) => b.averageScore - a.averageScore);
@@ -223,7 +286,7 @@ export class AcademicAnalyticsService {
     return {
       overallAverageScore,
       overallPassRate,
-      studentsNeedingAttentionCount: failingCount,
+      studentsNeedingAttentionCount: failingStudentsCount,
       subjectPerformances,
       classPerformances,
     };
