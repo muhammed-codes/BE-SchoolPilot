@@ -1,8 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PaymentSubmissionStudentShare, PaymentShareStatus } from '../../fees/entities/payment-submission-student-share.entity';
-import { StudentInvoice, InvoiceStatus } from '../../fees/entities/student-invoice.entity';
+import {
+  PaymentSubmissionStudentShare,
+  PaymentShareStatus,
+} from '../../fees/entities/payment-submission-student-share.entity';
+import {
+  StudentInvoice,
+  InvoiceStatus,
+} from '../../fees/entities/student-invoice.entity';
 import { Student } from '../../students/entities/student.entity';
 import { Term } from '../../terms/entities/term.entity';
 import { Session } from '../../terms/entities/session.entity';
@@ -43,10 +49,42 @@ export class FinancialAnalyticsService {
     const todayDate = now.getDate();
 
     if (filter === DashboardTimeFilter.TODAY) {
-      const currentStart = new Date(todayYear, todayMonth, todayDate, 0, 0, 0, 0);
-      const currentEnd = new Date(todayYear, todayMonth, todayDate, 23, 59, 59, 999);
-      const prevStart = new Date(todayYear, todayMonth, todayDate - 1, 0, 0, 0, 0);
-      const prevEnd = new Date(todayYear, todayMonth, todayDate - 1, 23, 59, 59, 999);
+      const currentStart = new Date(
+        todayYear,
+        todayMonth,
+        todayDate,
+        0,
+        0,
+        0,
+        0,
+      );
+      const currentEnd = new Date(
+        todayYear,
+        todayMonth,
+        todayDate,
+        23,
+        59,
+        59,
+        999,
+      );
+      const prevStart = new Date(
+        todayYear,
+        todayMonth,
+        todayDate - 1,
+        0,
+        0,
+        0,
+        0,
+      );
+      const prevEnd = new Date(
+        todayYear,
+        todayMonth,
+        todayDate - 1,
+        23,
+        59,
+        59,
+        999,
+      );
 
       const trendLabels: { label: string; start: Date; end: Date }[] = [];
       const intervals = [
@@ -62,7 +100,15 @@ export class FinancialAnalyticsService {
       for (const interval of intervals) {
         trendLabels.push({
           label: interval.label,
-          start: new Date(todayYear, todayMonth, todayDate, interval.startH, 0, 0, 0),
+          start: new Date(
+            todayYear,
+            todayMonth,
+            todayDate,
+            interval.startH,
+            0,
+            0,
+            0,
+          ),
           end: new Date(
             todayYear,
             todayMonth,
@@ -80,7 +126,15 @@ export class FinancialAnalyticsService {
     if (filter === DashboardTimeFilter.WEEK) {
       const dayOfWeek = now.getDay(); // 0 = Sun, 1 = Mon ...
       const diffToMonday = (dayOfWeek + 6) % 7; // days since Monday
-      const monday = new Date(todayYear, todayMonth, todayDate - diffToMonday, 0, 0, 0, 0);
+      const monday = new Date(
+        todayYear,
+        todayMonth,
+        todayDate - diffToMonday,
+        0,
+        0,
+        0,
+        0,
+      );
       const sunday = new Date(
         monday.getFullYear(),
         monday.getMonth(),
@@ -148,7 +202,11 @@ export class FinancialAnalyticsService {
       };
     }
 
-    if (filter === DashboardTimeFilter.TERM && activeTerm?.startDate && activeTerm?.endDate) {
+    if (
+      filter === DashboardTimeFilter.TERM &&
+      activeTerm?.startDate &&
+      activeTerm?.endDate
+    ) {
       const currentStart = new Date(activeTerm.startDate);
       currentStart.setHours(0, 0, 0, 0);
       const currentEnd = new Date(activeTerm.endDate);
@@ -270,7 +328,9 @@ export class FinancialAnalyticsService {
       .createQueryBuilder('share')
       .innerJoin('share.batch', 'batch')
       .where('batch.schoolId = :schoolId', { schoolId })
-      .andWhere('share.status = :status', { status: PaymentShareStatus.APPROVED })
+      .andWhere('share.status = :status', {
+        status: PaymentShareStatus.APPROVED,
+      })
       .andWhere(
         'COALESCE(share.finalizedAt, share.createdAt) BETWEEN :start AND :end',
         {
@@ -278,7 +338,12 @@ export class FinancialAnalyticsService {
           end: currentEnd,
         },
       )
-      .select(['share.id', 'share.amount', 'share.finalizedAt', 'share.createdAt'])
+      .select([
+        'share.id',
+        'share.amount',
+        'share.finalizedAt',
+        'share.createdAt',
+      ])
       .getMany();
 
     // Query approved payments in previous comparable period
@@ -286,7 +351,9 @@ export class FinancialAnalyticsService {
       .createQueryBuilder('share')
       .innerJoin('share.batch', 'batch')
       .where('batch.schoolId = :schoolId', { schoolId })
-      .andWhere('share.status = :status', { status: PaymentShareStatus.APPROVED })
+      .andWhere('share.status = :status', {
+        status: PaymentShareStatus.APPROVED,
+      })
       .andWhere(
         'COALESCE(share.finalizedAt, share.createdAt) BETWEEN :start AND :end',
         {
@@ -306,7 +373,8 @@ export class FinancialAnalyticsService {
     let changePercentage: number | null = null;
     if (previousPeriodTotal > 0) {
       const diff = total - previousPeriodTotal;
-      changePercentage = Math.round((diff / previousPeriodTotal) * 100 * 10) / 10;
+      changePercentage =
+        Math.round((diff / previousPeriodTotal) * 100 * 10) / 10;
     } else if (total > 0) {
       changePercentage = 100.0;
     } else {

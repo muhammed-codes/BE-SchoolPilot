@@ -13,6 +13,7 @@ export enum AppResource {
   FEES = 'fees',
   ACCESS = 'access',
   COMMUNICATION = 'communication',
+  EXPENSES = 'expenses',
 }
 
 registerEnumType(AppResource, { name: 'AppResource' });

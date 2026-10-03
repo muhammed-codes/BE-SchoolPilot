@@ -458,19 +458,21 @@ export class AccessService implements OnModuleInit {
       };
     }
 
-    // 5. CLASS_TEACHER: Class management, students, attendance, results & users read
+    // 5. CLASS_TEACHER: Class management, students, attendance, results & users read, and expenses requests
     if (role === UserRole.CLASS_TEACHER) {
       const isSettings = resource === AppResource.SETTINGS;
       const canCreateRes = [
         AppResource.RESULTS,
         AppResource.ATTENDANCE,
         AppResource.STUDENTS,
+        AppResource.EXPENSES,
       ].includes(resource);
       const canUpdateRes = [
         AppResource.RESULTS,
         AppResource.ATTENDANCE,
         AppResource.STUDENTS,
         AppResource.CLASSES,
+        AppResource.EXPENSES,
       ].includes(resource);
       return {
         canRead: !isSettings,
@@ -480,16 +482,18 @@ export class AccessService implements OnModuleInit {
       };
     }
 
-    // 6. SUBJECT_TEACHER: Results, attendance, classes, subjects, students & users read
+    // 6. SUBJECT_TEACHER: Results, attendance, classes, subjects, students & users read, and expenses requests
     if (role === UserRole.SUBJECT_TEACHER) {
       const isSettings = resource === AppResource.SETTINGS;
       const canCreateRes = [
         AppResource.RESULTS,
         AppResource.ATTENDANCE,
+        AppResource.EXPENSES,
       ].includes(resource);
       const canUpdateRes = [
         AppResource.RESULTS,
         AppResource.ATTENDANCE,
+        AppResource.EXPENSES,
       ].includes(resource);
       return {
         canRead: !isSettings,
@@ -499,14 +503,15 @@ export class AccessService implements OnModuleInit {
       };
     }
 
-    // BURSAR retains the existing finance role access during migration.
+    // BURSAR retains finance role access (fees and expenses).
     if (role === UserRole.BURSAR) {
-      const isFees = resource === AppResource.FEES;
+      const isFinance =
+        resource === AppResource.FEES || resource === AppResource.EXPENSES;
       return {
-        canRead: isFees,
-        canCreate: isFees,
-        canUpdate: isFees,
-        canDelete: isFees,
+        canRead: isFinance,
+        canCreate: isFinance,
+        canUpdate: isFinance,
+        canDelete: isFinance,
       };
     }
 

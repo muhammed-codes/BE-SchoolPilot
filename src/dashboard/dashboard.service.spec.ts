@@ -16,7 +16,10 @@ import { User } from '../users/entities/user.entity';
 import { ClassEntity } from '../classes/entities/class.entity';
 import { Term } from '../terms/entities/term.entity';
 import { Session } from '../terms/entities/session.entity';
-import { DashboardTimeFilter, AttendancePeriodFilter } from './dto/dashboard-analytics.input';
+import {
+  DashboardTimeFilter,
+  AttendancePeriodFilter,
+} from './dto/dashboard-analytics.input';
 import { AttentionSeverity } from './dto/dashboard-analytics.type';
 
 describe('DashboardService & Analytics Services', () => {
@@ -275,7 +278,8 @@ describe('DashboardService & Analytics Services', () => {
     }).compile();
 
     dashboardService = module.get<DashboardService>(DashboardService);
-    termAnalyticsService = module.get<TermAnalyticsService>(TermAnalyticsService);
+    termAnalyticsService =
+      module.get<TermAnalyticsService>(TermAnalyticsService);
     financialAnalyticsService = module.get<FinancialAnalyticsService>(
       FinancialAnalyticsService,
     );

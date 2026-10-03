@@ -5,7 +5,10 @@ import { Student } from '../../students/entities/student.entity';
 import { User } from '../../users/entities/user.entity';
 import { ClassEntity } from '../../classes/entities/class.entity';
 import { StudentAttendance } from '../../attendance/entities/student-attendance.entity';
-import { PaymentSubmissionStudentShare, PaymentShareStatus } from '../../fees/entities/payment-submission-student-share.entity';
+import {
+  PaymentSubmissionStudentShare,
+  PaymentShareStatus,
+} from '../../fees/entities/payment-submission-student-share.entity';
 import { Gender, StudentStatus, AttendanceStatus } from '../../common/enums';
 import {
   SCHOOL_STAFF_ROLES,
@@ -222,7 +225,10 @@ export class KpiAnalyticsService {
 
     const femalePercentage =
       totalStudents > 0
-        ? Math.min(100, Math.round((femaleCount / totalStudents) * 100 * 10) / 10)
+        ? Math.min(
+            100,
+            Math.round((femaleCount / totalStudents) * 100 * 10) / 10,
+          )
         : 0;
 
     const statusDistribution: StudentStatusCount[] = [];

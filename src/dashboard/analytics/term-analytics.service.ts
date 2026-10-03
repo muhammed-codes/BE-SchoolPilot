@@ -98,7 +98,7 @@ export class TermAnalyticsService {
       const effectiveEnd = today < end ? today : end;
 
       if (effectiveEnd >= start) {
-        let cur = new Date(start);
+        const cur = new Date(start);
         while (cur <= effectiveEnd) {
           const dayOfWeek = cur.getDay();
           // Monday to Friday

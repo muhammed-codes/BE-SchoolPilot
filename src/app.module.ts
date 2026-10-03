@@ -24,6 +24,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { TimetableModule } from './timetable/timetable.module';
 import { FeesModule } from './fees/fees.module';
 import { CommunicationModule } from './communication/communication.module';
+import { ExpensesModule } from './expenses/expenses.module';
 
 @Module({
   imports: [
@@ -130,6 +131,7 @@ import { CommunicationModule } from './communication/communication.module';
     TimetableModule,
     FeesModule,
     CommunicationModule,
+    ExpensesModule,
   ],
   controllers: [AppController],
   providers: [

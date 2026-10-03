@@ -1,4 +1,10 @@
-import { ObjectType, Field, Float, Int, registerEnumType } from '@nestjs/graphql';
+import {
+  ObjectType,
+  Field,
+  Float,
+  Int,
+  registerEnumType,
+} from '@nestjs/graphql';
 
 export enum AttentionSeverity {
   CRITICAL = 'CRITICAL',

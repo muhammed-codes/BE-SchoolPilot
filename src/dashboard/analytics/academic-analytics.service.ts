@@ -146,10 +146,7 @@ export class AcademicAnalyticsService {
           const obtainable = sheetMaxPerSubject * validSubjectScores.length;
           studentPct =
             obtainable > 0
-              ? Math.min(
-                  100,
-                  Math.round((sum / obtainable) * 100 * 10) / 10,
-                )
+              ? Math.min(100, Math.round((sum / obtainable) * 100 * 10) / 10)
               : null;
         }
       }
@@ -216,8 +213,7 @@ export class AcademicAnalyticsService {
         ? Math.min(
             100,
             Math.round(
-              (studentPercentages.reduce((a, b) => a + b, 0) /
-                assessedCount) *
+              (studentPercentages.reduce((a, b) => a + b, 0) / assessedCount) *
                 10,
             ) / 10,
           )
@@ -236,15 +232,16 @@ export class AcademicAnalyticsService {
     for (const [subjectId, data] of subjectMap.entries()) {
       if (data.scores.length === 0) continue;
       const subSum = data.scores.reduce((a, b) => a + b, 0);
-      const avg =
-        Math.min(100, Math.round((subSum / data.scores.length) * 10) / 10);
+      const avg = Math.min(
+        100,
+        Math.round((subSum / data.scores.length) * 10) / 10,
+      );
       const highest = Math.min(100, Math.max(...data.scores));
       const lowest = Math.max(0, Math.min(...data.scores));
-      const passRate =
-        Math.min(
-          100,
-          Math.round((data.passedCount / data.scores.length) * 100 * 10) / 10,
-        );
+      const passRate = Math.min(
+        100,
+        Math.round((data.passedCount / data.scores.length) * 100 * 10) / 10,
+      );
 
       subjectPerformances.push({
         subjectId,
@@ -263,15 +260,15 @@ export class AcademicAnalyticsService {
     for (const [classId, data] of classMap.entries()) {
       if (data.percentages.length === 0) continue;
       const clsSum = data.percentages.reduce((a, b) => a + b, 0);
-      const avg =
-        Math.min(100, Math.round((clsSum / data.percentages.length) * 10) / 10);
-      const passRate =
-        Math.min(
-          100,
-          Math.round(
-            (data.passedCount / data.percentages.length) * 100 * 10,
-          ) / 10,
-        );
+      const avg = Math.min(
+        100,
+        Math.round((clsSum / data.percentages.length) * 10) / 10,
+      );
+      const passRate = Math.min(
+        100,
+        Math.round((data.passedCount / data.percentages.length) * 100 * 10) /
+          10,
+      );
 
       classPerformances.push({
         classId,

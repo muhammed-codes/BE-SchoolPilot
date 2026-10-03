@@ -18,7 +18,9 @@ export class GuardianAnalyticsService {
     private readonly userRepo: Repository<User>,
   ) {}
 
-  async getGuardianOverview(schoolId: string): Promise<DashboardGuardianOverview> {
+  async getGuardianOverview(
+    schoolId: string,
+  ): Promise<DashboardGuardianOverview> {
     // Total active students
     const totalActiveStudents = await this.studentRepo.count({
       where: { schoolId, isArchived: false },

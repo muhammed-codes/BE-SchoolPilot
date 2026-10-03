@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, IsNull } from 'typeorm';
-import { StudentInvoice, InvoiceStatus } from '../../fees/entities/student-invoice.entity';
+import {
+  StudentInvoice,
+  InvoiceStatus,
+} from '../../fees/entities/student-invoice.entity';
 import { Student } from '../../students/entities/student.entity';
 import { ResultSheet } from '../../results/entities/result-sheet.entity';
 import { ResultStatus, StudentStatus } from '../../common/enums';

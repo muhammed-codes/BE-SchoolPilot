@@ -72,9 +72,8 @@ export class StaffAnalyticsService {
       activeStaff > 0
         ? Math.min(
             100,
-            Math.round(
-              ((presentCount + lateCount) / activeStaff) * 100 * 10,
-            ) / 10,
+            Math.round(((presentCount + lateCount) / activeStaff) * 100 * 10) /
+              10,
           )
         : 0;
 

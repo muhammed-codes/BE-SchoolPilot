@@ -99,7 +99,9 @@ export class ResultSubmissionAnalyticsService {
 
       for (const cs of classSubjects) {
         const teacherId =
-          cs.subjectTeacherId || cs.teacherId || (cs.teacherIds && cs.teacherIds[0]);
+          cs.subjectTeacherId ||
+          cs.teacherId ||
+          (cs.teacherIds && cs.teacherIds[0]);
         if (!teacherId) continue;
 
         const prev = teacherPendingMap.get(teacherId) || {
@@ -149,7 +151,10 @@ export class ResultSubmissionAnalyticsService {
       submittedSheets,
       pendingSheets,
       completionPercentage,
-      teachersWithPendingSubmissions: teachersWithPendingSubmissions.slice(0, 10),
+      teachersWithPendingSubmissions: teachersWithPendingSubmissions.slice(
+        0,
+        10,
+      ),
     };
   }
 }

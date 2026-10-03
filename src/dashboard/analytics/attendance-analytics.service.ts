@@ -126,7 +126,7 @@ export class AttendanceAnalyticsService {
     let presentCount = 0;
     let absentCount = 0;
     let lateCount = 0;
-    let excusedCount = 0;
+    const excusedCount = 0;
 
     for (const r of records) {
       if (r.status === AttendanceStatus.PRESENT) presentCount++;
@@ -139,9 +139,8 @@ export class AttendanceAnalyticsService {
       totalRecords > 0
         ? Math.min(
             100,
-            Math.round(
-              ((presentCount + lateCount) / totalRecords) * 100 * 10,
-            ) / 10,
+            Math.round(((presentCount + lateCount) / totalRecords) * 100 * 10) /
+              10,
           )
         : 0;
 
@@ -161,9 +160,7 @@ export class AttendanceAnalyticsService {
         dayTotal > 0
           ? Math.min(
               100,
-              Math.round(
-                ((dayPresent + dayLate) / dayTotal) * 100 * 10,
-              ) / 10,
+              Math.round(((dayPresent + dayLate) / dayTotal) * 100 * 10) / 10,
             )
           : 0;
 
