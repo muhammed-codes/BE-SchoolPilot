@@ -47,8 +47,8 @@ export class ExpenseReportsResolver {
     sessionId: string | undefined,
     @Args('termId', { type: () => ID, nullable: true })
     termId: string | undefined,
-    @Args('startDate', { nullable: true }) startDate: string | undefined,
-    @Args('endDate', { nullable: true }) endDate: string | undefined,
+    @Args('startDate', { type: () => String, nullable: true }) startDate: string | undefined,
+    @Args('endDate', { type: () => String, nullable: true }) endDate: string | undefined,
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.reportsService.getSpendingByCategory(

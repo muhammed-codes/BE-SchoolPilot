@@ -112,7 +112,8 @@ export class ExpenseRequestsResolver {
   @Query(() => PaginatedExpenseRequests)
   @RequirePermission(AppResource.EXPENSES, PermissionAction.READ)
   expenseRequests(
-    @Args('filter', { nullable: true }) filter: ExpenseRequestFilterInput = {},
+    @Args('filter', { type: () => ExpenseRequestFilterInput, nullable: true })
+    filter: ExpenseRequestFilterInput = {},
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.requestsService.getRequests(

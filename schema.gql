@@ -71,6 +71,11 @@ input ApprovalStepInput {
   sequenceOrder: Int!
 }
 
+input ApproveExpenseRequestInput {
+  approvedAmount: Float
+  id: ID!
+}
+
 input ApproveShareInput {
   allocations: [PaymentAllocationInput!]
   shareId: String!
@@ -171,6 +176,28 @@ type BulkImportResult {
   failed: [FailedRow!]!
   imported: Int!
   students: [Student!]!
+}
+
+input BulkSetExpenseBudgetInput {
+  budgets: [CategoryBudgetInput!]!
+  sessionId: ID!
+  termId: ID
+}
+
+input CategoryBudgetInput {
+  budgetAmount: Float!
+  categoryId: ID!
+}
+
+type CategoryBudgetProgress {
+  actualSpent: Float!
+  availableAmount: Float!
+  budgetAmount: Float!
+  category: ExpenseCategory
+  categoryId: ID!
+  committedAmount: Float!
+  percentageUsed: Float!
+  warningLevel: String!
 }
 
 type ChildTimetableResult {
@@ -312,6 +339,18 @@ type ConflictViolation {
   type: ConflictType!
 }
 
+input ConvertRequestToExpenseInput {
+  actualAmount: Float!
+  expenseDate: String!
+  notes: String
+  paymentMethod: ExpensePaymentMethod! = CASH
+  receiptUrl: String
+  referenceNumber: String
+  requestId: ID!
+  vendorId: ID
+  vendorName: String
+}
+
 input CopyDayLayoutInput {
   allowOverride: Boolean! = false
   classId: String
@@ -337,6 +376,62 @@ input CreateBankAccountInput {
 input CreateClassInput {
   classTeacherId: String
   name: String!
+}
+
+input CreateExpenseCategoryInput {
+  description: String
+  name: String!
+}
+
+input CreateExpenseDepartmentInput {
+  code: String
+  name: String!
+}
+
+input CreateExpenseInput {
+  amount: Float!
+  amountPaid: Float
+  categoryId: ID!
+  departmentId: ID
+  dueDate: String
+  expenseDate: String!
+  notes: String
+  paymentMethod: ExpensePaymentMethod! = CASH
+  paymentStatus: ExpensePaymentStatus! = PAID
+  receiptUrl: String
+  recurringExpenseId: ID
+  referenceNumber: String
+  requestId: ID
+  sessionId: ID
+  termId: ID
+  title: String!
+  vendorId: ID
+  vendorName: String
+}
+
+input CreateExpenseRequestInput {
+  categoryId: ID!
+  departmentId: ID
+  estimatedAmount: Float!
+  neededByDate: String
+  preferredVendor: String
+  quotationUrls: [String!]
+  reason: String!
+  receiptUrl: String
+  requestType: ExpenseRequestType! = MATERIALS_PURCHASE
+  sessionId: ID
+  termId: ID
+  title: String!
+  vendorId: ID
+}
+
+input CreateExpenseVendorInput {
+  address: String
+  contactPerson: String
+  email: String
+  name: String!
+  notes: String
+  phone: String
 }
 
 input CreateFeeCategoryInput {
@@ -377,6 +472,16 @@ input CreatePermissionGroupInput {
   description: String
   name: String!
   schoolId: String
+}
+
+input CreateRecurringExpenseInput {
+  categoryId: ID!
+  estimatedAmount: Float!
+  frequency: RecurringFrequency! = MONTHLY
+  nextDueDate: String!
+  notes: String
+  title: String!
+  vendorId: ID
 }
 
 input CreateResultSheetInput {
@@ -653,10 +758,260 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+type DuplicateExpenseWarning {
+  isPossibleDuplicate: Boolean!
+  matchedExpenseAmount: Float
+  matchedExpenseDate: String
+  matchedExpenseId: ID
+  matchedExpenseTitle: String
+  message: String
+}
+
 type EffectivePermission {
   action: PermissionAction!
   allowed: Boolean!
   resource: AppResource!
+}
+
+type Expense {
+  amount: Float!
+  amountPaid: Float!
+  category: ExpenseCategory
+  categoryId: ID!
+  createdAt: DateTime!
+  createdBy: User
+  createdById: ID!
+  department: ExpenseDepartment
+  departmentId: ID
+  dueDate: DateTime
+  expenseDate: DateTime!
+  id: ID!
+  isVoided: Boolean!
+  notes: String
+  paymentMethod: ExpensePaymentMethod!
+  paymentStatus: ExpensePaymentStatus!
+  receiptUrl: String
+  recurringExpenseId: ID
+  referenceNumber: String
+  requestId: ID
+  schoolId: ID!
+  session: Session
+  sessionId: ID
+  term: Term
+  termId: ID
+  title: String!
+  updatedAt: DateTime!
+  vendor: ExpenseVendor
+  vendorId: ID
+  vendorName: String
+  voidReason: String
+  voidedAt: DateTime
+  voidedBy: User
+  voidedById: ID
+}
+
+type ExpenseActivity {
+  action: ExpenseActivityAction!
+  actor: User
+  actorId: ID!
+  createdAt: DateTime!
+  details: String
+  entityId: ID!
+  entityType: String!
+  id: ID!
+  schoolId: ID!
+  updatedAt: DateTime!
+}
+
+enum ExpenseActivityAction {
+  APPROVED
+  CANCELLED
+  CONVERTED_TO_EXPENSE
+  CREATED
+  FUNDED
+  PAYMENT_RECORDED
+  REJECTED
+  SUBMITTED
+  UPDATED
+  VOIDED
+}
+
+type ExpenseBreakdownItem {
+  count: Int!
+  key: String!
+  label: String!
+  percentage: Float!
+  totalAmount: Float!
+}
+
+type ExpenseBudget {
+  budgetAmount: Float!
+  category: ExpenseCategory
+  categoryId: ID!
+  createdAt: DateTime!
+  id: ID!
+  schoolId: ID!
+  session: Session
+  sessionId: ID!
+  term: Term
+  termId: ID
+  updatedAt: DateTime!
+}
+
+type ExpenseCategory {
+  createdAt: DateTime!
+  description: String
+  id: ID!
+  isActive: Boolean!
+  name: String!
+  schoolId: ID!
+  updatedAt: DateTime!
+}
+
+type ExpenseDepartment {
+  code: String
+  createdAt: DateTime!
+  id: ID!
+  isActive: Boolean!
+  name: String!
+  schoolId: ID!
+  updatedAt: DateTime!
+}
+
+input ExpenseFilterInput {
+  categoryId: ID
+  departmentId: ID
+  endDate: String
+  includeVoided: Boolean = false
+  limit: Int = 20
+  page: Int = 1
+  paymentMethod: ExpensePaymentMethod
+  paymentStatus: ExpensePaymentStatus
+  search: String
+  sessionId: ID
+  startDate: String
+  termId: ID
+  vendorId: ID
+}
+
+type ExpenseMonthlyTrend {
+  expenseCount: Int!
+  label: String!
+  month: String!
+  totalSpent: Float!
+}
+
+enum ExpensePaymentMethod {
+  BANK_TRANSFER
+  CASH
+  PETTY_CASH
+  POS
+}
+
+enum ExpensePaymentStatus {
+  PAID
+  PARTIALLY_PAID
+  UNPAID
+  VOIDED
+}
+
+type ExpenseRequest {
+  actualAmount: Float
+  approvedAmount: Float
+  approvedAt: DateTime
+  approver: User
+  approverId: ID
+  category: ExpenseCategory
+  categoryId: ID!
+  completedAt: DateTime
+  createdAt: DateTime!
+  department: ExpenseDepartment
+  departmentId: ID
+  estimatedAmount: Float!
+  expense: Expense
+  expenseId: ID
+  fundedAt: DateTime
+  id: ID!
+  neededByDate: DateTime
+  preferredVendor: String
+  quotationUrls: [String!]
+  reason: String!
+  receiptUrl: String
+  rejectionReason: String
+  requestType: ExpenseRequestType!
+  requester: User
+  requesterId: ID!
+  schoolId: ID!
+  session: Session
+  sessionId: ID
+  status: ExpenseRequestStatus!
+  term: Term
+  termId: ID
+  title: String!
+  updatedAt: DateTime!
+  vendor: ExpenseVendor
+  vendorId: ID
+}
+
+input ExpenseRequestFilterInput {
+  categoryId: ID
+  departmentId: ID
+  endDate: String
+  limit: Int = 20
+  page: Int = 1
+  requestType: ExpenseRequestType
+  requesterId: ID
+  search: String
+  sessionId: ID
+  startDate: String
+  status: ExpenseRequestStatus
+  termId: ID
+}
+
+enum ExpenseRequestStatus {
+  APPROVED
+  CANCELLED
+  COMPLETED
+  DRAFT
+  FUNDED
+  PENDING_APPROVAL
+  REJECTED
+  SUBMITTED
+}
+
+enum ExpenseRequestType {
+  MATERIALS_PURCHASE
+  MONEY_ADVANCE
+  OTHER
+  PROJECT_ACTIVITY
+  REIMBURSEMENT
+}
+
+type ExpenseSummary {
+  needsAttention: [NeedsAttentionItem!]!
+  overBudgetCount: Int!
+  pendingRequestsAmount: Float!
+  pendingRequestsCount: Int!
+  totalBudget: Float!
+  totalBudgetRemaining: Float!
+  totalCommitted: Float!
+  totalSpent: Float!
+  unpaidExpensesAmount: Float!
+  unpaidExpensesCount: Int!
+}
+
+type ExpenseVendor {
+  address: String
+  contactPerson: String
+  createdAt: DateTime!
+  email: String
+  id: ID!
+  isActive: Boolean!
+  name: String!
+  notes: String
+  phone: String
+  schoolId: ID!
+  updatedAt: DateTime!
 }
 
 input ExportTimetablePdfInput {
@@ -874,6 +1229,7 @@ type Mutation {
   adminResetPassword(newPassword: String!, userId: String!): Boolean!
   adminResetSchoolPassword(newPassword: String!, schoolId: String!): Boolean!
   adminSetTeacherAvailability(input: AdminSetTeacherAvailabilityInput!): TeacherAvailability!
+  approveExpenseRequest(input: ApproveExpenseRequestInput!): ExpenseRequest!
   approvePaymentShare(input: ApproveShareInput!): PaymentSubmissionStudentShare!
   approveResult(resultSheetId: String!): ResultSheet!
   archiveResultSheet(resultSheetId: String!): ResultSheet!
@@ -886,20 +1242,29 @@ type Mutation {
   bulkCreateFeeOverrides(input: BulkCreateOverrideInput!): [StudentFeeOverride!]!
   bulkCreateFeeStructures(input: BulkCreateFeeStructureInput!): [FeeStructure!]!
   bulkImportStudents(students: [CreateStudentInput!]!): BulkImportResult!
+  bulkSetExpenseBudgets(input: BulkSetExpenseBudgetInput!): [ExpenseBudget!]!
+  cancelExpenseRequest(id: ID!): ExpenseRequest!
   changePassword(newPassword: String!, oldPassword: String!): Boolean!
   clockAction(photo: String!): StaffAttendance!
   cloneClassTimetable(input: CloneClassTimetableInput!): [TimetableMutationResult!]!
   closeTerm(termId: String!): Term!
+  convertRequestToExpense(input: ConvertRequestToExpenseInput!): Expense!
   copyDayLayout(input: CopyDayLayoutInput!): [TimetableMutationResult!]!
   createAnnouncement(input: CreateAnnouncementInput!): Announcement!
   createBankAccount(input: CreateBankAccountInput!): SchoolBankAccount!
   createClass(input: CreateClassInput!): ClassEntity!
+  createExpense(input: CreateExpenseInput!): Expense!
+  createExpenseCategory(input: CreateExpenseCategoryInput!): ExpenseCategory!
+  createExpenseDepartment(input: CreateExpenseDepartmentInput!): ExpenseDepartment!
+  createExpenseRequest(input: CreateExpenseRequestInput!): ExpenseRequest!
+  createExpenseVendor(input: CreateExpenseVendorInput!): ExpenseVendor!
   createFeeCategory(input: CreateFeeCategoryInput!): FeeCategory!
   createFeeStructure(input: CreateFeeStructureInput!): FeeStructure!
   createNonTeachingSlot(input: CreateNonTeachingSlotInput!): NonTeachingSlot!
   createPeriod(input: CreatePeriodInput!): Period!
   createPermissionGroup(input: CreatePermissionGroupInput!): PermissionGroup!
   createReceiptTemplate(name: String!, templateKey: String!, thumbnailUrl: String): ReceiptTemplate!
+  createRecurringExpense(input: CreateRecurringExpenseInput!): RecurringExpense!
   createResultSheet(input: CreateResultSheetInput!): ResultSheet!
   createRoom(input: CreateRoomInput!): Room!
   createSchool(input: CreateSchoolInput!): School!
@@ -920,6 +1285,7 @@ type Mutation {
   deleteSubject(id: String!): Boolean!
   deleteTimetableEntry(id: String!): Boolean!
   forgotPassword(input: ForgotPasswordInput!): Boolean!
+  fundExpenseRequest(id: ID!): ExpenseRequest!
   generateBulkReportCards(resultSheetId: String!): String!
   generateInvoices(input: GenerateInvoicesInput!): GenerateInvoicesResult!
   generateReportCard(studentResultId: String!): String!
@@ -931,6 +1297,7 @@ type Mutation {
   logout: Boolean!
   manualStaffAttendance(input: ManualStaffAttendanceInput!): StaffAttendance!
   markAttendanceWithQr(token: String!): StaffAttendance!
+  markRecurringExpenseRecorded(id: ID!): RecurringExpense!
   markStudentAttendance(input: MarkAttendanceInput!): [StudentAttendance!]!
   promoteStudents(input: PromoteStudentsInput!): PromotionResult!
   publishAnnouncement(id: String!): Announcement!
@@ -940,12 +1307,14 @@ type Mutation {
   regenerateQrCode(schoolId: String!): School!
   register(input: RegisterInput!): AuthResponse!
   registerSchool(input: RegisterSchoolInput!): AuthResponse!
+  rejectExpenseRequest(input: RejectExpenseRequestInput!): ExpenseRequest!
   rejectPaymentShare(input: RejectShareInput!): PaymentSubmissionStudentShare!
   removeClassSubjectAssignment(id: String!): Boolean!
   removeFeeOverride(id: String!): Boolean!
   removePermissionGroup(groupId: String!, schoolId: String, userId: String!): Boolean!
   removeUserPermission(action: PermissionAction!, resource: AppResource!, schoolId: String, userId: String!): Boolean!
   reorderPeriods(items: [ReorderPeriodItem!]!): [Period!]!
+  replenishPettyCash(input: ReplenishPettyCashInput!): PettyCashTransaction!
   resendVerificationEmail(email: String!): Boolean!
   resetPassword(input: ResetPasswordInput!): Boolean!
   returnResult(reason: String!, resultSheetId: String!): ResultSheet!
@@ -955,6 +1324,7 @@ type Mutation {
   saveSubjectScores(input: SaveSubjectScoresInput!): [SubjectScore!]!
   saveTeacherRemark(remark: String!, subjectScoreId: String!): SubjectScore!
   setDefaultReceiptTemplate(id: String!): ReceiptTemplate
+  setExpenseBudget(input: SetExpenseBudgetInput!): ExpenseBudget!
   setPermissionGroupPermissions(input: SetPermissionGroupPermissionsInput!, schoolId: String): [PermissionGroupPermission!]!
   setUserPermission(input: SetUserPermissionInput!, schoolId: String): UserPermission!
   singleUpload(file: Upload!, folder: String!): UploadResult!
@@ -968,12 +1338,17 @@ type Mutation {
   updateAnnouncement(id: String!, input: UpdateAnnouncementInput!): Announcement!
   updateBankAccount(id: String!, input: UpdateBankAccountInput!): SchoolBankAccount!
   updateClassSubjectAssignment(input: UpdateClassSubjectAssignmentInput!): ClassSubject!
+  updateExpense(input: UpdateExpenseInput!): Expense!
+  updateExpenseCategory(input: UpdateExpenseCategoryInput!): ExpenseCategory!
+  updateExpenseRequest(input: UpdateExpenseRequestInput!): ExpenseRequest!
+  updateExpenseVendor(input: UpdateExpenseVendorInput!): ExpenseVendor!
   updateExpoPushToken(token: String!): Boolean!
   updateFeeCategory(id: String!, input: UpdateFeeCategoryInput!): FeeCategory!
   updateFeeStructureAmount(amount: Int!, id: String!): FeeStructure!
   updateNonTeachingSlot(input: UpdateNonTeachingSlotInput!): NonTeachingSlot!
   updatePeriod(input: UpdatePeriodInput!): Period!
   updatePermissionGroup(input: UpdatePermissionGroupInput!, schoolId: String): PermissionGroup!
+  updateRecurringExpense(input: UpdateRecurringExpenseInput!): RecurringExpense!
   updateRolePermission(input: UpdatePermissionInput!): RolePermission!
   updateRoom(input: UpdateRoomInput!): Room!
   updateSchool(id: String!, input: UpdateSchoolInput!): School!
@@ -993,12 +1368,23 @@ type Mutation {
   upsertApprovalConfig(input: UpsertApprovalConfigInput!): FeeApprovalConfig!
   upsertStaffFeeVisibility(input: UpdateVisibilityConfigInput!): StaffFeeVisibilityConfig!
   verifyEmail(token: String!): Boolean!
+  voidExpense(input: VoidExpenseInput!): Expense!
 }
 
 enum NamePrefix {
   MISS
   MR
   MRS
+}
+
+type NeedsAttentionItem {
+  amount: Float!
+  date: String
+  id: ID!
+  severity: String
+  subtitle: String
+  title: String!
+  type: String!
 }
 
 type NonTeachingSlot {
@@ -1043,6 +1429,24 @@ type PaginatedClassScores {
   maxScore: Float
   scoreComponents: [ScoreComponentConfig!]
   total: Int!
+}
+
+type PaginatedExpenseRequests {
+  items: [ExpenseRequest!]!
+  limit: Int!
+  page: Int!
+  total: Int!
+  totalEstimatedAmount: Float!
+  totalPages: Int!
+}
+
+type PaginatedExpenses {
+  items: [Expense!]!
+  limit: Int!
+  page: Int!
+  total: Int!
+  totalAmount: Float!
+  totalPages: Int!
 }
 
 type PaginatedPaymentSubmissionBatch {
@@ -1230,6 +1634,38 @@ type PermissionGroupPermission {
   updatedAt: DateTime!
 }
 
+type PettyCashAccount {
+  createdAt: DateTime!
+  currentBalance: Float!
+  id: ID!
+  isActive: Boolean!
+  name: String!
+  openingBalance: Float!
+  schoolId: ID!
+  updatedAt: DateTime!
+}
+
+type PettyCashTransaction {
+  account: PettyCashAccount
+  accountId: ID!
+  amount: Float!
+  balanceAfter: Float!
+  createdAt: DateTime!
+  description: String!
+  id: ID!
+  recordedBy: User
+  recordedById: ID!
+  referenceId: String
+  schoolId: ID!
+  type: PettyCashTransactionType!
+  updatedAt: DateTime!
+}
+
+enum PettyCashTransactionType {
+  DISBURSEMENT
+  REPLENISHMENT
+}
+
 type PlatformStats {
   activeSchools: Int!
   totalSchools: Int!
@@ -1272,6 +1708,7 @@ type Query {
   archivedResultSheets(status: ResultStatus): [ResultSheet!]!
   archivedStudents: [Student!]!
   bankAccounts: [SchoolBankAccount!]!
+  checkDuplicateExpense(input: CreateExpenseInput!): DuplicateExpenseWarning!
   childTimetable(studentId: String!, termId: String): ChildTimetableResult!
   class(id: String!): ClassEntity!
   classAttendance(classId: String!, date: String!): [StudentAttendance!]!
@@ -1294,6 +1731,22 @@ type Query {
   """Fetches filtered income trend analytics for the specified time period"""
   dashboardIncomeAnalytics(filter: DashboardTimeFilter = MONTH, termId: String): DashboardIncomeAnalytics!
   dashboardOverview: DashboardOverview!
+  expense(id: ID!): Expense!
+  expenseActivities(expenseId: ID!): [ExpenseActivity!]!
+  expenseBudgets(sessionId: ID!, termId: ID): [CategoryBudgetProgress!]!
+  expenseCategories: [ExpenseCategory!]!
+  expenseDepartments: [ExpenseDepartment!]!
+  expenseMonthlyTrends(year: Int): [ExpenseMonthlyTrend!]!
+  expenseRequest(id: ID!): ExpenseRequest!
+  expenseRequestActivities(requestId: ID!): [ExpenseActivity!]!
+  expenseRequests(filter: ExpenseRequestFilterInput): PaginatedExpenseRequests!
+  expenseSpendingByCategory(endDate: String, sessionId: ID, startDate: String, termId: ID): [ExpenseBreakdownItem!]!
+  expenseSpendingByDepartment(sessionId: ID, termId: ID): [ExpenseBreakdownItem!]!
+  expenseSpendingByVendor(sessionId: ID, termId: ID): [ExpenseBreakdownItem!]!
+  expenseSummary(sessionId: ID, termId: ID): ExpenseSummary!
+  expenseVendorSpend(vendorId: ID!): Float!
+  expenseVendors: [ExpenseVendor!]!
+  expenses(filter: ExpenseFilterInput): PaginatedExpenses!
   exportTimetablePdf(input: ExportTimetablePdfInput!): TimetablePdfResult!
   feeCategories: [FeeCategory!]!
   feeOverrides(classId: String, feeStructureId: String, sessionId: String, studentId: String, termId: String): [StudentFeeOverride!]!
@@ -1326,9 +1779,12 @@ type Query {
   periods: [Period!]!
   permissionGroupPermissions(groupId: String!, schoolId: String): [PermissionGroupPermission!]!
   permissionGroups(schoolId: String): [PermissionGroup!]!
+  pettyCashAccount: PettyCashAccount!
+  pettyCashTransactions(limit: Int = 50): [PettyCashTransaction!]!
   platformStats: PlatformStats!
   previewSchoolDaySchedule(input: PreviewSchoolDayScheduleInput!): SchoolDaySchedulePreviewResult!
   receiptTemplates: [ReceiptTemplate!]!
+  recurringExpenses: [RecurringExpense!]!
   resolvedBankAccounts(feeCategoryId: String): [SchoolBankAccount!]!
   resultAnalytics(classId: String!, sessionId: String!, subjectId: String, termId: String!): ResultAnalytics!
   resultSheet(id: String!): ResultSheet!
@@ -1406,6 +1862,31 @@ input RecordOfflinePaymentInput {
   studentId: String!
 }
 
+type RecurringExpense {
+  category: ExpenseCategory
+  categoryId: ID!
+  createdAt: DateTime!
+  estimatedAmount: Float!
+  frequency: RecurringFrequency!
+  id: ID!
+  isActive: Boolean!
+  lastRecordedDate: DateTime
+  nextDueDate: DateTime!
+  notes: String
+  schoolId: ID!
+  title: String!
+  updatedAt: DateTime!
+  vendor: ExpenseVendor
+  vendorId: ID
+}
+
+enum RecurringFrequency {
+  ANNUAL
+  MONTHLY
+  TERMLY
+  WEEKLY
+}
+
 input RegisterInput {
   email: String!
   firstName: String!
@@ -1436,6 +1917,11 @@ input RegisterSchoolInput {
   whatsappNumber: String
 }
 
+input RejectExpenseRequestInput {
+  id: ID!
+  rejectionReason: String!
+}
+
 input RejectShareInput {
   reason: String!
   shareId: String!
@@ -1444,6 +1930,13 @@ input RejectShareInput {
 input ReorderPeriodItem {
   id: String!
   orderIndex: Int!
+}
+
+input ReplenishPettyCashInput {
+  accountId: ID
+  amount: Float!
+  description: String!
+  referenceId: String
 }
 
 input ResetPasswordInput {
@@ -1666,6 +2159,13 @@ type Session {
   schoolId: String!
   terms: [Term!]
   updatedAt: DateTime!
+}
+
+input SetExpenseBudgetInput {
+  budgetAmount: Float!
+  categoryId: ID!
+  sessionId: ID!
+  termId: ID
 }
 
 input SetPermissionGroupPermissionsInput {
@@ -2131,6 +2631,57 @@ input UpdateClassSubjectAssignmentInput {
   teacherIds: [String!]
 }
 
+input UpdateExpenseCategoryInput {
+  description: String
+  id: ID!
+  isActive: Boolean
+  name: String
+}
+
+input UpdateExpenseInput {
+  amount: Float
+  amountPaid: Float
+  categoryId: ID
+  departmentId: ID
+  dueDate: String
+  expenseDate: String
+  id: ID!
+  notes: String
+  paymentMethod: ExpensePaymentMethod
+  paymentStatus: ExpensePaymentStatus
+  receiptUrl: String
+  referenceNumber: String
+  title: String
+  vendorId: ID
+  vendorName: String
+}
+
+input UpdateExpenseRequestInput {
+  categoryId: ID
+  departmentId: ID
+  estimatedAmount: Float
+  id: ID!
+  neededByDate: String
+  preferredVendor: String
+  quotationUrls: [String!]
+  reason: String
+  receiptUrl: String
+  requestType: ExpenseRequestType
+  title: String
+  vendorId: ID
+}
+
+input UpdateExpenseVendorInput {
+  address: String
+  contactPerson: String
+  email: String
+  id: ID!
+  isActive: Boolean
+  name: String
+  notes: String
+  phone: String
+}
+
 input UpdateFeeCategoryInput {
   isActive: Boolean
   name: String
@@ -2174,6 +2725,18 @@ input UpdatePermissionInput {
   canRead: Boolean
   canUpdate: Boolean
   id: ID!
+}
+
+input UpdateRecurringExpenseInput {
+  categoryId: ID
+  estimatedAmount: Float
+  frequency: RecurringFrequency
+  id: ID!
+  isActive: Boolean
+  nextDueDate: String
+  notes: String
+  title: String
+  vendorId: ID
 }
 
 input UpdateRoomInput {
@@ -2344,4 +2907,9 @@ enum UserRole {
   SUBJECT_TEACHER
   SUPER_ADMIN
   VICE_PRINCIPAL
+}
+
+input VoidExpenseInput {
+  id: ID!
+  reason: String
 }
