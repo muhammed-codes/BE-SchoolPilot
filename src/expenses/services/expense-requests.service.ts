@@ -41,6 +41,16 @@ const MANAGEMENT_ROLES = [
   UserRole.BURSAR,
 ];
 
+const REQUEST_TO_EXPENSE_PAYMENT_STATUS: Record<
+  ExpenseRequestPaymentStatus,
+  ExpensePaymentStatus
+> = {
+  [ExpenseRequestPaymentStatus.PAID]: ExpensePaymentStatus.PAID,
+  [ExpenseRequestPaymentStatus.PARTIALLY_PAID]:
+    ExpensePaymentStatus.PARTIALLY_PAID,
+  [ExpenseRequestPaymentStatus.UNPAID]: ExpensePaymentStatus.UNPAID,
+};
+
 @Injectable()
 export class ExpenseRequestsService {
   private readonly logger = new Logger(ExpenseRequestsService.name);
@@ -440,7 +450,7 @@ export class ExpenseRequestsService {
       vendorId: input.vendorId || request.vendorId,
       vendorName: input.vendorName || request.preferredVendor,
       paymentMethod: input.paymentMethod,
-      paymentStatus: paymentStatus as ExpensePaymentStatus,
+      paymentStatus: REQUEST_TO_EXPENSE_PAYMENT_STATUS[paymentStatus],
       amountPaid,
       referenceNumber: input.referenceNumber?.trim(),
       receiptUrl: input.receiptUrl || request.receiptUrl,
