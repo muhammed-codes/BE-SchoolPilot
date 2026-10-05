@@ -63,6 +63,7 @@ export class PettyCashService {
       type: PettyCashTransactionType.REPLENISHMENT,
       amount,
       balanceAfter: newBal,
+      transactionDate: input.transactionDate || undefined,
       description: input.description.trim(),
       referenceId: input.referenceId?.trim(),
       recordedById: user.id,

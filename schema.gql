@@ -1678,6 +1678,7 @@ type PettyCashTransaction {
   recordedById: ID!
   referenceId: String
   schoolId: ID!
+  transactionDate: String!
   type: PettyCashTransactionType!
   updatedAt: DateTime!
 }
@@ -1964,6 +1965,7 @@ input ReplenishPettyCashInput {
   amount: Float!
   description: String!
   referenceId: String
+  transactionDate: String
 }
 
 input ResetPasswordInput {

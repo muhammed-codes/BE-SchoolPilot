@@ -9,6 +9,7 @@ import { User } from '../../users/entities/user.entity';
 @Entity('petty_cash_transactions')
 @Index(['schoolId', 'accountId'])
 @Index(['schoolId', 'createdAt'])
+@Index(['schoolId', 'transactionDate'])
 export class PettyCashTransaction extends BaseEntity {
   @Field(() => ID)
   @Column({ type: 'uuid' })
@@ -38,6 +39,10 @@ export class PettyCashTransaction extends BaseEntity {
   @Field(() => Float)
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   balanceAfter!: number;
+
+  @Field(() => String)
+  @Column({ type: 'date', default: () => 'CURRENT_DATE' })
+  transactionDate!: string;
 
   @Field()
   @Column()

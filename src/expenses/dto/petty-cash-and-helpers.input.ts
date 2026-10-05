@@ -7,6 +7,7 @@ import {
   IsString,
   IsUUID,
   Min,
+  IsDateString,
 } from 'class-validator';
 
 @InputType()
@@ -20,6 +21,11 @@ export class ReplenishPettyCashInput {
   @IsNumber()
   @IsPositive()
   amount!: number;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsDateString({ strict: true })
+  transactionDate?: string;
 
   @Field()
   @IsNotEmpty()
