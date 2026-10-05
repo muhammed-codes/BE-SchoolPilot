@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import {
   Expense,
   ExpenseCategory,
@@ -67,9 +67,11 @@ export class ExpensesService {
   createCategory = async (
     input: CreateExpenseCategoryInput,
     schoolId: string,
+    manager?: EntityManager,
   ): Promise<ExpenseCategory> => {
+    const categoryRepo = manager?.getRepository(ExpenseCategory) ?? this.categoryRepo;
     const normalizedName = input.name.trim();
-    const existing = await this.categoryRepo
+    const existing = await categoryRepo
       .createQueryBuilder('category')
       .where('category.schoolId = :schoolId', { schoolId })
       .andWhere('LOWER(BTRIM(category.name)) = LOWER(BTRIM(:name))', {
@@ -80,32 +82,34 @@ export class ExpensesService {
       if (!existing.isActive) {
         existing.isActive = true;
         if (input.description) existing.description = input.description.trim();
-        return this.categoryRepo.save(existing);
+        return categoryRepo.save(existing);
       }
       throw new BadRequestException(`Category "${input.name}" already exists`);
     }
 
-    const category = this.categoryRepo.create({
+    const category = categoryRepo.create({
       schoolId,
       name: normalizedName,
       description: input.description?.trim(),
       isActive: true,
     });
-    return this.categoryRepo.save(category);
+    return categoryRepo.save(category);
   };
 
   updateCategory = async (
     input: UpdateExpenseCategoryInput,
     schoolId: string,
+    manager?: EntityManager,
   ): Promise<ExpenseCategory> => {
-    const category = await this.categoryRepo.findOne({
+    const categoryRepo = manager?.getRepository(ExpenseCategory) ?? this.categoryRepo;
+    const category = await categoryRepo.findOne({
       where: { id: input.id, schoolId },
     });
     if (!category) throw new NotFoundException('Category not found');
 
     if (input.name !== undefined) {
       const normalizedName = input.name.trim();
-      const existing = await this.categoryRepo
+      const existing = await categoryRepo
         .createQueryBuilder('category')
         .where('category.schoolId = :schoolId', { schoolId })
         .andWhere('LOWER(BTRIM(category.name)) = LOWER(BTRIM(:name))', {
@@ -122,7 +126,7 @@ export class ExpensesService {
       category.description = input.description.trim();
     if (input.isActive !== undefined) category.isActive = input.isActive;
 
-    return this.categoryRepo.save(category);
+    return categoryRepo.save(category);
   };
 
   archiveCategory = async (

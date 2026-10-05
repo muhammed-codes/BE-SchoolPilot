@@ -1332,6 +1332,7 @@ type Mutation {
   returnResult(reason: String!, resultSheetId: String!): ResultSheet!
   reviewTeacherAvailability(input: ReviewTeacherAvailabilityInput!): TeacherAvailability!
   saveClassTeacherRemark(remark: String!, studentResultId: String!): StudentResult!
+  saveExpenseCategory(input: SaveExpenseCategoryInput!): ExpenseCategory!
   savePrincipalRemark(remark: String!, studentResultId: String!): StudentResult!
   saveSubjectScores(input: SaveSubjectScoresInput!): [SubjectScore!]!
   saveTeacherRemark(remark: String!, subjectScoreId: String!): SubjectScore!
@@ -1872,6 +1873,11 @@ type ReceiptTemplate {
   updatedAt: DateTime!
 }
 
+input RecordExpenseRequestPaymentInput {
+  amount: Float!
+  id: ID!
+}
+
 input RecordOfflinePaymentInput {
   amount: Int!
   bankAccountId: String
@@ -1941,11 +1947,6 @@ input RegisterSchoolInput {
 input RejectExpenseRequestInput {
   id: ID!
   rejectionReason: String!
-}
-
-input RecordExpenseRequestPaymentInput {
-  amount: Float!
-  id: ID!
 }
 
 input RejectShareInput {
@@ -2052,6 +2053,15 @@ enum RoomType {
   OTHER
   OUTDOOR
   WORKSHOP
+}
+
+input SaveExpenseCategoryInput {
+  budgetAmount: Float
+  description: String
+  id: ID
+  name: String!
+  sessionId: ID
+  termId: ID
 }
 
 input SaveSubjectScoresInput {

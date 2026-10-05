@@ -6,6 +6,7 @@ import {
   IsPositive,
   IsString,
   IsUUID,
+  Min,
 } from 'class-validator';
 
 @InputType()
@@ -63,6 +64,40 @@ export class UpdateExpenseCategoryInput {
   @Field({ nullable: true })
   @IsOptional()
   isActive?: boolean;
+}
+
+@InputType()
+export class SaveExpenseCategoryInput {
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  name!: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  sessionId?: string;
+
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  termId?: string;
+
+  @Field(() => Float, { nullable: true })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  budgetAmount?: number;
 }
 
 @InputType()

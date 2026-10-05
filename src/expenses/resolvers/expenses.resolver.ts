@@ -27,8 +27,10 @@ import {
   CreateExpenseCategoryInput,
   UpdateExpenseCategoryInput,
   CreateExpenseDepartmentInput,
+  SaveExpenseCategoryInput,
 } from '../dto';
 import { ExpensesService } from '../services/expenses.service';
+import { ExpenseBudgetsService } from '../services/expense-budgets.service';
 
 type CurrentUserPayload = {
   id?: string;
@@ -50,7 +52,10 @@ const mapToUserEntity = (payload: CurrentUserPayload): User => {
 @Resolver(() => Expense)
 @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
 export class ExpensesResolver {
-  constructor(private readonly expensesService: ExpensesService) {}
+  constructor(
+    private readonly expensesService: ExpensesService,
+    private readonly budgetsService: ExpenseBudgetsService,
+  ) {}
 
   // ── CATEGORIES ─────────────────────────────────────────────────────────────
 
@@ -80,6 +85,15 @@ export class ExpensesResolver {
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.expensesService.updateCategory(input, user.schoolId);
+  }
+
+  @Mutation(() => ExpenseCategory)
+  @RequirePermission(AppResource.EXPENSES, PermissionAction.UPDATE)
+  saveExpenseCategory(
+    @Args('input') input: SaveExpenseCategoryInput,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.budgetsService.saveCategoryWithBudget(input, user.schoolId);
   }
 
   @Mutation(() => ExpenseCategory)

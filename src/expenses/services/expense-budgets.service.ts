@@ -1,16 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import {
   ExpenseBudget,
   ExpenseCategory,
   Expense,
   ExpenseRequest,
 } from '../entities';
+import { Session } from '../../terms/entities/session.entity';
+import { Term } from '../../terms/entities/term.entity';
 import {
   SetExpenseBudgetInput,
   BulkSetExpenseBudgetInput,
   CategoryBudgetProgress,
+  SaveExpenseCategoryInput,
 } from '../dto';
 import { ExpenseRequestStatus } from '../enums';
 import { ExpensesService } from './expenses.service';
@@ -29,6 +36,70 @@ export class ExpenseBudgetsService {
     private readonly expensesService: ExpensesService,
   ) {}
 
+  saveCategoryWithBudget = async (
+    input: SaveExpenseCategoryInput,
+    schoolId: string,
+  ): Promise<ExpenseCategory> =>
+    this.budgetRepo.manager.transaction(async (manager) => {
+      const category = input.id
+        ? await this.expensesService.updateCategory(
+            {
+              id: input.id,
+              name: input.name,
+              description: input.description,
+            },
+            schoolId,
+            manager,
+          )
+        : await this.expensesService.createCategory(
+            { name: input.name, description: input.description },
+            schoolId,
+            manager,
+          );
+
+      if (input.budgetAmount === undefined) return category;
+      if (!input.sessionId) {
+        throw new BadRequestException(
+          'A session is required when setting a category budget',
+        );
+      }
+
+      const session = await manager.getRepository(Session).findOne({
+        where: { id: input.sessionId, schoolId },
+      });
+      if (!session) throw new NotFoundException('Session not found');
+      if (input.termId) {
+        const term = await manager.getRepository(Term).findOne({
+          where: { id: input.termId, sessionId: input.sessionId, schoolId },
+        });
+        if (!term) throw new NotFoundException('Term not found');
+      }
+
+      const budgetRepo = manager.getRepository(ExpenseBudget);
+      let budget = await budgetRepo.findOne({
+        where: {
+          schoolId,
+          sessionId: input.sessionId,
+          termId: input.termId || IsNull(),
+          categoryId: category.id,
+        },
+      });
+      if (!budget) {
+        budget = budgetRepo.create({
+          schoolId,
+          sessionId: input.sessionId,
+          termId: input.termId,
+          categoryId: category.id,
+          budgetAmount: input.budgetAmount,
+        });
+      } else {
+        budget.budgetAmount = input.budgetAmount;
+      }
+      await budgetRepo.save(budget);
+
+      return category;
+    });
+
   setBudget = async (
     input: SetExpenseBudgetInput,
     schoolId: string,
@@ -37,7 +108,7 @@ export class ExpenseBudgetsService {
       where: {
         schoolId,
         sessionId: input.sessionId,
-        termId: input.termId || undefined,
+        termId: input.termId || IsNull(),
         categoryId: input.categoryId,
       },
     });
@@ -86,8 +157,11 @@ export class ExpenseBudgetsService {
     const categories = await this.expensesService.getCategories(schoolId);
 
     // 2. Get budgets for this session & term
-    const budgetWhere: Record<string, unknown> = { schoolId, sessionId };
-    if (termId) budgetWhere.termId = termId;
+    const budgetWhere: Record<string, unknown> = {
+      schoolId,
+      sessionId,
+      termId: termId || IsNull(),
+    };
     const budgets = await this.budgetRepo.find({ where: budgetWhere });
     const budgetMap = new Map(
       budgets.map((b) => [b.categoryId, Number(b.budgetAmount)]),
