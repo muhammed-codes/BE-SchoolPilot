@@ -380,6 +380,7 @@ export class ExpensesService {
       .leftJoinAndSelect('e.vendor', 'vendor')
       .leftJoinAndSelect('e.createdBy', 'createdBy')
       .leftJoinAndSelect('e.voidedBy', 'voidedBy')
+      .distinct(true)
       .where('e.schoolId = :schoolId', { schoolId });
 
     if (!filter.includeVoided) {
