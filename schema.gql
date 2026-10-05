@@ -1339,7 +1339,7 @@ type Mutation {
   setDefaultReceiptTemplate(id: String!): ReceiptTemplate
   setExpenseBudget(input: SetExpenseBudgetInput!): ExpenseBudget!
   setPermissionGroupPermissions(input: SetPermissionGroupPermissionsInput!, schoolId: String): [PermissionGroupPermission!]!
-  setUserPermission(input: SetUserPermissionInput!, schoolId: String): UserPermission!
+  setUserPermission(input: SetUserPermissionInput!, schoolId: String, userId: String): UserPermission!
   singleUpload(file: Upload!, folder: String!): UploadResult!
   submitForAdminReview(resultSheetId: String!): ResultSheet!
   submitForPrincipalApproval(resultSheetId: String!): ResultSheet!
