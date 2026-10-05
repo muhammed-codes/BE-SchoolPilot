@@ -234,11 +234,13 @@ export class AccessResolver {
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   setUserPermission(
     @Args('input') input: SetUserPermissionInput,
+    @Args('userId', { type: () => String, nullable: true }) userId: string | undefined,
     @CurrentUser() user: { role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
+    const targetUserId = input.userId?.trim() || userId?.trim();
     return this.accessService.setUserPermission(
-      input,
+      { ...input, userId: targetUserId ?? '' },
       this.schoolIdFor(user, schoolId),
     );
   }
