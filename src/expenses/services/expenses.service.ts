@@ -327,7 +327,7 @@ export class ExpensesService {
       `Voided expense "${voided.title}" (₦${voided.amount.toLocaleString()}). Reason: ${expense.voidReason}`,
     );
 
-    return this.getExpenseById(voided.id, schoolId);
+    return this.getExpenseById(voided.id, schoolId, true);
   };
 
   getExpenses = async (
