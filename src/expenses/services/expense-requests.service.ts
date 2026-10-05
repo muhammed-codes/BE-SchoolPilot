@@ -27,6 +27,7 @@ import {
   ExpenseRequestType,
   ExpenseActivityAction,
   ExpensePaymentStatus,
+  ExpenseRequestPaymentStatus,
 } from '../enums';
 import { User } from '../../users/entities/user.entity';
 import { UserRole } from '../../common/enums/role.enum';
@@ -100,6 +101,8 @@ export class ExpenseRequestsService {
       quotationUrls: input.quotationUrls || [],
       receiptUrl: input.receiptUrl,
       status: ExpenseRequestStatus.PENDING_APPROVAL,
+      paymentStatus: ExpenseRequestPaymentStatus.UNPAID,
+      amountPaid: 0,
       requesterId: user.id,
       sessionId: input.sessionId,
       termId: input.termId,
@@ -308,6 +311,10 @@ export class ExpenseRequestsService {
 
     request.status = ExpenseRequestStatus.FUNDED;
     request.fundedAt = new Date();
+    request.paymentStatus = ExpenseRequestPaymentStatus.PAID;
+    request.amountPaid = Number(
+      request.approvedAmount ?? request.estimatedAmount,
+    );
 
     const saved = await this.requestRepo.save(request);
 
@@ -329,6 +336,58 @@ export class ExpenseRequestsService {
       );
     }
 
+    return this.getRequestById(saved.id, schoolId);
+  };
+
+  recordRequestPayment = async (
+    id: string,
+    amount: number,
+    user: User,
+  ): Promise<ExpenseRequest> => {
+    const schoolId = user.schoolId;
+    if (!schoolId) throw new ForbiddenException('User must belong to a school');
+
+    const request = await this.requestRepo.findOne({ where: { id, schoolId } });
+    if (!request) throw new NotFoundException('Request not found');
+    if (
+      request.status !== ExpenseRequestStatus.APPROVED &&
+      request.status !== ExpenseRequestStatus.FUNDED
+    ) {
+      throw new BadRequestException('Only approved requests can receive payments');
+    }
+    if (request.expenseId) {
+      throw new BadRequestException('This request is already recorded as an expense');
+    }
+
+    const approvedAmount = Number(
+      request.approvedAmount ?? request.estimatedAmount,
+    );
+    const amountPaid = Number(request.amountPaid || 0) + amount;
+    if (amountPaid > approvedAmount) {
+      throw new BadRequestException(
+        'The payment cannot exceed the approved request amount',
+      );
+    }
+
+    request.amountPaid = amountPaid;
+    request.paymentStatus =
+      amountPaid >= approvedAmount
+        ? ExpenseRequestPaymentStatus.PAID
+        : ExpenseRequestPaymentStatus.PARTIALLY_PAID;
+    if (request.paymentStatus === ExpenseRequestPaymentStatus.PAID) {
+      request.status = ExpenseRequestStatus.FUNDED;
+      request.fundedAt ??= new Date();
+    }
+
+    const saved = await this.requestRepo.save(request);
+    await this.expensesService.logActivity(
+      schoolId,
+      'REQUEST',
+      saved.id,
+      ExpenseActivityAction.PAYMENT_RECORDED,
+      user.id,
+      `Recorded payment of ₦${amount.toLocaleString()} for request "${saved.title}". Total paid: ₦${amountPaid.toLocaleString()}`,
+    );
     return this.getRequestById(saved.id, schoolId);
   };
 
@@ -355,6 +414,22 @@ export class ExpenseRequestsService {
     }
 
     // Create the expense linked to this request
+    const paymentStatus =
+      input.paymentStatus ?? ExpenseRequestPaymentStatus.PAID;
+    const amountPaid = input.amountPaid ?? input.actualAmount;
+    if (amountPaid > input.actualAmount) {
+      throw new BadRequestException('Amount paid cannot exceed the actual amount');
+    }
+    if (
+      (paymentStatus === ExpenseRequestPaymentStatus.PAID &&
+        amountPaid !== input.actualAmount) ||
+      (paymentStatus === ExpenseRequestPaymentStatus.PARTIALLY_PAID &&
+        (amountPaid <= 0 || amountPaid >= input.actualAmount)) ||
+      (paymentStatus === ExpenseRequestPaymentStatus.UNPAID && amountPaid !== 0)
+    ) {
+      throw new BadRequestException('Payment status and amount paid do not match');
+    }
+
     const expense = this.expenseRepo.create({
       schoolId,
       title: request.title,
@@ -365,8 +440,8 @@ export class ExpenseRequestsService {
       vendorId: input.vendorId || request.vendorId,
       vendorName: input.vendorName || request.preferredVendor,
       paymentMethod: input.paymentMethod,
-      paymentStatus: ExpensePaymentStatus.PAID,
-      amountPaid: input.actualAmount,
+      paymentStatus: paymentStatus as ExpensePaymentStatus,
+      amountPaid,
       referenceNumber: input.referenceNumber?.trim(),
       receiptUrl: input.receiptUrl || request.receiptUrl,
       notes: input.notes?.trim() || request.reason,
@@ -381,6 +456,8 @@ export class ExpenseRequestsService {
 
     // Update the request with actualAmount, expenseId, and status COMPLETED
     request.actualAmount = input.actualAmount;
+    request.paymentStatus = paymentStatus;
+    request.amountPaid = amountPaid;
     request.expenseId = savedExpense.id;
     request.status = ExpenseRequestStatus.COMPLETED;
     request.completedAt = new Date();

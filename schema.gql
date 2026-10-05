@@ -341,9 +341,11 @@ type ConflictViolation {
 
 input ConvertRequestToExpenseInput {
   actualAmount: Float!
+  amountPaid: Float
   expenseDate: String!
   notes: String
   paymentMethod: ExpensePaymentMethod! = CASH
+  paymentStatus: ExpenseRequestPaymentStatus
   receiptUrl: String
   referenceNumber: String
   requestId: ID!
@@ -917,6 +919,7 @@ enum ExpensePaymentStatus {
 
 type ExpenseRequest {
   actualAmount: Float
+  amountPaid: Float!
   approvedAmount: Float
   approvedAt: DateTime
   approver: User
@@ -933,6 +936,7 @@ type ExpenseRequest {
   fundedAt: DateTime
   id: ID!
   neededByDate: String
+  paymentStatus: ExpenseRequestPaymentStatus!
   preferredVendor: String
   quotationUrls: [String!]
   reason: String!
@@ -966,6 +970,12 @@ input ExpenseRequestFilterInput {
   startDate: String
   status: ExpenseRequestStatus
   termId: ID
+}
+
+enum ExpenseRequestPaymentStatus {
+  PAID
+  PARTIALLY_PAID
+  UNPAID
 }
 
 enum ExpenseRequestStatus {
@@ -1303,6 +1313,7 @@ type Mutation {
   promoteStudents(input: PromoteStudentsInput!): PromotionResult!
   publishAnnouncement(id: String!): Announcement!
   publishResultSheet(resultSheetId: String!): ResultSheet!
+  recordExpenseRequestPayment(input: RecordExpenseRequestPaymentInput!): ExpenseRequest!
   recordOfflinePayment(input: RecordOfflinePaymentInput!): PaymentSubmissionStudentShare!
   refreshTokens(refreshToken: String!): AuthResponse!
   regenerateQrCode(schoolId: String!): School!
@@ -1930,6 +1941,11 @@ input RegisterSchoolInput {
 input RejectExpenseRequestInput {
   id: ID!
   rejectionReason: String!
+}
+
+input RecordExpenseRequestPaymentInput {
+  amount: Float!
+  id: ID!
 }
 
 input RejectShareInput {

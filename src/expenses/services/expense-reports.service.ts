@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, SelectQueryBuilder } from 'typeorm';
 import {
   Expense,
   ExpenseRequest,
@@ -16,6 +16,7 @@ import {
 } from '../dto';
 import {
   ExpensePaymentStatus,
+  ExpenseRequestPaymentStatus,
   ExpenseRequestStatus,
   ExpenseRequestType,
 } from '../enums';
@@ -37,6 +38,33 @@ export class ExpenseReportsService {
     private readonly budgetsService: ExpenseBudgetsService,
   ) {}
 
+  private addPaidRequestFilters = (
+    query: SelectQueryBuilder<ExpenseRequest>,
+    schoolId: string,
+    sessionId?: string,
+    termId?: string,
+  ): SelectQueryBuilder<ExpenseRequest> => {
+    query
+      .where('r.schoolId = :schoolId', { schoolId })
+      .andWhere('r.expenseId IS NULL')
+      .andWhere('r.amountPaid > 0')
+      .andWhere('r.paymentStatus IN (:...paymentStatuses)', {
+        paymentStatuses: [
+          ExpenseRequestPaymentStatus.PAID,
+          ExpenseRequestPaymentStatus.PARTIALLY_PAID,
+        ],
+      })
+      .andWhere('r.status IN (:...requestStatuses)', {
+        requestStatuses: [
+          ExpenseRequestStatus.APPROVED,
+          ExpenseRequestStatus.FUNDED,
+        ],
+      });
+    if (sessionId) query.andWhere('r.sessionId = :sessionId', { sessionId });
+    if (termId) query.andWhere('r.termId = :termId', { termId });
+    return query;
+  };
+
   getSummary = async (
     schoolId: string,
     sessionId?: string,
@@ -53,7 +81,32 @@ export class ExpenseReportsService {
     if (termId) spentQb.andWhere('e.termId = :termId', { termId });
 
     const spentRaw = await spentQb.getRawOne<{ total: string | null }>();
-    const totalSpent = parseFloat(spentRaw?.total || '0');
+    const requestSpendQb = this.requestRepo
+      .createQueryBuilder('r')
+      .select('SUM(r.amountPaid)', 'total')
+      .where('r.schoolId = :schoolId', { schoolId })
+      .andWhere('r.expenseId IS NULL')
+      .andWhere('r.paymentStatus IN (:...statuses)', {
+        statuses: [
+          ExpenseRequestPaymentStatus.PAID,
+          ExpenseRequestPaymentStatus.PARTIALLY_PAID,
+        ],
+      })
+      .andWhere('r.status IN (:...requestStatuses)', {
+        requestStatuses: [
+          ExpenseRequestStatus.APPROVED,
+          ExpenseRequestStatus.FUNDED,
+        ],
+      });
+    if (sessionId)
+      requestSpendQb.andWhere('r.sessionId = :sessionId', { sessionId });
+    if (termId) requestSpendQb.andWhere('r.termId = :termId', { termId });
+    const requestSpendRaw = await requestSpendQb.getRawOne<{
+      total: string | null;
+    }>();
+    const totalSpent =
+      parseFloat(spentRaw?.total || '0') +
+      parseFloat(requestSpendRaw?.total || '0');
 
     // 2. Pending Requests
     const pendingReqQb = this.requestRepo
@@ -259,12 +312,49 @@ export class ExpenseReportsService {
       count: string;
     }>();
 
-    const overallTotal = results.reduce(
+    const paidRequestsQuery = this.requestRepo
+      .createQueryBuilder('r')
+      .innerJoin('r.category', 'cat')
+      .select('cat.id', 'key')
+      .addSelect('cat.name', 'label')
+      .addSelect('SUM(r.amountPaid)', 'totalAmount')
+      .addSelect('COUNT(r.id)', 'count');
+    this.addPaidRequestFilters(paidRequestsQuery, schoolId, sessionId, termId);
+    if (startDate)
+      paidRequestsQuery.andWhere('r.updatedAt::date >= :startDate', { startDate });
+    if (endDate)
+      paidRequestsQuery.andWhere('r.updatedAt::date <= :endDate', { endDate });
+    paidRequestsQuery
+      .groupBy('cat.id')
+      .addGroupBy('cat.name');
+    const paidRequests = await paidRequestsQuery.getRawMany<{
+      key: string;
+      label: string;
+      totalAmount: string;
+      count: string;
+    }>();
+    const breakdownByCategory = new Map(
+      results.map((item) => [item.key, { ...item }]),
+    );
+    for (const item of paidRequests) {
+      const existing = breakdownByCategory.get(item.key);
+      if (existing) {
+        existing.totalAmount = String(
+          Number(existing.totalAmount || 0) + Number(item.totalAmount || 0),
+        );
+        existing.count = String(Number(existing.count || 0) + Number(item.count || 0));
+      } else {
+        breakdownByCategory.set(item.key, { ...item });
+      }
+    }
+    const combinedResults = [...breakdownByCategory.values()];
+
+    const overallTotal = combinedResults.reduce(
       (sum, r) => sum + parseFloat(r.totalAmount || '0'),
       0,
     );
 
-    return results.map((r) => {
+    return combinedResults.map((r) => {
       const totalAmount = parseFloat(r.totalAmount || '0');
       const percentage =
         overallTotal > 0
@@ -309,6 +399,35 @@ export class ExpenseReportsService {
     }>();
 
     const monthMap = new Map(results.map((r) => [r.month, r]));
+    const paidRequestsQuery = this.requestRepo
+      .createQueryBuilder('r')
+      .select("TO_CHAR(r.updatedAt, 'YYYY-MM')", 'month')
+      .addSelect('SUM(r.amountPaid)', 'totalSpent')
+      .addSelect('COUNT(r.id)', 'expenseCount');
+    this.addPaidRequestFilters(paidRequestsQuery, schoolId);
+    paidRequestsQuery
+      .andWhere('r.updatedAt BETWEEN :startDate AND :endDate', {
+        startDate,
+        endDate: `${targetYear}-12-31 23:59:59`,
+      })
+      .groupBy("TO_CHAR(r.updatedAt, 'YYYY-MM')");
+    const paidRequestResults = await paidRequestsQuery.getRawMany<{
+      month: string;
+      totalSpent: string;
+      expenseCount: string;
+    }>();
+    for (const result of paidRequestResults) {
+      const existing = monthMap.get(result.month);
+      monthMap.set(result.month, {
+        month: result.month,
+        totalSpent: String(
+          Number(existing?.totalSpent || 0) + Number(result.totalSpent || 0),
+        ),
+        expenseCount: String(
+          Number(existing?.expenseCount || 0) + Number(result.expenseCount || 0),
+        ),
+      });
+    }
 
     const monthNames = [
       'Jan',
@@ -371,12 +490,46 @@ export class ExpenseReportsService {
       count: string;
     }>();
 
-    const overallTotal = results.reduce(
+    const paidRequestsQuery = this.requestRepo
+      .createQueryBuilder('r')
+      .leftJoin('r.department', 'dept')
+      .select(
+        "COALESCE(dept.id, '00000000-0000-0000-0000-000000000000')",
+        'key',
+      )
+      .addSelect("COALESCE(dept.name, 'General / Unassigned')", 'label')
+      .addSelect('SUM(r.amountPaid)', 'totalAmount')
+      .addSelect('COUNT(r.id)', 'count');
+    this.addPaidRequestFilters(paidRequestsQuery, schoolId, sessionId, termId);
+    paidRequestsQuery.groupBy('dept.id').addGroupBy('dept.name');
+    const paidRequests = await paidRequestsQuery.getRawMany<{
+      key: string;
+      label: string;
+      totalAmount: string;
+      count: string;
+    }>();
+    const breakdownByDepartment = new Map(
+      results.map((item) => [item.key, { ...item }]),
+    );
+    for (const item of paidRequests) {
+      const existing = breakdownByDepartment.get(item.key);
+      if (existing) {
+        existing.totalAmount = String(
+          Number(existing.totalAmount || 0) + Number(item.totalAmount || 0),
+        );
+        existing.count = String(Number(existing.count || 0) + Number(item.count || 0));
+      } else {
+        breakdownByDepartment.set(item.key, { ...item });
+      }
+    }
+    const combinedResults = [...breakdownByDepartment.values()];
+
+    const overallTotal = combinedResults.reduce(
       (sum, r) => sum + parseFloat(r.totalAmount || '0'),
       0,
     );
 
-    return results.map((r) => {
+    return combinedResults.map((r) => {
       const totalAmount = parseFloat(r.totalAmount || '0');
       const percentage =
         overallTotal > 0
@@ -425,12 +578,50 @@ export class ExpenseReportsService {
       count: string;
     }>();
 
-    const overallTotal = results.reduce(
+    const paidRequestsQuery = this.requestRepo
+      .createQueryBuilder('r')
+      .leftJoin('r.vendor', 'v')
+      .select("COALESCE(v.id, '00000000-0000-0000-0000-000000000000')", 'key')
+      .addSelect(
+        "COALESCE(v.name, r.preferredVendor, 'Direct / Petty Cash')",
+        'label',
+      )
+      .addSelect('SUM(r.amountPaid)', 'totalAmount')
+      .addSelect('COUNT(r.id)', 'count');
+    this.addPaidRequestFilters(paidRequestsQuery, schoolId, sessionId, termId);
+    paidRequestsQuery
+      .groupBy('v.id')
+      .addGroupBy('v.name')
+      .addGroupBy('r.preferredVendor');
+    const paidRequests = await paidRequestsQuery.getRawMany<{
+      key: string;
+      label: string;
+      totalAmount: string;
+      count: string;
+    }>();
+    const breakdownByVendor = new Map(
+      results.map((item) => [`${item.key}:${item.label}`, { ...item }]),
+    );
+    for (const item of paidRequests) {
+      const vendorKey = `${item.key}:${item.label}`;
+      const existing = breakdownByVendor.get(vendorKey);
+      if (existing) {
+        existing.totalAmount = String(
+          Number(existing.totalAmount || 0) + Number(item.totalAmount || 0),
+        );
+        existing.count = String(Number(existing.count || 0) + Number(item.count || 0));
+      } else {
+        breakdownByVendor.set(vendorKey, { ...item });
+      }
+    }
+    const combinedResults = [...breakdownByVendor.values()];
+
+    const overallTotal = combinedResults.reduce(
       (sum, r) => sum + parseFloat(r.totalAmount || '0'),
       0,
     );
 
-    return results.map((r) => {
+    return combinedResults.map((r) => {
       const totalAmount = parseFloat(r.totalAmount || '0');
       const percentage =
         overallTotal > 0

@@ -14,6 +14,7 @@ import {
   CreateExpenseRequestInput,
   UpdateExpenseRequestInput,
   ApproveExpenseRequestInput,
+  RecordExpenseRequestPaymentInput,
   RejectExpenseRequestInput,
   ConvertRequestToExpenseInput,
   ExpenseRequestFilterInput,
@@ -86,6 +87,19 @@ export class ExpenseRequestsResolver {
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.requestsService.fundRequest(id, mapToUserEntity(user));
+  }
+
+  @Mutation(() => ExpenseRequest)
+  @RequirePermission(AppResource.EXPENSES, PermissionAction.UPDATE)
+  recordExpenseRequestPayment(
+    @Args('input') input: RecordExpenseRequestPaymentInput,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.requestsService.recordRequestPayment(
+      input.id,
+      input.amount,
+      mapToUserEntity(user),
+    );
   }
 
   @Mutation(() => Expense)

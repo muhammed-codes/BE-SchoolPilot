@@ -14,6 +14,7 @@ import {
 import {
   ExpenseRequestType,
   ExpenseRequestStatus,
+  ExpenseRequestPaymentStatus,
   ExpensePaymentMethod,
 } from '../enums';
 
@@ -160,6 +161,18 @@ export class ApproveExpenseRequestInput {
 }
 
 @InputType()
+export class RecordExpenseRequestPaymentInput {
+  @Field(() => ID)
+  @IsUUID()
+  id!: string;
+
+  @Field(() => Float)
+  @IsNumber()
+  @IsPositive()
+  amount!: number;
+}
+
+@InputType()
 export class RejectExpenseRequestInput {
   @Field(() => ID)
   @IsUUID()
@@ -191,6 +204,17 @@ export class ConvertRequestToExpenseInput {
   })
   @IsEnum(ExpensePaymentMethod)
   paymentMethod!: ExpensePaymentMethod;
+
+  @Field(() => ExpenseRequestPaymentStatus, { nullable: true })
+  @IsOptional()
+  @IsEnum(ExpenseRequestPaymentStatus)
+  paymentStatus?: ExpenseRequestPaymentStatus;
+
+  @Field(() => Float, { nullable: true })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  amountPaid?: number;
 
   @Field(() => ID, { nullable: true })
   @IsOptional()

@@ -1,7 +1,11 @@
 import { ObjectType, Field, ID, Float } from '@nestjs/graphql';
 import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
-import { ExpenseRequestType, ExpenseRequestStatus } from '../enums';
+import {
+  ExpenseRequestType,
+  ExpenseRequestStatus,
+  ExpenseRequestPaymentStatus,
+} from '../enums';
 import { ExpenseCategory } from './expense-category.entity';
 import { ExpenseDepartment } from './expense-department.entity';
 import { ExpenseVendor } from './expense-vendor.entity';
@@ -44,6 +48,18 @@ export class ExpenseRequest extends BaseEntity {
   @Field(() => Float, { nullable: true })
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   actualAmount?: number;
+
+  @Field(() => ExpenseRequestPaymentStatus)
+  @Column({
+    type: 'enum',
+    enum: ExpenseRequestPaymentStatus,
+    default: ExpenseRequestPaymentStatus.UNPAID,
+  })
+  paymentStatus!: ExpenseRequestPaymentStatus;
+
+  @Field(() => Float)
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  amountPaid!: number;
 
   @Field(() => ID)
   @Column({ type: 'uuid' })

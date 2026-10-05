@@ -114,12 +114,38 @@ export class ExpenseBudgetsService {
       spentResults.map((r) => [r.categoryId, parseFloat(r.spent || '0')]),
     );
 
+    const requestPaidQb = this.requestRepo
+      .createQueryBuilder('r')
+      .select('r.categoryId', 'categoryId')
+      .addSelect('SUM(r.amountPaid)', 'spent')
+      .where('r.schoolId = :schoolId', { schoolId })
+      .andWhere('r.expenseId IS NULL')
+      .andWhere('r.amountPaid > 0')
+      .andWhere('r.status IN (:...statuses)', {
+        statuses: [ExpenseRequestStatus.APPROVED, ExpenseRequestStatus.FUNDED],
+      });
+    if (sessionId)
+      requestPaidQb.andWhere('r.sessionId = :sessionId', { sessionId });
+    if (termId) requestPaidQb.andWhere('r.termId = :termId', { termId });
+    requestPaidQb.groupBy('r.categoryId');
+    const requestPaidResults = await requestPaidQb.getRawMany<{
+      categoryId: string;
+      spent: string;
+    }>();
+    for (const result of requestPaidResults) {
+      spentMap.set(
+        result.categoryId,
+        (spentMap.get(result.categoryId) || 0) +
+          parseFloat(result.spent || '0'),
+      );
+    }
+
     // 4. Get Committed amounts per category (approved or funded requests not yet converted to expense)
     const requestQb = this.requestRepo
       .createQueryBuilder('r')
       .select('r.categoryId', 'categoryId')
       .addSelect(
-        'SUM(COALESCE(r.approvedAmount, r.estimatedAmount))',
+        'SUM(GREATEST(COALESCE(r.approvedAmount, r.estimatedAmount) - COALESCE(r.amountPaid, 0), 0))',
         'committed',
       )
       .where('r.schoolId = :schoolId', { schoolId })
