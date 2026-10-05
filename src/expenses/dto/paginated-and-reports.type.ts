@@ -24,6 +24,24 @@ export class PaginatedExpenses {
 }
 
 @ObjectType()
+export class PaginatedArchivedExpenses {
+  @Field(() => [Expense])
+  items!: Expense[];
+
+  @Field(() => Int)
+  total!: number;
+
+  @Field(() => Int)
+  page!: number;
+
+  @Field(() => Int)
+  limit!: number;
+
+  @Field(() => Int)
+  totalPages!: number;
+}
+
+@ObjectType()
 export class PaginatedExpenseRequests {
   @Field(() => [ExpenseRequest])
   items!: ExpenseRequest[];

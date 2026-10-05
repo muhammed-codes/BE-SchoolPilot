@@ -20,6 +20,7 @@ import {
   VoidExpenseInput,
   ExpenseFilterInput,
   PaginatedExpenses,
+  PaginatedArchivedExpenses,
   DuplicateExpenseWarning,
   CreateExpenseCategoryInput,
   UpdateExpenseCategoryInput,
@@ -331,7 +332,7 @@ export class ExpensesService {
 
   getExpenses = async (
     filter: ExpenseFilterInput,
-    schoolId: string,
+    schoolId?: string,
   ): Promise<PaginatedExpenses> => {
     const page = filter.page ?? 1;
     const limit = filter.limit ?? 20;
@@ -345,11 +346,10 @@ export class ExpensesService {
       .leftJoinAndSelect('e.createdBy', 'createdBy')
       .leftJoinAndSelect('e.voidedBy', 'voidedBy')
       .distinct(true)
-      .where('e.schoolId = :schoolId', { schoolId });
+      .where(schoolId ? 'e.schoolId = :schoolId' : '1 = 1', { schoolId });
 
-    if (!filter.includeVoided) {
-      qb.andWhere('e.isVoided = false');
-    }
+    // Archived expenses are exposed only through the super-admin archive query.
+    qb.andWhere('e.isVoided = false');
 
     if (filter.search?.trim()) {
       const search = `%${filter.search.trim()}%`;
@@ -427,9 +427,44 @@ export class ExpensesService {
     };
   };
 
-  getExpenseById = async (id: string, schoolId: string): Promise<Expense> => {
+  getArchivedExpenses = async (
+    page = 1,
+    limit = 20,
+  ): Promise<PaginatedArchivedExpenses> => {
+    const qb = this.expenseRepo
+      .createQueryBuilder('e')
+      .leftJoinAndSelect('e.category', 'category')
+      .leftJoinAndSelect('e.department', 'department')
+      .leftJoinAndSelect('e.vendor', 'vendor')
+      .leftJoinAndSelect('e.createdBy', 'createdBy')
+      .leftJoinAndSelect('e.voidedBy', 'voidedBy')
+      .where('e.isVoided = true')
+      .orderBy('e.voidedAt', 'DESC', 'NULLS LAST')
+      .addOrderBy('e.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [items, total] = await qb.getManyAndCount();
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
+  };
+
+  getExpenseById = async (
+    id: string,
+    schoolId: string | undefined,
+    includeVoided = false,
+  ): Promise<Expense> => {
     const expense = await this.expenseRepo.findOne({
-      where: { id, schoolId },
+      where: {
+        id,
+        ...(schoolId ? { schoolId } : {}),
+        ...(!includeVoided ? { isVoided: false } : {}),
+      },
       relations: [
         'category',
         'department',
@@ -492,10 +527,25 @@ export class ExpensesService {
 
   getExpenseActivities = async (
     expenseId: string,
-    schoolId: string,
+    schoolId: string | undefined,
+    includeVoided = false,
   ): Promise<ExpenseActivity[]> => {
+    const expense = await this.expenseRepo.findOne({
+      where: {
+        id: expenseId,
+        ...(schoolId ? { schoolId } : {}),
+        ...(!includeVoided ? { isVoided: false } : {}),
+      },
+      select: ['id', 'schoolId'],
+    });
+    if (!expense) throw new NotFoundException('Expense not found');
+
     return this.activityRepo.find({
-      where: { schoolId, entityType: 'EXPENSE', entityId: expenseId },
+      where: {
+        schoolId: expense.schoolId,
+        entityType: 'EXPENSE',
+        entityId: expenseId,
+      },
       relations: ['actor'],
       order: { createdAt: 'DESC' },
     });

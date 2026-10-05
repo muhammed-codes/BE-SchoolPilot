@@ -1417,6 +1417,14 @@ type PaginatedAnnouncement {
   totalPages: Int!
 }
 
+type PaginatedArchivedExpenses {
+  items: [Expense!]!
+  limit: Int!
+  page: Int!
+  total: Int!
+  totalPages: Int!
+}
+
 type PaginatedClassEntity {
   items: [ClassEntity!]!
   page: Int!
@@ -1706,6 +1714,7 @@ type Query {
   announcements: [Announcement!]!
   announcementsPage(limit: Int! = 50, page: Int! = 1): PaginatedAnnouncement!
   approvalConfigs: [FeeApprovalConfig!]!
+  archivedExpenses(limit: Int, page: Int): PaginatedArchivedExpenses!
   archivedResultSheets(status: ResultStatus): [ResultSheet!]!
   archivedStudents: [Student!]!
   bankAccounts: [SchoolBankAccount!]!

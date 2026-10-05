@@ -1,10 +1,11 @@
-import { Resolver, Query, Mutation, Args, ID } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, ID, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { AppResource } from '../../access/enums/resource.enum';
 import { PermissionAction } from '../../access/enums/permission-action.enum';
 import { UserRole } from '../../common/enums/role.enum';
@@ -21,6 +22,7 @@ import {
   VoidExpenseInput,
   ExpenseFilterInput,
   PaginatedExpenses,
+  PaginatedArchivedExpenses,
   DuplicateExpenseWarning,
   CreateExpenseCategoryInput,
   UpdateExpenseCategoryInput,
@@ -145,13 +147,26 @@ export class ExpensesResolver {
     return this.expensesService.getExpenses(filter, user.schoolId);
   }
 
+  @Query(() => PaginatedArchivedExpenses)
+  @Roles(UserRole.SUPER_ADMIN)
+  archivedExpenses(
+    @Args('page', { type: () => Int, nullable: true }) page = 1,
+    @Args('limit', { type: () => Int, nullable: true }) limit = 20,
+  ) {
+    return this.expensesService.getArchivedExpenses(page, limit);
+  }
+
   @Query(() => Expense)
   @RequirePermission(AppResource.EXPENSES, PermissionAction.READ)
   expense(
     @Args('id', { type: () => ID }) id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.expensesService.getExpenseById(id, user.schoolId);
+    return this.expensesService.getExpenseById(
+      id,
+      user.schoolId,
+      user.role === UserRole.SUPER_ADMIN,
+    );
   }
 
   @Query(() => DuplicateExpenseWarning)
@@ -169,6 +184,10 @@ export class ExpensesResolver {
     @Args('expenseId', { type: () => ID }) expenseId: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.expensesService.getExpenseActivities(expenseId, user.schoolId);
+    return this.expensesService.getExpenseActivities(
+      expenseId,
+      user.schoolId,
+      user.role === UserRole.SUPER_ADMIN,
+    );
   }
 }
