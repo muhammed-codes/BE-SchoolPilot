@@ -94,9 +94,7 @@ export class ExpenseRequestsService {
       categoryId: input.categoryId,
       departmentId: input.departmentId,
       reason: input.reason.trim(),
-      neededByDate: input.neededByDate
-        ? new Date(input.neededByDate)
-        : undefined,
+      neededByDate: input.neededByDate || undefined,
       preferredVendor: input.preferredVendor?.trim(),
       vendorId: input.vendorId,
       quotationUrls: input.quotationUrls || [],
@@ -169,9 +167,7 @@ export class ExpenseRequestsService {
       request.departmentId = input.departmentId;
     if (input.reason !== undefined) request.reason = input.reason.trim();
     if (input.neededByDate !== undefined)
-      request.neededByDate = input.neededByDate
-        ? new Date(input.neededByDate)
-        : undefined;
+      request.neededByDate = input.neededByDate || undefined;
     if (input.preferredVendor !== undefined)
       request.preferredVendor = input.preferredVendor.trim();
     if (input.vendorId !== undefined) request.vendorId = input.vendorId;
@@ -363,7 +359,7 @@ export class ExpenseRequestsService {
       schoolId,
       title: request.title,
       amount: input.actualAmount,
-      expenseDate: new Date(input.expenseDate),
+      expenseDate: input.expenseDate,
       categoryId: request.categoryId,
       departmentId: request.departmentId,
       vendorId: input.vendorId || request.vendorId,

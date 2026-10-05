@@ -28,9 +28,9 @@ export class Expense extends BaseEntity {
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   amount!: number;
 
-  @Field()
+  @Field(() => String)
   @Column({ type: 'date' })
-  expenseDate!: Date;
+  expenseDate!: string;
 
   @Field(() => ID)
   @Column({ type: 'uuid' })
@@ -98,9 +98,9 @@ export class Expense extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   notes?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'date', nullable: true })
-  dueDate?: Date;
+  dueDate?: string;
 
   @Field()
   @Column({ default: false })

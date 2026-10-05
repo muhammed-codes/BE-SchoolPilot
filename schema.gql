@@ -783,8 +783,8 @@ type Expense {
   createdById: ID!
   department: ExpenseDepartment
   departmentId: ID
-  dueDate: DateTime
-  expenseDate: DateTime!
+  dueDate: String
+  expenseDate: String!
   id: ID!
   isVoided: Boolean!
   notes: String
@@ -932,7 +932,7 @@ type ExpenseRequest {
   expenseId: ID
   fundedAt: DateTime
   id: ID!
-  neededByDate: DateTime
+  neededByDate: String
   preferredVendor: String
   quotationUrls: [String!]
   reason: String!
@@ -1870,8 +1870,8 @@ type RecurringExpense {
   frequency: RecurringFrequency!
   id: ID!
   isActive: Boolean!
-  lastRecordedDate: DateTime
-  nextDueDate: DateTime!
+  lastRecordedDate: String
+  nextDueDate: String!
   notes: String
   schoolId: ID!
   title: String!

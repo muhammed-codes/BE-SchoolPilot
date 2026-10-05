@@ -67,9 +67,9 @@ export class ExpenseRequest extends BaseEntity {
   @Column({ type: 'text' })
   reason!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'date', nullable: true })
-  neededByDate?: Date;
+  neededByDate?: string;
 
   @Field({ nullable: true })
   @Column({ nullable: true })

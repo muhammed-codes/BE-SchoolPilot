@@ -40,9 +40,9 @@ export class RecurringExpense extends BaseEntity {
   })
   frequency!: RecurringFrequency;
 
-  @Field()
+  @Field(() => String)
   @Column({ type: 'date' })
-  nextDueDate!: Date;
+  nextDueDate!: string;
 
   @Field(() => ID, { nullable: true })
   @Column({ type: 'uuid', nullable: true })
@@ -61,7 +61,7 @@ export class RecurringExpense extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   notes?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'date', nullable: true })
-  lastRecordedDate?: Date;
+  lastRecordedDate?: string;
 }

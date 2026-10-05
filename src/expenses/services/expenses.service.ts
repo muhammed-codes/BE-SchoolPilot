@@ -221,7 +221,7 @@ export class ExpensesService {
       schoolId,
       title: input.title.trim(),
       amount: input.amount,
-      expenseDate: new Date(input.expenseDate),
+      expenseDate: input.expenseDate,
       categoryId: input.categoryId,
       departmentId: input.departmentId,
       vendorId: input.vendorId,
@@ -232,7 +232,7 @@ export class ExpensesService {
       referenceNumber: input.referenceNumber?.trim(),
       receiptUrl: input.receiptUrl,
       notes: input.notes?.trim(),
-      dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
+      dueDate: input.dueDate || undefined,
       requestId: input.requestId,
       recurringExpenseId: input.recurringExpenseId,
       sessionId: input.sessionId,
@@ -297,7 +297,7 @@ export class ExpensesService {
       expense.amount = input.amount;
     }
     if (input.expenseDate !== undefined)
-      expense.expenseDate = new Date(input.expenseDate);
+      expense.expenseDate = input.expenseDate;
     if (input.categoryId !== undefined) expense.categoryId = input.categoryId;
     if (input.departmentId !== undefined)
       expense.departmentId = input.departmentId;
@@ -314,7 +314,7 @@ export class ExpensesService {
     if (input.receiptUrl !== undefined) expense.receiptUrl = input.receiptUrl;
     if (input.notes !== undefined) expense.notes = input.notes.trim();
     if (input.dueDate !== undefined)
-      expense.dueDate = input.dueDate ? new Date(input.dueDate) : undefined;
+      expense.dueDate = input.dueDate || undefined;
 
     const updated = await this.expenseRepo.save(expense);
 

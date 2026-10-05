@@ -42,7 +42,7 @@ export class ExpenseRecurringService {
       categoryId: input.categoryId,
       estimatedAmount: input.estimatedAmount,
       frequency: input.frequency,
-      nextDueDate: new Date(input.nextDueDate),
+      nextDueDate: input.nextDueDate,
       vendorId: input.vendorId,
       notes: input.notes?.trim(),
       isActive: true,
@@ -66,7 +66,7 @@ export class ExpenseRecurringService {
       recurring.estimatedAmount = input.estimatedAmount;
     if (input.frequency !== undefined) recurring.frequency = input.frequency;
     if (input.nextDueDate !== undefined)
-      recurring.nextDueDate = new Date(input.nextDueDate);
+      recurring.nextDueDate = input.nextDueDate;
     if (input.vendorId !== undefined) recurring.vendorId = input.vendorId;
     if (input.notes !== undefined) recurring.notes = input.notes.trim();
     if (input.isActive !== undefined) recurring.isActive = input.isActive;
@@ -83,20 +83,20 @@ export class ExpenseRecurringService {
     });
     if (!recurring) throw new NotFoundException('Recurring expense not found');
 
-    recurring.lastRecordedDate = new Date();
+    recurring.lastRecordedDate = new Date().toISOString().slice(0, 10);
 
     // Advance nextDueDate based on frequency
-    const currentDue = new Date(recurring.nextDueDate);
+    const currentDue = new Date(`${recurring.nextDueDate}T00:00:00.000Z`);
     if (recurring.frequency === RecurringFrequency.WEEKLY) {
-      currentDue.setDate(currentDue.getDate() + 7);
+      currentDue.setUTCDate(currentDue.getUTCDate() + 7);
     } else if (recurring.frequency === RecurringFrequency.MONTHLY) {
-      currentDue.setMonth(currentDue.getMonth() + 1);
+      currentDue.setUTCMonth(currentDue.getUTCMonth() + 1);
     } else if (recurring.frequency === RecurringFrequency.TERMLY) {
-      currentDue.setMonth(currentDue.getMonth() + 3);
+      currentDue.setUTCMonth(currentDue.getUTCMonth() + 3);
     } else if (recurring.frequency === RecurringFrequency.ANNUAL) {
-      currentDue.setFullYear(currentDue.getFullYear() + 1);
+      currentDue.setUTCFullYear(currentDue.getUTCFullYear() + 1);
     }
-    recurring.nextDueDate = currentDue;
+    recurring.nextDueDate = currentDue.toISOString().slice(0, 10);
 
     return this.recurringRepo.save(recurring);
   };
