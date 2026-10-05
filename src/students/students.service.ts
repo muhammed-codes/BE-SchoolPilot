@@ -573,7 +573,7 @@ export class StudentsService {
 
     if (options.classIds) {
       if (options.classIds.length === 0) {
-        return { items: [], total: 0, page, totalPages: 0 };
+        return { items: [], total: 0, page, totalPages: 0, hasMore: false };
       }
       builder.andWhere('student.currentClassId IN (:...classIds)', {
         classIds: options.classIds,
@@ -604,7 +604,8 @@ export class StudentsService {
       .take(limit)
       .getManyAndCount();
 
-    return { items, total, page, totalPages: Math.ceil(total / limit) };
+    const totalPages = Math.ceil(total / limit);
+    return { items, total, page, totalPages, hasMore: page < totalPages };
   };
 
   getStudentStatistics = async (

@@ -1423,6 +1423,7 @@ enum NonTeachingSlotType {
 }
 
 type PaginatedAnnouncement {
+  hasMore: Boolean
   items: [Announcement!]!
   page: Int!
   total: Int!
@@ -1438,6 +1439,7 @@ type PaginatedArchivedExpenses {
 }
 
 type PaginatedClassEntity {
+  hasMore: Boolean
   items: [ClassEntity!]!
   page: Int!
   total: Int!
@@ -1471,6 +1473,7 @@ type PaginatedExpenses {
 }
 
 type PaginatedPaymentSubmissionBatch {
+  hasMore: Boolean
   items: [PaymentSubmissionBatch!]!
   page: Int!
   total: Int!
@@ -1478,6 +1481,7 @@ type PaginatedPaymentSubmissionBatch {
 }
 
 type PaginatedSchool {
+  hasMore: Boolean
   items: [School!]!
   page: Int!
   total: Int!
@@ -1485,6 +1489,7 @@ type PaginatedSchool {
 }
 
 type PaginatedStudent {
+  hasMore: Boolean
   items: [Student!]!
   page: Int!
   total: Int!
@@ -1492,6 +1497,7 @@ type PaginatedStudent {
 }
 
 type PaginatedStudentInvoice {
+  hasMore: Boolean
   items: [StudentInvoice!]!
   page: Int!
   total: Int!
@@ -1499,6 +1505,7 @@ type PaginatedStudentInvoice {
 }
 
 type PaginatedSubject {
+  hasMore: Boolean
   items: [Subject!]!
   page: Int!
   total: Int!
@@ -1506,6 +1513,7 @@ type PaginatedSubject {
 }
 
 type PaginatedUser {
+  hasMore: Boolean
   items: [User!]!
   page: Int!
   total: Int!
@@ -1837,7 +1845,7 @@ type Query {
   studentResult(studentId: String!, termId: String!): StudentResult
   studentStatistics(archived: Boolean! = false, classId: String, query: String! = ""): StudentStatistics!
   studentsByClass(classId: String!): [Student!]!
-  studentsPage(archived: Boolean! = false, classId: String, gender: Gender, limit: Int! = 50, page: Int! = 1, query: String! = "", status: StudentStatus): PaginatedStudent!
+  studentsPage(archived: Boolean! = false, classId: String, gender: Gender, limit: Int! = 50, page: Int! = 1, query: String! = "", skip: Int, status: StudentStatus, take: Int): PaginatedStudent!
   subject(id: String!): Subject
   subjects(limit: Int! = 50, page: Int! = 1, search: String): PaginatedSubject!
   teacherAvailabilities(approvalStatus: ApprovalStatus, teacherId: String): [TeacherAvailability!]!

@@ -15,6 +15,9 @@ export const createPaginatedType = <T>(ItemType: Type<T>) => {
 
     @Field(() => Int)
     totalPages: number;
+
+    @Field(() => Boolean, { nullable: true })
+    hasMore?: boolean;
   }
 
   return PaginatedResult;

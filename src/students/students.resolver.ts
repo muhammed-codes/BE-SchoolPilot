@@ -97,14 +97,21 @@ export class StudentsResolver {
     @Args('archived', { type: () => Boolean, defaultValue: false })
     archived: boolean,
     @Args() pagination: PaginationArgs,
+    @Args('skip', { type: () => Int, nullable: true }) skip: number | undefined,
+    @Args('take', { type: () => Int, nullable: true }) take: number | undefined,
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
+    const limit = Math.max(1, take ?? pagination.limit);
+    const page = skip === undefined
+      ? Math.max(1, pagination.page)
+      : Math.floor(Math.max(0, skip) / limit) + 1;
     const classIdsPromise = TEACHER_ROLES.includes(user.role)
       ? this.studentsService.getTeacherClassIds(user.sub, user.schoolId)
       : Promise.resolve(undefined);
     return classIdsPromise.then((classIds) =>
       this.studentsService.getPaginatedStudents(user.schoolId, {
-        ...pagination,
+        page,
+        limit,
         query,
         classId,
         gender,
