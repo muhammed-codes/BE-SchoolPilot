@@ -1278,6 +1278,7 @@ type Mutation {
   deactivateSchool(id: String!): School!
   deactivateUser(id: String!): User!
   deleteAnnouncement(id: String!): Boolean!
+  deleteExpenseCategory(id: ID!): ExpenseCategory!
   deleteNonTeachingSlot(id: String!): Boolean!
   deletePeriod(deleteGroup: Boolean! = true, id: String!): Boolean!
   deletePermissionGroup(groupId: String!, schoolId: String): Boolean!
@@ -1734,7 +1735,7 @@ type Query {
   expense(id: ID!): Expense!
   expenseActivities(expenseId: ID!): [ExpenseActivity!]!
   expenseBudgets(sessionId: ID!, termId: ID): [CategoryBudgetProgress!]!
-  expenseCategories: [ExpenseCategory!]!
+  expenseCategories(includeInactive: Boolean): [ExpenseCategory!]!
   expenseDepartments: [ExpenseDepartment!]!
   expenseMonthlyTrends(year: Int): [ExpenseMonthlyTrend!]!
   expenseRequest(id: ID!): ExpenseRequest!

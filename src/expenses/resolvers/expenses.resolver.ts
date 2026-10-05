@@ -54,8 +54,12 @@ export class ExpensesResolver {
 
   @Query(() => [ExpenseCategory])
   @RequirePermission(AppResource.EXPENSES, PermissionAction.READ)
-  expenseCategories(@CurrentUser() user: CurrentUserPayload) {
-    return this.expensesService.getCategories(user.schoolId);
+  expenseCategories(
+    @CurrentUser() user: CurrentUserPayload,
+    @Args('includeInactive', { type: () => Boolean, nullable: true })
+    includeInactive = false,
+  ) {
+    return this.expensesService.getCategories(user.schoolId, includeInactive);
   }
 
   @Mutation(() => ExpenseCategory)
@@ -74,6 +78,15 @@ export class ExpensesResolver {
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.expensesService.updateCategory(input, user.schoolId);
+  }
+
+  @Mutation(() => ExpenseCategory)
+  @RequirePermission(AppResource.EXPENSES, PermissionAction.DELETE)
+  deleteExpenseCategory(
+    @Args('id', { type: () => ID }) id: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.expensesService.archiveCategory(id, user.schoolId);
   }
 
   // ── DEPARTMENTS ────────────────────────────────────────────────────────────

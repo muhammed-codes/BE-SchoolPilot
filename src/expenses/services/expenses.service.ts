@@ -33,59 +33,6 @@ import {
 import { User } from '../../users/entities/user.entity';
 import { PettyCashService } from './petty-cash.service';
 
-const DEFAULT_CATEGORIES = [
-  {
-    name: 'Electricity & Utilities',
-    description: 'Electricity bills, power generator, water',
-  },
-  {
-    name: 'Fuel & Diesel',
-    description: 'Fuel for school buses, generator, vehicles',
-  },
-  {
-    name: 'Repairs & Maintenance',
-    description: 'Building, plumbing, electrical, carpentry repairs',
-  },
-  {
-    name: 'Stationery & Printing',
-    description: 'Paper, ink, printing exams, office supplies',
-  },
-  {
-    name: 'Teaching & Classroom Materials',
-    description: 'Chalk, whiteboards, lab practicals, learning aids',
-  },
-  {
-    name: 'Internet & ICT',
-    description: 'Broadband, software subscriptions, computer lab repairs',
-  },
-  { name: 'Security', description: 'Security personnel, guards, equipment' },
-  {
-    name: 'Cleaning & Sanitation',
-    description: 'Cleaning supplies, waste disposal, fumigation',
-  },
-  {
-    name: 'Transport & Logistics',
-    description: 'Bus maintenance, travel, logistics',
-  },
-  {
-    name: 'Examination & Assessment',
-    description: 'External exam fees, question printing, answer booklets',
-  },
-  {
-    name: 'Staff Welfare & Hospitality',
-    description: 'Refreshments, staff meetings, events',
-  },
-  {
-    name: 'Events & Competitions',
-    description: 'Sports day, inter-school competitions, end of year',
-  },
-  {
-    name: 'Equipment & Furniture',
-    description: 'Desks, chairs, projectors, lab apparatus',
-  },
-  { name: 'Other Expenses', description: 'Miscellaneous operational expenses' },
-];
-
 @Injectable()
 export class ExpensesService {
   private readonly logger = new Logger(ExpensesService.name);
@@ -106,35 +53,28 @@ export class ExpensesService {
 
   // ── CATEGORIES ─────────────────────────────────────────────────────────────
 
-  getCategories = async (schoolId: string): Promise<ExpenseCategory[]> => {
-    let categories = await this.categoryRepo.find({
-      where: { schoolId },
+  getCategories = async (
+    schoolId: string,
+    includeInactive = false,
+  ): Promise<ExpenseCategory[]> => {
+    return this.categoryRepo.find({
+      where: { schoolId, ...(includeInactive ? {} : { isActive: true }) },
       order: { name: 'ASC' },
     });
-
-    // Auto-seed starter categories if none exist for this school
-    if (categories.length === 0) {
-      const toCreate = DEFAULT_CATEGORIES.map((cat) =>
-        this.categoryRepo.create({
-          schoolId,
-          name: cat.name,
-          description: cat.description,
-          isActive: true,
-        }),
-      );
-      categories = await this.categoryRepo.save(toCreate);
-    }
-
-    return categories;
   };
 
   createCategory = async (
     input: CreateExpenseCategoryInput,
     schoolId: string,
   ): Promise<ExpenseCategory> => {
-    const existing = await this.categoryRepo.findOne({
-      where: { schoolId, name: input.name.trim() },
-    });
+    const normalizedName = input.name.trim();
+    const existing = await this.categoryRepo
+      .createQueryBuilder('category')
+      .where('category.schoolId = :schoolId', { schoolId })
+      .andWhere('LOWER(BTRIM(category.name)) = LOWER(BTRIM(:name))', {
+        name: normalizedName,
+      })
+      .getOne();
     if (existing) {
       if (!existing.isActive) {
         existing.isActive = true;
@@ -146,7 +86,7 @@ export class ExpensesService {
 
     const category = this.categoryRepo.create({
       schoolId,
-      name: input.name.trim(),
+      name: normalizedName,
       description: input.description?.trim(),
       isActive: true,
     });
@@ -162,11 +102,35 @@ export class ExpensesService {
     });
     if (!category) throw new NotFoundException('Category not found');
 
-    if (input.name !== undefined) category.name = input.name.trim();
+    if (input.name !== undefined) {
+      const normalizedName = input.name.trim();
+      const existing = await this.categoryRepo
+        .createQueryBuilder('category')
+        .where('category.schoolId = :schoolId', { schoolId })
+        .andWhere('LOWER(BTRIM(category.name)) = LOWER(BTRIM(:name))', {
+          name: normalizedName,
+        })
+        .andWhere('category.id != :id', { id: input.id })
+        .getOne();
+      if (existing) {
+        throw new BadRequestException(`Category "${normalizedName}" already exists`);
+      }
+      category.name = normalizedName;
+    }
     if (input.description !== undefined)
       category.description = input.description.trim();
     if (input.isActive !== undefined) category.isActive = input.isActive;
 
+    return this.categoryRepo.save(category);
+  };
+
+  archiveCategory = async (
+    id: string,
+    schoolId: string,
+  ): Promise<ExpenseCategory> => {
+    const category = await this.categoryRepo.findOne({ where: { id, schoolId } });
+    if (!category) throw new NotFoundException('Category not found');
+    category.isActive = false;
     return this.categoryRepo.save(category);
   };
 
