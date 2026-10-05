@@ -20,6 +20,7 @@ import { PermissionGroupPermission } from './entities/permission-group-permissio
 import { UserPermissionGroup } from './entities/user-permission-group.entity';
 import { UserPermission } from './entities/user-permission.entity';
 import { PermissionAction } from './enums/permission-action.enum';
+import { PermissionEffect } from './enums/permission-effect.enum';
 import { AppResource } from './enums/resource.enum';
 import { EffectivePermission } from './dto/effective-permission.type';
 
@@ -233,14 +234,26 @@ export class AccessResolver {
   @Mutation(() => UserPermission)
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   setUserPermission(
-    @Args('input') input: SetUserPermissionInput,
+    @Args('input', { type: () => SetUserPermissionInput, nullable: true })
+    input: SetUserPermissionInput | undefined,
     @Args('userId', { type: () => String, nullable: true }) userId: string | undefined,
+    @Args('resource', { type: () => AppResource, nullable: true })
+    resource: AppResource | undefined,
+    @Args('action', { type: () => PermissionAction, nullable: true })
+    action: PermissionAction | undefined,
+    @Args('effect', { type: () => PermissionEffect, nullable: true })
+    effect: PermissionEffect | undefined,
     @CurrentUser() user: { role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
-    const targetUserId = input.userId?.trim() || userId?.trim();
+    const targetUserId = userId?.trim() || input?.userId?.trim() || '';
     return this.accessService.setUserPermission(
-      { ...input, userId: targetUserId ?? '' },
+      {
+        userId: targetUserId,
+        resource: resource ?? input?.resource,
+        action: action ?? input?.action,
+        effect: effect ?? input?.effect,
+      },
       this.schoolIdFor(user, schoolId),
     );
   }

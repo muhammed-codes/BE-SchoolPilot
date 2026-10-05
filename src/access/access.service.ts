@@ -299,17 +299,25 @@ export class AccessService implements OnModuleInit {
 
   async setUserPermission(
     input: {
-      userId: string;
-      resource: AppResource;
-      action: PermissionAction;
-      effect: PermissionEffect;
+      userId?: string;
+      resource?: AppResource;
+      action?: PermissionAction;
+      effect?: PermissionEffect;
     },
     schoolId: string,
   ) {
     const userId = input.userId?.trim();
+    const resource = input.resource;
+    const action = input.action;
+    const effect = input.effect;
     if (!userId) {
       throw new BadRequestException(
         'A userId is required for a permission override',
+      );
+    }
+    if (!resource || !action || !effect) {
+      throw new BadRequestException(
+        'A resource, action, and effect are required for a permission override',
       );
     }
 
@@ -318,21 +326,21 @@ export class AccessService implements OnModuleInit {
       where: {
         userId,
         schoolId,
-        resource: input.resource,
-        action: input.action,
+        resource,
+        action,
       },
     });
     if (existing) {
-      existing.effect = input.effect;
+      existing.effect = effect;
       return this.userPermissionRepo.save(existing);
     }
     return this.userPermissionRepo.save(
       this.userPermissionRepo.create({
         userId,
         schoolId,
-        resource: input.resource,
-        action: input.action,
-        effect: input.effect,
+        resource,
+        action,
+        effect,
       }),
     );
   }
