@@ -148,12 +148,17 @@ export class ExpensesResolver {
   }
 
   @Query(() => PaginatedArchivedExpenses)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   archivedExpenses(
     @Args('page', { type: () => Int, nullable: true }) page = 1,
     @Args('limit', { type: () => Int, nullable: true }) limit = 20,
+    @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.expensesService.getArchivedExpenses(page, limit);
+    return this.expensesService.getArchivedExpenses(
+      page,
+      limit,
+      user.role === UserRole.SUPER_ADMIN ? undefined : user.schoolId,
+    );
   }
 
   @Query(() => Expense)

@@ -430,6 +430,7 @@ export class ExpensesService {
   getArchivedExpenses = async (
     page = 1,
     limit = 20,
+    schoolId?: string,
   ): Promise<PaginatedArchivedExpenses> => {
     const qb = this.expenseRepo
       .createQueryBuilder('e')
@@ -439,6 +440,7 @@ export class ExpensesService {
       .leftJoinAndSelect('e.createdBy', 'createdBy')
       .leftJoinAndSelect('e.voidedBy', 'voidedBy')
       .where('e.isVoided = true')
+      .andWhere(schoolId ? 'e.schoolId = :schoolId' : '1 = 1', { schoolId })
       .orderBy('e.voidedAt', 'DESC', 'NULLS LAST')
       .addOrderBy('e.createdAt', 'DESC')
       .skip((page - 1) * limit)
