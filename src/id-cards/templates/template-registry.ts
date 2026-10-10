@@ -1,4 +1,8 @@
-import { IdCardType, IdCardOrientation, IdCardSide } from '../enums/id-card.enums';
+import {
+  IdCardType,
+  IdCardOrientation,
+  IdCardSide,
+} from '../enums/id-card.enums';
 import {
   RenderCardContext,
   StudentCardData,
@@ -120,7 +124,9 @@ export const SYSTEM_TEMPLATES: TemplateDefinition[] = [
   },
 ];
 
-export const getTemplateDefinition = (key: string): TemplateDefinition | undefined => {
+export const getTemplateDefinition = (
+  key: string,
+): TemplateDefinition | undefined => {
   return SYSTEM_TEMPLATES.find((t) => t.key === key);
 };
 
@@ -128,7 +134,11 @@ export const getDefaultTemplateKey = (cardType: IdCardType): string => {
   const match = SYSTEM_TEMPLATES.find(
     (t) => t.cardType === cardType && t.isSystemDefault,
   );
-  return match ? match.key : cardType === IdCardType.STUDENT ? 'classic-student' : 'classic-staff';
+  return match
+    ? match.key
+    : cardType === IdCardType.STUDENT
+      ? 'classic-student'
+      : 'classic-staff';
 };
 
 export const compileFullDocumentHtml = (

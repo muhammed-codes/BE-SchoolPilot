@@ -1,7 +1,4 @@
-import {
-  RenderCardContext,
-  StaffCardData,
-} from './id-card-data.interface';
+import { RenderCardContext, StaffCardData } from './id-card-data.interface';
 import {
   escapeHtml,
   sanitizeUrl,
@@ -17,8 +14,11 @@ export const renderClassicStaffFront = (
   const schoolName = escapeHtml(school.name || 'SchoolPilot');
   const staffName = escapeHtml(cardData.fullName);
   const staffId = escapeHtml(cardData.staffId || '—');
-  const designation = escapeHtml(cardData.designation || cardData.role.replace(/_/g, ' '));
+  const designation = escapeHtml(
+    cardData.designation || cardData.role.replace(/_/g, ' '),
+  );
   const email = escapeHtml(cardData.email || '');
+  const phone = escapeHtml(cardData.phone || '');
 
   const logoSrc = school.logoUrl
     ? sanitizeUrl(school.logoUrl)
@@ -152,10 +152,20 @@ export const renderClassicStaffFront = (
           font-size: 1.9mm;
           margin-top: 1mm;
         ">
-          <div style="display: flex; justify-content: space-between; ${email ? 'margin-bottom: 0.6mm;' : ''}">
+          <div style="display: flex; justify-content: space-between; ${phone || email ? 'margin-bottom: 0.6mm;' : ''}">
             <span style="color: #64748B; font-weight: 500;">Staff ID:</span>
             <span style="font-family: monospace; font-weight: 700; color: #0F172A;">${staffId}</span>
           </div>
+          ${
+            phone
+              ? `
+          <div style="display: flex; justify-content: space-between; ${email ? 'margin-bottom: 0.6mm;' : ''}">
+            <span style="color: #64748B; font-weight: 500;">Phone:</span>
+            <span style="font-family: monospace; font-weight: 600; color: #0F172A; max-width: 25mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${phone}</span>
+          </div>
+          `
+              : ''
+          }
           ${
             email
               ? `

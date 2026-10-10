@@ -89,7 +89,10 @@ describe('IdCardsService', () => {
         if (where.id && t.id !== where.id) match = false;
         if (where.key && t.key !== where.key) match = false;
         if (where.cardType && t.cardType !== where.cardType) match = false;
-        if (where.isSystemDefault !== undefined && t.isSystemDefault !== where.isSystemDefault)
+        if (
+          where.isSystemDefault !== undefined &&
+          t.isSystemDefault !== where.isSystemDefault
+        )
           match = false;
         return match;
       });
@@ -110,7 +113,9 @@ describe('IdCardsService', () => {
       showPrincipalSignature: false,
       customNote: null,
     }),
-    create: jest.fn().mockImplementation((dto) => ({ id: 'settings-new', ...dto })),
+    create: jest
+      .fn()
+      .mockImplementation((dto) => ({ id: 'settings-new', ...dto })),
     save: jest.fn().mockImplementation((dto) => Promise.resolve(dto)),
   };
 
@@ -200,7 +205,8 @@ describe('IdCardsService', () => {
   const mockUploadService = {
     uploadBuffer: jest.fn().mockResolvedValue({
       url: 'https://res.cloudinary.com/demo/raw/upload/test.pdf',
-      pdfPrivateUrl: 'https://res.cloudinary.com/demo/raw/upload/private/test.pdf',
+      pdfPrivateUrl:
+        'https://res.cloudinary.com/demo/raw/upload/private/test.pdf',
       expiresAt: 123456789,
     }),
   };
@@ -258,7 +264,9 @@ describe('IdCardsService', () => {
   it('should retrieve active templates filtered by student card type', async () => {
     const studentTemplates = await service.getTemplates(IdCardType.STUDENT);
     expect(studentTemplates.length).toBeGreaterThan(0);
-    expect(studentTemplates.every((t) => t.cardType === IdCardType.STUDENT)).toBe(true);
+    expect(
+      studentTemplates.every((t) => t.cardType === IdCardType.STUDENT),
+    ).toBe(true);
   });
 
   it('should render a student ID card with front and back sides preserving CR80 dimensions', async () => {
@@ -306,6 +314,7 @@ describe('IdCardsService', () => {
     expect(res.html).toContain('Jane Smith');
     expect(res.html).toContain('SCH-2025-001');
     expect(res.html).toContain('CLASS TEACHER');
+    expect(res.html).toContain('08012345678');
     expect(res.backHtml).toContain('classic-staff-back');
   });
 
@@ -333,7 +342,10 @@ describe('IdCardsService', () => {
   });
 
   it('should generate sequential staff IDs correctly', async () => {
-    const generatedId = await service.generateStaffId('school-123', 'St. Peter College');
+    const generatedId = await service.generateStaffId(
+      'school-123',
+      'St. Peter College',
+    );
     expect(generatedId).toMatch(/^[A-Z]{3}-\d{4}-\d{3}$/);
     expect(generatedId).toContain('STP-');
   });

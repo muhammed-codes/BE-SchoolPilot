@@ -51,7 +51,8 @@ export class IdCardsResolver {
 
   @Query(() => SchoolIdCardSettings, {
     name: 'schoolIdCardSettings',
-    description: 'Get ID card configuration and default template settings for the current school',
+    description:
+      'Get ID card configuration and default template settings for the current school',
   })
   @RequirePermission(AppResource.ID_CARDS, PermissionAction.READ)
   schoolIdCardSettings(
@@ -62,7 +63,8 @@ export class IdCardsResolver {
 
   @Mutation(() => SchoolIdCardSettings, {
     name: 'updateSchoolIdCardSettings',
-    description: 'Update ID card configuration and default templates for the school',
+    description:
+      'Update ID card configuration and default templates for the school',
   })
   @RequirePermission(AppResource.ID_CARDS, PermissionAction.UPDATE)
   updateSchoolIdCardSettings(
@@ -146,19 +148,24 @@ export class IdCardsResolver {
 
   @Mutation(() => IdCardPdfResult, {
     name: 'generateBatchStudentIdCardsPdf',
-    description: 'Generate print-ready PDF for multiple student ID cards in batch',
+    description:
+      'Generate print-ready PDF for multiple student ID cards in batch',
   })
   @RequirePermission(AppResource.ID_CARDS, PermissionAction.GENERATE)
   generateBatchStudentIdCardsPdf(
     @Args('input') input: GenerateBatchStudentIdCardsPdfInput,
     @CurrentUser() user: { schoolId: string },
   ): Promise<IdCardPdfResult> {
-    return this.idCardsService.generateBatchStudentCardsPdf(user.schoolId, input);
+    return this.idCardsService.generateBatchStudentCardsPdf(
+      user.schoolId,
+      input,
+    );
   }
 
   @Mutation(() => IdCardPdfResult, {
     name: 'generateBatchStaffIdCardsPdf',
-    description: 'Generate print-ready PDF for multiple staff ID cards in batch',
+    description:
+      'Generate print-ready PDF for multiple staff ID cards in batch',
   })
   @RequirePermission(AppResource.ID_CARDS, PermissionAction.GENERATE)
   generateBatchStaffIdCardsPdf(

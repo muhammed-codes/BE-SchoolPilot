@@ -29,41 +29,38 @@ export const getInitials = (name: string): string => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-export const getDefaultAvatarSvg = (name: string, bg = '#E3ECE9', fg = '#146356'): string => {
+export const getDefaultAvatarSvg = (
+  name: string,
+  bg = '#E3ECE9',
+  fg = '#146356',
+): string => {
   const initials = escapeHtml(getInitials(name));
-  return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="${encodeURIComponent(
-    bg,
-  )}"/><text x="50" y="58" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" font-size="34" font-weight="700" fill="${encodeURIComponent(
-    fg,
-  )}" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}"/><text x="50" y="58" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" font-size="34" font-weight="700" fill="${fg}" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 };
 
 export const getDefaultLogoSvg = (name: string): string => {
   const initials = escapeHtml(getInitials(name));
-  return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><rect width="60" height="60" rx="6" fill="%23146356"/><text x="30" y="35" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" font-size="20" font-weight="800" fill="%23FFFFFF" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><rect width="60" height="60" rx="6" fill="#146356"/><text x="30" y="35" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" font-size="20" font-weight="800" fill="#FFFFFF" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 };
 
 export const BASE_CARD_CSS = `
   /* Exact CR80 dimensions: 53.98mm x 85.60mm */
-  *, *::before, *::after {
+  .id-card-wrapper,
+  .id-card-wrapper *,
+  .id-card-wrapper *::before,
+  .id-card-wrapper *::after,
+  .classic-card,
+  .classic-card *,
+  .premium-card,
+  .premium-card * {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
   }
 
   @page {
     size: A4 portrait;
     margin: 8mm;
-  }
-
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    background: #FAFAFA;
-    color: #14201C;
-    margin: 0;
-    padding: 0;
   }
 
   .id-cards-grid {

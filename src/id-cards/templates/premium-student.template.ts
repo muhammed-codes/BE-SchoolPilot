@@ -1,7 +1,4 @@
-import {
-  RenderCardContext,
-  StudentCardData,
-} from './id-card-data.interface';
+import { RenderCardContext, StudentCardData } from './id-card-data.interface';
 import {
   escapeHtml,
   sanitizeUrl,

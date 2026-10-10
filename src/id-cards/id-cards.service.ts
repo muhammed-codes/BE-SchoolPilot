@@ -232,8 +232,7 @@ export class IdCardsService implements OnModuleInit {
       settings.showSchoolAddress = input.showSchoolAddress;
     if (input.showPrincipalSignature !== undefined)
       settings.showPrincipalSignature = input.showPrincipalSignature;
-    if (input.customNote !== undefined)
-      settings.customNote = input.customNote;
+    if (input.customNote !== undefined) settings.customNote = input.customNote;
 
     const saved = await this.settingsRepo.save(settings);
     return this.getSchoolSettings(saved.schoolId);
@@ -445,10 +444,7 @@ export class IdCardsService implements OnModuleInit {
     if (side === IdCardSide.FRONT || side === IdCardSide.BOTH) {
       cardsHtml.push(frontHtml);
     }
-    if (
-      (side === IdCardSide.BACK || side === IdCardSide.BOTH) &&
-      backHtml
-    ) {
+    if ((side === IdCardSide.BACK || side === IdCardSide.BOTH) && backHtml) {
       cardsHtml.push(backHtml);
     }
 
@@ -536,10 +532,7 @@ export class IdCardsService implements OnModuleInit {
     if (side === IdCardSide.FRONT || side === IdCardSide.BOTH) {
       cardsHtml.push(frontHtml);
     }
-    if (
-      (side === IdCardSide.BACK || side === IdCardSide.BOTH) &&
-      backHtml
-    ) {
+    if ((side === IdCardSide.BACK || side === IdCardSide.BOTH) && backHtml) {
       cardsHtml.push(backHtml);
     }
 
@@ -586,7 +579,9 @@ export class IdCardsService implements OnModuleInit {
     }
 
     if (students.length === 0) {
-      throw new BadRequestException('No student records found to generate cards');
+      throw new BadRequestException(
+        'No student records found to generate cards',
+      );
     }
 
     const { templateDef, entity } = await this.resolveTemplate(
@@ -646,10 +641,7 @@ export class IdCardsService implements OnModuleInit {
       if (side === IdCardSide.FRONT || side === IdCardSide.BOTH) {
         cardsHtml.push(frontHtml);
       }
-      if (
-        (side === IdCardSide.BACK || side === IdCardSide.BOTH) &&
-        backHtml
-      ) {
+      if ((side === IdCardSide.BACK || side === IdCardSide.BOTH) && backHtml) {
         cardsHtml.push(backHtml);
       }
     }
@@ -746,10 +738,7 @@ export class IdCardsService implements OnModuleInit {
       if (side === IdCardSide.FRONT || side === IdCardSide.BOTH) {
         cardsHtml.push(frontHtml);
       }
-      if (
-        (side === IdCardSide.BACK || side === IdCardSide.BOTH) &&
-        backHtml
-      ) {
+      if ((side === IdCardSide.BACK || side === IdCardSide.BOTH) && backHtml) {
         cardsHtml.push(backHtml);
       }
     }
@@ -886,10 +875,7 @@ export class IdCardsService implements OnModuleInit {
   };
 
   /** Generates a sequential staff ID like "SCH-2025-001" — used by UsersService on staff creation. */
-  generateStaffId = (
-    schoolId: string,
-    schoolName: string,
-  ): Promise<string> => {
+  generateStaffId = (schoolId: string, schoolName: string): Promise<string> => {
     const consonants = schoolName.replace(/[^bcdfghjklmnpqrstvwxyz]/gi, '');
     const prefix = (
       consonants.length >= 3
