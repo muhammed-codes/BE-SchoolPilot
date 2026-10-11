@@ -63,8 +63,8 @@ importers:
         specifier: ^17.3.1
         version: 17.3.1
       expo-server-sdk:
-        specifier: ^6.1.0
-        version: 6.1.0
+        specifier: 4.0.0
+        version: 4.0.0
       graphql:
         specifier: ^16.13.2
         version: 16.13.2
@@ -2494,8 +2494,8 @@ packages:
     resolution: {integrity: sha512-1zQrciTiQfRdo7qJM1uG4navm8DayFa2TgCSRlzUyNkhcJ6XUZF3hjnpkyr3VhAqPH7i/9GkG7Tv5abz6fqz0Q==}
     engines: {node: ^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0}
 
-  expo-server-sdk@6.1.0:
-    resolution: {integrity: sha512-ISuax1AQ7cpM5RAqcu8gVcoLL0ZKskJ5OLoMWmdITBe9nYjTucjdGyBq817YkIvTcj1pAUwx+9toUT7l/V7thA==}
+  expo-server-sdk@4.0.0:
+    resolution: {integrity: sha512-zi83XtG2pqyP3gyn1JIRYkydo2i6HU3CYaWo/VvhZG/F29U+QIDv6LBEUsWf4ddZlVE7c9WN1N8Be49rHgO8OQ==}
     engines: {node: '>=20'}
 
   express@5.2.1:
@@ -4200,10 +4200,6 @@ packages:
   undici@5.28.4:
     resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}
     engines: {node: '>=14.0'}
-
-  undici@7.24.6:
-    resolution: {integrity: sha512-Xi4agocCbRzt0yYMZGMA6ApD7gvtUFaxm4ZmeacWI4cZxaF6C+8I8QfofC20NAePiB/IcvZmzkJ7XPa471AEtA==}
-    engines: {node: '>=20.18.1'}
 
   universalify@2.0.1:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
@@ -6920,11 +6916,13 @@ snapshots:
       jest-mock: 30.3.0
       jest-util: 30.3.0
 
-  expo-server-sdk@6.1.0:
+  expo-server-sdk@4.0.0:
     dependencies:
+      node-fetch: 2.6.9
       promise-limit: 2.7.0
       promise-retry: 2.0.1
-      undici: 7.24.6
+    transitivePeerDependencies:
+      - encoding
 
   express@5.2.1:
     dependencies:
@@ -8763,8 +8761,6 @@ snapshots:
   undici@5.28.4:
     dependencies:
       '@fastify/busboy': 2.1.1
-
-  undici@7.24.6: {}
 
   universalify@2.0.1: {}
 
