@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 
 import { School } from './entities/school.entity';
@@ -70,7 +70,7 @@ export class SchoolsService implements OnModuleInit {
     const school = this.schoolsRepository.create({
       ...input,
       schoolCode: this.normalizeSchoolCode(input.schoolCode),
-      uniqueQrCode: uuidv4(),
+      uniqueQrCode: randomUUID(),
     });
     return this.schoolsRepository.save(school).then((savedSchool) => {
       // Seed per-school permissions after creation (fire-and-forget)
@@ -120,7 +120,7 @@ export class SchoolsService implements OnModuleInit {
             contactPersonRole: input.roleInSchool,
             whatsappNumber: input.whatsappNumber,
             verificationStatus: 'PENDING',
-            uniqueQrCode: uuidv4(),
+            uniqueQrCode: randomUUID(),
             isActive: false, // Inactive pending Super Admin verification
           });
           const savedSchool = await manager.save(School, school);
@@ -262,7 +262,7 @@ export class SchoolsService implements OnModuleInit {
 
   regenerateQrCode = (id: string) => {
     return this.schoolsRepository
-      .update(id, { uniqueQrCode: uuidv4() })
+      .update(id, { uniqueQrCode: randomUUID() })
       .then(() => this.findById(id));
   };
 

@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import * as bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { AppDataSource } from './data-source';
 import { School } from '../schools/entities/school.entity';
 import { User } from '../users/entities/user.entity';
@@ -27,7 +27,7 @@ async function seed() {
         email: 'info@schoolpilot.ng',
         schoolType: 'basic',
         schoolCode: 'SP-DEMO',
-        uniqueQrCode: `SCH-${uuidv4().slice(0, 8).toUpperCase()}`,
+        uniqueQrCode: `SCH-${randomUUID().slice(0, 8).toUpperCase()}`,
         isActive: true,
       });
       await schoolRepo.save(school);
