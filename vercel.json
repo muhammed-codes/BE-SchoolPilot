@@ -19,6 +19,7 @@
   "routes": [
     { "src": "/", "dest": "api/health.js" },
     { "src": "/api/health", "dest": "api/health.js" },
+    { "src": "/favicon.(ico|png)", "dest": "api/health.js" },
     { "src": "/(.*)", "dest": "api/index.js" }
   ]
 }
