@@ -20,9 +20,8 @@ import { join } from 'path';
  *    \`pnpm run migration:revert\`
  *
  * NOTE: IN PRODUCTION, do not rely on \`synchronize: true\`.
- * The application will automatically run pending migrations on startup when
- * NODE_ENV=production. During development, you can use these CLI tools
- * to manage incremental schema changes safely.
+ * Run migrations once from a release environment before deploying application
+ * code; serverless function startup never runs them.
  * ==============================================================================
  */
 
@@ -59,7 +58,8 @@ export const dataSourceOptions: DataSourceOptions = {
       }),
   extra: endpointId ? { options: `endpoint=${endpointId}` } : undefined,
   ssl: {
-    rejectUnauthorized: false,
+    rejectUnauthorized:
+      process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false',
   },
   entities: [join(__dirname, '../**/*.entity{.ts,.js}')],
   migrations: [join(__dirname, '../migrations/*{.ts,.js}')],

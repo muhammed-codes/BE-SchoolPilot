@@ -4,14 +4,17 @@ import { Resend } from 'resend';
 
 @Injectable()
 export class MailService {
-  private resend: Resend;
+  private resend?: Resend;
   private readonly logger = new Logger(MailService.name);
 
-  constructor(private configService: ConfigService) {
-    this.resend = new Resend(
+  constructor(private configService: ConfigService) {}
+
+  private readonly getResendClient = (): Resend => {
+    this.resend ??= new Resend(
       this.configService.getOrThrow<string>('RESEND_API_KEY'),
     );
-  }
+    return this.resend;
+  };
 
   private maskEmail = (email: string) => {
     const [local, domain] = email.split('@');
@@ -22,8 +25,8 @@ export class MailService {
     const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
-    return this.resend.emails
-      .send({
+    return this.getResendClient()
+      .emails.send({
         from: 'SchoolPilot <noreply@schoolpilot.app>',
         to: email,
         subject: 'Reset Your Password',
@@ -58,12 +61,51 @@ export class MailService {
       });
   };
 
+  sendParentAccountSetupEmail = (email: string, token: string) => {
+    const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
+    const setupUrl = `${frontendUrl}/reset-password?token=${token}`;
+
+    return this.getResendClient()
+      .emails.send({
+        from: 'SchoolPilot <noreply@schoolpilot.app>',
+        to: email,
+        subject: 'Set Up Your SchoolPilot Parent Account',
+        html: `
+          <h1>Parent Portal Account Created</h1>
+          <p>Your school created a SchoolPilot parent account for this email address.</p>
+          <a href="${setupUrl}">Set Your Password</a>
+          <p>This setup link expires in 30 minutes. If you did not expect this account, you can ignore this email.</p>
+        `,
+      })
+      .then((result) => {
+        if (result.error) {
+          this.logger.error(
+            `Failed to send parent account setup email to ${this.maskEmail(email)}: ${result.error.message}`,
+          );
+          throw new Error(result.error.message);
+        }
+        this.logger.log(
+          `Parent account setup email sent to ${this.maskEmail(email)}`,
+        );
+        return true;
+      })
+      .catch((error) => {
+        const errorStack =
+          error instanceof Error ? error.stack : 'Unknown error';
+        this.logger.error(
+          `Failed to send parent account setup email to ${this.maskEmail(email)}`,
+          errorStack,
+        );
+        throw error;
+      });
+  };
+
   sendVerificationEmail = (email: string, token: string) => {
     const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
     const verifyUrl = `${frontendUrl}/verify-email?token=${token}`;
 
-    return this.resend.emails
-      .send({
+    return this.getResendClient()
+      .emails.send({
         from: 'SchoolPilot <noreply@schoolpilot.app>',
         to: email,
         subject: 'Verify Your Email Address',
@@ -107,8 +149,8 @@ export class MailService {
       this.configService.get<string>('FRONTEND_URL') ||
       'https://schoolpilot.app';
 
-    return this.resend.emails
-      .send({
+    return this.getResendClient()
+      .emails.send({
         from: 'SchoolPilot <noreply@schoolpilot.app>',
         to: email,
         subject: `Welcome to SchoolPilot - Parent Portal Access for ${studentName}`,

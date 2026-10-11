@@ -30,8 +30,8 @@ jobs:
       NODE_ENV: test
       PORT: 3001
       DATABASE_URL: postgresql://schoolpilot_test:schoolpilot_test@127.0.0.1:5433/schoolpilot_test
-      JWT_ACCESS_SECRET: schoolpilot-ci-access-secret
-      JWT_REFRESH_SECRET: schoolpilot-ci-refresh-secret
+      JWT_ACCESS_SECRET: schoolpilot-ci-access-secret-for-runtime-tests
+      JWT_REFRESH_SECRET: schoolpilot-ci-refresh-secret-for-runtime-tests
       JWT_ACCESS_EXPIRES: 15m
       JWT_REFRESH_EXPIRES: 7d
       FRONTEND_URL: http://localhost:9995
@@ -43,7 +43,7 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9.1.0
+          version: 10.28.0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

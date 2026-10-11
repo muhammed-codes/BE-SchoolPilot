@@ -21,6 +21,7 @@ import { ClassesService } from '../classes/classes.service';
 import { SchoolsService } from '../schools/schools.service';
 import { User } from '../users/entities/user.entity';
 import { MailService } from '../mail/mail.service';
+import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -45,6 +46,37 @@ export class StudentsService {
 
   private getAdmissionNumber = (prefix: string, sequence: number) =>
     `${prefix}-${String(sequence).padStart(3, '0')}`;
+
+  private readonly createParentAccessSetup = async () => {
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedResetToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    return {
+      resetToken,
+      passwordHash: await bcrypt.hash(
+        crypto.randomBytes(48).toString('base64url'),
+        12,
+      ),
+      resetPasswordToken: hashedResetToken,
+      resetPasswordExpires: new Date(Date.now() + 30 * 60 * 1000),
+    };
+  };
+
+  private readonly sendParentAccessSetupEmails = (
+    setupEmails: { email: string; resetToken: string }[],
+  ) =>
+    Promise.all(
+      setupEmails.map(({ email, resetToken }) =>
+        Promise.resolve()
+          .then(() =>
+            this.mailService.sendParentAccountSetupEmail(email, resetToken),
+          )
+          .catch(() => false),
+      ),
+    );
 
   private getAdmissionContext = (schoolId: string, year: number) => {
     return this.schoolsService.findById(schoolId).then((school) => {
@@ -94,95 +126,107 @@ export class StudentsService {
 
   createStudent = (input: CreateStudentInput, schoolId: string) => {
     const admissionYear = new Date().getFullYear();
+    const setupEmails: { email: string; resetToken: string }[] = [];
 
     return this.classesService.getClassById(input.classId, schoolId).then(() =>
       this.getAdmissionContext(schoolId, admissionYear).then(
         ({ prefix, lockKey }) =>
-          this.dataSource.transaction((manager) =>
-            this.getNextAdmissionSequence(
-              manager,
-              schoolId,
-              admissionYear,
-              lockKey,
-            ).then((sequence) => {
-              const student = manager.create(Student, {
-                firstName: input.firstName,
-                middleName: input.middleName,
-                lastName: input.lastName,
-                admissionNumber: this.getAdmissionNumber(prefix, sequence),
-                dateOfBirth: input.dateOfBirth,
-                gender: input.gender,
-                nationality: input.nationality || 'Nigerian',
-                stateOfOrigin: input.stateOfOrigin,
-                lga: input.lga,
-                status: input.status,
-                dateOfAdmission: input.dateOfAdmission,
-                admissionClassId: input.admissionClassId,
-                currentClassId: input.classId,
-                address: input.address,
-                medicalInfo: input.medicalInfo,
-                notes: input.notes,
-                passportPhotoUrl: input.passportPhotoUrl,
+          this.dataSource
+            .transaction((manager) =>
+              this.getNextAdmissionSequence(
+                manager,
                 schoolId,
-              });
+                admissionYear,
+                lockKey,
+              ).then((sequence) => {
+                const student = manager.create(Student, {
+                  firstName: input.firstName,
+                  middleName: input.middleName,
+                  lastName: input.lastName,
+                  admissionNumber: this.getAdmissionNumber(prefix, sequence),
+                  dateOfBirth: input.dateOfBirth,
+                  gender: input.gender,
+                  nationality: input.nationality || 'Nigerian',
+                  stateOfOrigin: input.stateOfOrigin,
+                  lga: input.lga,
+                  status: input.status,
+                  dateOfAdmission: input.dateOfAdmission,
+                  admissionClassId: input.admissionClassId,
+                  currentClassId: input.classId,
+                  address: input.address,
+                  medicalInfo: input.medicalInfo,
+                  notes: input.notes,
+                  passportPhotoUrl: input.passportPhotoUrl,
+                  schoolId,
+                });
 
-              return manager
-                .save(Student, student)
-                .then(async (savedStudent) => {
-                  if (input.guardians && input.guardians.length > 0) {
-                    for (const g of input.guardians) {
-                      if (!g.email || !g.email.trim()) continue;
-                      const email = g.email.trim().toLowerCase();
-                      const phone = g.phone?.trim();
-                      let parentUser = await manager.findOne(User, {
-                        where: { email, schoolId },
-                      });
+                return manager
+                  .save(Student, student)
+                  .then(async (savedStudent) => {
+                    if (input.guardians && input.guardians.length > 0) {
+                      for (const g of input.guardians) {
+                        if (!g.email || !g.email.trim()) continue;
+                        const email = g.email.trim().toLowerCase();
+                        const phone = g.phone?.trim();
+                        let parentUser = await manager.findOne(User, {
+                          where: { email, schoolId },
+                        });
 
-                      if (!parentUser) {
-                        const [first, ...rest] = (g.name || 'Parent')
-                          .trim()
-                          .split(' ');
-                        const last = rest.join(' ') || first;
-                        const hashedPassword = await bcrypt.hash(
-                          'Password@321',
-                          10,
-                        );
-                        parentUser = await manager.save(
-                          User,
-                          manager.create(User, {
-                            firstName: first,
-                            lastName: last,
+                        if (!parentUser) {
+                          const [first, ...rest] = (g.name || 'Parent')
+                            .trim()
+                            .split(' ');
+                          const last = rest.join(' ') || first;
+                          const accessSetup =
+                            await this.createParentAccessSetup();
+                          parentUser = await manager.save(
+                            User,
+                            manager.create(User, {
+                              firstName: first,
+                              lastName: last,
+                              email,
+                              phone,
+                              passwordHash: accessSetup.passwordHash,
+                              resetPasswordToken:
+                                accessSetup.resetPasswordToken,
+                              resetPasswordExpires:
+                                accessSetup.resetPasswordExpires,
+                              role: UserRole.PARENT,
+                              schoolId,
+                              isActive: true,
+                            }),
+                          );
+                          setupEmails.push({
                             email,
-                            phone,
-                            passwordHash: hashedPassword,
-                            role: UserRole.PARENT,
-                            schoolId,
-                            isActive: true,
-                          }),
-                        );
-                      }
+                            resetToken: accessSetup.resetToken,
+                          });
+                        }
 
-                      const exists = await manager.findOne(StudentParent, {
-                        where: {
-                          studentId: savedStudent.id,
-                          parentId: parentUser.id,
-                        },
-                      });
-                      if (!exists) {
-                        await manager.save(
-                          StudentParent,
-                          manager.create(StudentParent, {
+                        const exists = await manager.findOne(StudentParent, {
+                          where: {
                             studentId: savedStudent.id,
                             parentId: parentUser.id,
-                          }),
-                        );
+                          },
+                        });
+                        if (!exists) {
+                          await manager.save(
+                            StudentParent,
+                            manager.create(StudentParent, {
+                              studentId: savedStudent.id,
+                              parentId: parentUser.id,
+                            }),
+                          );
+                        }
                       }
                     }
-                  }
-                  return savedStudent;
-                });
+                    return savedStudent;
+                  });
+              }),
+            )
+            .then(async (savedStudent) => {
+              await this.sendParentAccessSetupEmails(setupEmails);
+              return savedStudent;
             }),
-          ),
       ),
     );
   };
@@ -250,6 +294,7 @@ export class StudentsService {
         .then(() => this.studentsRepository.update(id, updateData))
         .then(async () => {
           if (input.guardians !== undefined) {
+            const setupEmails: { email: string; resetToken: string }[] = [];
             const userRepo = this.dataSource.getRepository(User);
             const validGuardianEmails = (input.guardians || [])
               .map((g) => g.email?.trim().toLowerCase())
@@ -292,18 +337,24 @@ export class StudentsService {
                     .trim()
                     .split(' ');
                   const last = rest.join(' ') || first;
-                  const hashedPassword = await bcrypt.hash('Password@321', 10);
+                  const accessSetup = await this.createParentAccessSetup();
                   const newParent = userRepo.create({
                     firstName: first,
                     lastName: last,
                     email,
                     phone,
-                    passwordHash: hashedPassword,
+                    passwordHash: accessSetup.passwordHash,
+                    resetPasswordToken: accessSetup.resetPasswordToken,
+                    resetPasswordExpires: accessSetup.resetPasswordExpires,
                     role: UserRole.PARENT,
                     schoolId,
                     isActive: true,
                   });
                   parentUser = await userRepo.save(newParent);
+                  setupEmails.push({
+                    email,
+                    resetToken: accessSetup.resetToken,
+                  });
                 } else if (phone && parentUser.phone !== phone) {
                   parentUser.phone = phone;
                   await userRepo.save(parentUser);
@@ -324,6 +375,7 @@ export class StudentsService {
                 }
               }
             }
+            await this.sendParentAccessSetupEmails(setupEmails);
           }
           return this.getStudentById(id, schoolId);
         });

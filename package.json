@@ -5,11 +5,14 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": "24.x"
+  },
+  "packageManager": "pnpm@10.28.0",
   "scripts": {
     "prebuild": "rm -rf dist",
     "build": "nest build",
     "check:schema-contract": "node scripts/verify-schema-contract.mjs",
-    "vercel-build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "prestart:dev": "rm -rf dist",
@@ -109,14 +112,5 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@apollo/protobufjs",
-      "@nestjs/core",
-      "bcrypt",
-      "esbuild",
-      "unrs-resolver"
-    ]
   }
 }

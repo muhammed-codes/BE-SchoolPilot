@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
+import { AppController, RootHealthController } from './app.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GraphQLModule } from '@nestjs/graphql';
@@ -25,10 +25,15 @@ import { TimetableModule } from './timetable/timetable.module';
 import { FeesModule } from './fees/fees.module';
 import { CommunicationModule } from './communication/communication.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { validateEnvironment } from './config/environment.validation';
+
+const isProduction =
+  process.env.NODE_ENV === 'production' ||
+  process.env.VERCEL_ENV === 'production';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
 
     // ThrottlerModule.forRoot([
     //   {
@@ -64,8 +69,8 @@ import { ExpensesModule } from './expenses/expenses.module';
 
         return {
           type: 'postgres',
-          retryAttempts: 10,
-          retryDelay: 3000,
+          retryAttempts: 3,
+          retryDelay: 1000,
           ...(databaseUrl
             ? { url: databaseUrl }
             : {
@@ -86,16 +91,20 @@ import { ExpensesModule } from './expenses/expenses.module';
               }),
           extra: {
             ...(endpointId ? { options: `endpoint=${endpointId}` } : {}),
-            connectionTimeoutMillis: 20000,
-            idleTimeoutMillis: 30000,
-            max: 25,
+            connectionTimeoutMillis: 10000,
+            idleTimeoutMillis: 10000,
+            max: 5,
             keepAlive: true,
             keepAliveInitialDelayMillis: 10000,
           },
-          ssl: { rejectUnauthorized: false },
+          ssl: {
+            rejectUnauthorized:
+              config.get<string>('DATABASE_SSL_REJECT_UNAUTHORIZED') !==
+              'false',
+          },
           synchronize: false,
           autoLoadEntities: true,
-          migrationsRun: true,
+          migrationsRun: false,
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
         };
       },
@@ -106,8 +115,8 @@ import { ExpensesModule } from './expenses/expenses.module';
       autoSchemaFile: process.env.VERCEL ? true : 'schema.gql',
       sortSchema: true,
       resolvers: { Upload: GraphQLUpload },
-      playground: true,
-      introspection: true,
+      playground: !isProduction,
+      introspection: !isProduction,
       csrfPrevention: true,
       context: ({ req }: { req: Request }) => ({ req }),
     }),
@@ -133,7 +142,7 @@ import { ExpensesModule } from './expenses/expenses.module';
     CommunicationModule,
     ExpensesModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, RootHealthController],
   providers: [
     // {
     //   provide: APP_GUARD,

@@ -115,7 +115,9 @@ export class PdfService {
   generatePdfFromHtml = (html: string): Promise<Buffer> => {
     let browserInstance: Awaited<ReturnType<typeof puppeteer.launch>>;
 
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction =
+      process.env.NODE_ENV === 'production' ||
+      process.env.VERCEL_ENV === 'production';
 
     const resolveLaunchConfig = (): Promise<{
       executablePath: string;

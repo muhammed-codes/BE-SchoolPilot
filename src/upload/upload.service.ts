@@ -192,34 +192,23 @@ export class UploadService implements OnModuleInit {
     return `schoolpilot/${schoolId}/${normalized}`;
   };
 
-  private readonly validateCloudinaryConnection = (): Promise<void> => {
-    return cloudinary.api.ping().then(() => undefined);
-  };
+  onModuleInit = (): void => {
+    const cloudName = this.configService.get<string>('CLOUDINARY_CLOUD_NAME');
+    const apiKey = this.configService.get<string>('CLOUDINARY_API_KEY');
+    const apiSecret = this.configService.get<string>('CLOUDINARY_API_SECRET');
 
-  onModuleInit = (): Promise<void> => {
+    if (!cloudName || !apiKey || !apiSecret) {
+      this.logger.warn(
+        'Cloudinary is not configured; file uploads are unavailable',
+      );
+      return;
+    }
+
     cloudinary.config({
-      cloud_name: this.configService
-        .getOrThrow<string>('CLOUDINARY_CLOUD_NAME')
-        .trim(),
-      api_key: this.configService
-        .getOrThrow<string>('CLOUDINARY_API_KEY')
-        .trim(),
-      api_secret: this.configService
-        .getOrThrow<string>('CLOUDINARY_API_SECRET')
-        .trim(),
+      cloud_name: cloudName.trim(),
+      api_key: apiKey.trim(),
+      api_secret: apiSecret.trim(),
     });
-    return this.validateCloudinaryConnection()
-      .then(() => {
-        this.logger.log('Cloudinary startup validation passed');
-      })
-      .catch((error) => {
-        const cloudinaryError = this.getCloudinaryErrorMessage(
-          this.getErrorMessage(error),
-        );
-        this.logger.warn(
-          `Cloudinary startup ping failed (server will still start): ${cloudinaryError}`,
-        );
-      });
   };
 
   uploadFile = (

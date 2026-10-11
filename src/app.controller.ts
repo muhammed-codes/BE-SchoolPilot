@@ -7,7 +7,17 @@ export class AppController {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
+    };
+  }
+}
+
+@Controller()
+export class RootHealthController {
+  @Get()
+  checkRootHealth() {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
     };
   }
 }

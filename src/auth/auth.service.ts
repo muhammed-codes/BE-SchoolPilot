@@ -36,6 +36,40 @@ export class AuthService {
     return { raw, hashed };
   };
 
+  private readonly rejectLegacyParentPassword = async (
+    user: User,
+  ): Promise<void> => {
+    const legacyPassword = this.configService.get<string>(
+      'LEGACY_PARENT_DEFAULT_PASSWORD',
+    );
+    if (user.role !== UserRole.PARENT || !legacyPassword) return;
+
+    const matchesLegacyPassword = await bcrypt.compare(
+      legacyPassword,
+      user.passwordHash,
+    );
+    if (!matchesLegacyPassword) return;
+
+    const { raw: resetToken, hashed: resetPasswordToken } =
+      this.generateVerificationToken();
+    const passwordHash = await bcrypt.hash(
+      crypto.randomBytes(48).toString('base64url'),
+      12,
+    );
+    await this.usersService.update(user.id, {
+      passwordHash,
+      resetPasswordToken,
+      resetPasswordExpires: new Date(Date.now() + 30 * 60 * 1000),
+    });
+    await this.mailService
+      .sendParentAccountSetupEmail(user.email, resetToken)
+      .catch(() => false);
+
+    throw new UnauthorizedException(
+      'This account needs a new password. Use Forgot Password to continue.',
+    );
+  };
+
   register = (input: RegisterInput) => {
     this.logger.log(`New user registration attempt for email: ${input.email}`);
     return this.usersService
@@ -88,7 +122,8 @@ export class AuthService {
   login = (input: LoginInput) => {
     return this.validateUser(input.email, input.password).then((user) => {
       this.logger.log(`Successful login for user: ${input.email}`);
-      const mustChangePassword = input.password === 'Password@321';
+      const mustChangePassword =
+        user.role === UserRole.PARENT && Boolean(user.resetPasswordToken);
       return this.generateTokens(user).then((tokens) => ({
         ...tokens,
         user,
@@ -214,11 +249,11 @@ export class AuthService {
                     'Your account is currently inactive. Please contact platform support or your school administrator.',
                   );
                 }
-                return user;
+                return this.rejectLegacyParentPassword(user).then(() => user);
               });
           }
 
-          return user;
+          return this.rejectLegacyParentPassword(user).then(() => user);
         });
     });
   };
