@@ -7,8 +7,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
+import { pathToFileURL } from 'url';
 
 import { StudentResult } from '../results/entities/student-result.entity';
 import { ResultSheet } from '../results/entities/result-sheet.entity';
@@ -28,6 +28,18 @@ import {
   ScoreComponentData,
   SubjectScoreData,
 } from './templates/report-card-data.interface';
+
+type PuppeteerModule = typeof import('puppeteer-core');
+
+const importEsmModule = new Function(
+  'specifier',
+  'return import(specifier)',
+) as (specifier: string) => Promise<PuppeteerModule>;
+
+const loadPuppeteer = (): Promise<PuppeteerModule> =>
+  importEsmModule(
+    pathToFileURL(require.resolve('puppeteer-core')).href,
+  );
 
 @Injectable()
 export class PdfService {
@@ -113,7 +125,7 @@ export class PdfService {
   };
 
   generatePdfFromHtml = (html: string): Promise<Buffer> => {
-    let browserInstance: Awaited<ReturnType<typeof puppeteer.launch>>;
+    let browserInstance: import('puppeteer-core').Browser | undefined;
 
     const isProduction =
       process.env.NODE_ENV === 'production' ||
@@ -144,9 +156,9 @@ export class PdfService {
       });
     };
 
-    return resolveLaunchConfig()
-      .then(({ executablePath, args }) =>
-        puppeteer.launch({
+    return Promise.all([resolveLaunchConfig(), loadPuppeteer()])
+      .then(([{ executablePath, args }, puppeteerModule]) =>
+        puppeteerModule.default.launch({
           headless: true,
           executablePath,
           args,
@@ -170,9 +182,11 @@ export class PdfService {
           }),
         ),
       )
-      .then((pdfBuffer) =>
-        browserInstance.close().then(() => Buffer.from(pdfBuffer)),
-      )
+      .then((pdfBuffer) => {
+        const browser = browserInstance;
+        if (!browser) throw new Error('PDF browser did not initialize');
+        return browser.close().then(() => Buffer.from(pdfBuffer));
+      })
       .catch((error) => {
         if (browserInstance) {
           browserInstance
