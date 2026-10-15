@@ -3,6 +3,8 @@ import {
   NotFoundException,
   ForbiddenException,
   UnauthorizedException,
+  ConflictException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
@@ -40,7 +42,29 @@ export class UsersService {
   ) {}
 
   findByEmail = (email: string) => {
-    return this.usersRepository.findOne({ where: { email } });
+    const normalizedEmail = email.trim();
+
+    return this.usersRepository
+      .findOne({ where: { email: normalizedEmail } })
+      .then((exactMatch) => {
+        if (exactMatch) return exactMatch;
+
+        return this.usersRepository
+          .createQueryBuilder('user')
+          .where('LOWER(user.email) = LOWER(:email)', {
+            email: normalizedEmail,
+          })
+          .limit(2)
+          .getMany()
+          .then((matches) => {
+            if (matches.length > 1) {
+              throw new ConflictException(
+                'This email matches multiple accounts. Contact your school administrator.',
+              );
+            }
+            return matches[0] ?? null;
+          });
+      });
   };
 
   findById = (id: string) => {
@@ -361,7 +385,21 @@ export class UsersService {
         .then((passwordHash: string) =>
           this.usersRepository
             .update(userId, { passwordHash })
-            .then(() => true),
+            .then(() => this.findById(userId))
+            .then((updatedUser) => {
+              if (!updatedUser) throw new NotFoundException('User not found');
+
+              return bcrypt
+                .compare(newPassword, updatedUser.passwordHash)
+                .then((passwordMatches: boolean) => {
+                  if (!passwordMatches) {
+                    throw new InternalServerErrorException(
+                      'Password update could not be confirmed',
+                    );
+                  }
+                  return true;
+                });
+            }),
         );
     });
   };
