@@ -7,7 +7,6 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { graphqlUploadExpress } from 'graphql-upload-ts';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
-import type { Request, Response } from 'express';
 
 const isProduction =
   process.env.NODE_ENV === 'production' ||
@@ -78,33 +77,14 @@ const createApp = async () => {
   return app;
 };
 
-// --------------- Vercel serverless handler ---------------
-let cachedServer: ReturnType<typeof import('express')>;
-
-const getServer = async () => {
-  if (!cachedServer) {
-    const app = await createApp();
-    await app.init();
-    cachedServer = app.getHttpAdapter().getInstance();
-  }
-  return cachedServer;
+const bootstrap = async () => {
+  const app = await createApp();
+  const defaultPort = process.env.VERCEL ? 3000 : 9998;
+  await app.listen(process.env.PORT || defaultPort);
 };
 
-export default async (req: Request, res: Response) => {
-  const server = await getServer();
-  server(req, res);
-};
-
-// --------------- Local development server ---------------
-if (!process.env.VERCEL) {
-  const bootstrap = async () => {
-    const app = await createApp();
-    await app.listen(process.env.PORT || 9998);
-  };
-
-  void bootstrap().catch((error: unknown) => {
-    const errorStack = error instanceof Error ? error.stack : String(error);
-    Logger.error('Application bootstrap failed', errorStack);
-    process.exitCode = 1;
-  });
-}
+void bootstrap().catch((error: unknown) => {
+  const errorStack = error instanceof Error ? error.stack : String(error);
+  Logger.error('Application bootstrap failed', errorStack);
+  process.exitCode = 1;
+});

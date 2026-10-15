@@ -10,9 +10,9 @@
 ## Create the Vercel project
 
 1. Import the repository into Vercel.
-2. Set **Root Directory** to `BE-SchoolPilot` and leave framework detection, install command, build command, and output directory on **Auto / Default**. Vercel detects `src/main.ts` as the NestJS entrypoint; this project intentionally has no `vercel.json` or custom serverless adapter.
+2. Set **Root Directory** to `.` (the root of this repository) and leave framework detection, install command, build command, and output directory on **Auto / Default**. Vercel detects `src/main.ts` as the NestJS entrypoint and builds it as a single Vercel Function.
 3. Add the environment variables below separately for Production, Preview, and Development. Use staging database and service credentials for Preview and Development.
-4. Set the function region closest to the database. Leave Fluid Compute enabled. Report-card PDF generation uses Chromium and should have at least 1 GB function memory; use 2 GB if available.
+4. Set the function region closest to the database and leave Fluid Compute enabled. The PDF renderer uses Chromium, so test PDF generation in a Preview deployment with the function memory available on your Vercel plan.
 5. Deploy a Preview first, run the smoke checks below, then promote it to Production.
 
 ## Environment variables
@@ -47,7 +47,7 @@ Migrations are deliberately not run by application startup, because Vercel may i
 
 ## Deploy and verify
 
-Push a branch to create a Preview deployment, or deploy with the Vercel CLI from `BE-SchoolPilot` (`vercel deploy`). Use `vercel --prod` only when you intend to publish to Production.
+Push a branch to create a Preview deployment, or deploy with the Vercel CLI from the repository root (`vercel`). Use `vercel --prod` only when you intend to publish to Production.
 
 Check `GET /` and `GET /api/health`; each returns `{ "status": "ok", "timestamp": "..." }`. Check the GraphQL endpoint at `/graphql`. Review the Vercel deployment Build Logs for compilation and Function Logs for startup or request errors.
 
