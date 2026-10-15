@@ -276,9 +276,9 @@ export const renderClassicStudentBack = (
           border-radius: 1mm;
           display: inline-block;
         ">
-          <img src="${qrCodeDataUrl}" alt="QR Verification" style="
-            width: 17mm;
-            height: 17mm;
+          <img src="${qrCodeDataUrl}" alt="Student ID QR code" style="
+            width: 24mm;
+            height: 24mm;
             display: block;
           " />
         </div>
@@ -289,7 +289,7 @@ export const renderClassicStudentBack = (
           text-transform: uppercase;
           letter-spacing: 0.06em;
           margin-top: 0.8mm;
-        ">Scan to verify credentials</div>
+        ">Scan for student ID data</div>
       </div>
       `
           : ''

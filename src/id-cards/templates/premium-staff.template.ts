@@ -307,8 +307,8 @@ export const renderPremiumStaffBack = (
           display: inline-block;
         ">
           <img src="${qrCodeDataUrl}" alt="QR Code" style="
-            width: 17mm;
-            height: 17mm;
+            width: 24mm;
+            height: 24mm;
             display: block;
           " />
         </div>

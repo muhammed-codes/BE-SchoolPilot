@@ -284,8 +284,8 @@ export const renderClassicStaffBack = (
           display: inline-block;
         ">
           <img src="${qrCodeDataUrl}" alt="QR Verification" style="
-            width: 17mm;
-            height: 17mm;
+            width: 24mm;
+            height: 24mm;
             display: block;
           " />
         </div>

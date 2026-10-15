@@ -5,6 +5,7 @@ import {
   BadRequestException,
   ForbiddenException,
   OnModuleInit,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -334,9 +335,9 @@ export class IdCardsService implements OnModuleInit {
   private generateQrCodeDataUrl = async (payload: string): Promise<string> => {
     try {
       return await QRCode.toDataURL(payload, {
-        margin: 1,
+        margin: 2,
         width: 256,
-        errorCorrectionLevel: 'M',
+        errorCorrectionLevel: 'Q',
         color: {
           dark: '#0F172A',
           light: '#FFFFFF',
@@ -344,7 +345,9 @@ export class IdCardsService implements OnModuleInit {
       });
     } catch (err) {
       this.logger.error('Failed to generate QR Code data URL', err);
-      return '';
+      throw new InternalServerErrorException(
+        'Unable to generate the ID card QR code',
+      );
     }
   };
 

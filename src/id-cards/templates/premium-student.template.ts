@@ -43,7 +43,7 @@ export const renderPremiumStudentFront = (
     ">
       <!-- Top Decorative Accent -->
       <div style="
-        height: 1.2mm;
+        height: 2mm;
         background: linear-gradient(90deg, ${primaryColor} 0%, ${accentColor} 100%);
       "></div>
 
@@ -53,8 +53,7 @@ export const renderPremiumStudentFront = (
         display: flex;
         align-items: center;
         gap: 2mm;
-        background: ${primaryColor};
-        color: #FFFFFF;
+        border-bottom: 0.5mm solid ${primaryColor};
       ">
         <img src="${logoSrc}" alt="School Logo" style="
           width: 7.5mm;
@@ -67,9 +66,9 @@ export const renderPremiumStudentFront = (
         " />
         <div style="min-width: 0; flex: 1;">
           <div style="
-            font-size: 2.3mm;
-            font-weight: 800;
-            color: #FFFFFF;
+            font-size: 2.6mm;
+            font-weight: 900;
+            color: ${primaryColor};
             text-transform: uppercase;
             letter-spacing: 0.05em;
             white-space: nowrap;
@@ -80,7 +79,7 @@ export const renderPremiumStudentFront = (
           <div style="
             font-size: 1.5mm;
             font-weight: 700;
-            color: ${accentColor};
+            color: ${primaryColor};
             text-transform: uppercase;
             letter-spacing: 0.12em;
             margin-top: 0.3mm;
@@ -302,9 +301,9 @@ export const renderPremiumStudentBack = (
           box-shadow: 0 1px 4px rgba(0,0,0,0.06);
           display: inline-block;
         ">
-          <img src="${qrCodeDataUrl}" alt="QR Code" style="
-            width: 17mm;
-            height: 17mm;
+          <img src="${qrCodeDataUrl}" alt="Student ID QR code" style="
+            width: 24mm;
+            height: 24mm;
             display: block;
           " />
         </div>
@@ -315,7 +314,7 @@ export const renderPremiumStudentBack = (
           text-transform: uppercase;
           letter-spacing: 0.08em;
           margin-top: 0.8mm;
-        ">Scan for instant verification</div>
+        ">Scan for student ID data</div>
       </div>
       `
           : ''
