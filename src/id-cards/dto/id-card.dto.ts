@@ -6,6 +6,9 @@ import {
   IsBoolean,
   IsArray,
   IsUUID,
+  IsInt,
+  Min,
+  Max,
 } from 'class-validator';
 import {
   IdCardType,
@@ -27,6 +30,15 @@ export class IdCardRenderResult {
 
   @Field(() => Int)
   totalCards!: number;
+
+  @Field(() => Int, { nullable: true })
+  page?: number;
+
+  @Field(() => Int, { nullable: true })
+  pageSize?: number;
+
+  @Field(() => Int, { nullable: true })
+  totalPages?: number;
 
   @Field()
   templateKey!: string;
@@ -153,6 +165,19 @@ export class RenderBatchStudentIdCardsInput {
   @IsOptional()
   @IsEnum(IdCardSide)
   side?: IdCardSide;
+
+  @Field(() => Int, { nullable: true })
+  @IsOptional()
+  @Min(1)
+  @IsInt()
+  page?: number;
+
+  @Field(() => Int, { nullable: true })
+  @IsOptional()
+  @Min(1)
+  @Max(100)
+  @IsInt()
+  limit?: number;
 }
 
 @InputType()

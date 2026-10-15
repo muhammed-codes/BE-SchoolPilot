@@ -558,25 +558,25 @@ export class IdCardsService implements OnModuleInit {
     schoolId: string,
     input: RenderBatchStudentIdCardsInput,
   ): Promise<IdCardRenderResult> => {
-    let students: Student[] = [];
-
-    if (input.studentIds && input.studentIds.length > 0) {
-      students = await this.studentRepo.find({
-        where: { id: In(input.studentIds), schoolId },
-        relations: ['currentClass'],
-      });
-    } else if (input.classId) {
-      students = await this.studentRepo.find({
-        where: { currentClassId: input.classId, schoolId },
-        relations: ['currentClass'],
-      });
-    } else {
-      students = await this.studentRepo.find({
-        where: { schoolId },
-        relations: ['currentClass'],
-        take: 200,
-      });
-    }
+    const isPaginated = input.page !== undefined || input.limit !== undefined;
+    const page = input.page ?? 1;
+    const pageSize = Math.min(100, input.limit ?? 50);
+    const where =
+      input.studentIds && input.studentIds.length > 0
+        ? { id: In(input.studentIds), schoolId }
+        : input.classId
+          ? { currentClassId: input.classId, schoolId }
+          : { schoolId };
+    const [students, matchingStudentCount] = await this.studentRepo.findAndCount({
+      where,
+      relations: ['currentClass'],
+      order: { lastName: 'ASC', firstName: 'ASC', id: 'ASC' },
+      ...(isPaginated
+        ? { skip: (page - 1) * pageSize, take: pageSize }
+        : !input.studentIds?.length && !input.classId
+          ? { take: 200 }
+          : {}),
+    });
 
     if (students.length === 0) {
       throw new BadRequestException(
@@ -653,7 +653,14 @@ export class IdCardsService implements OnModuleInit {
 
     return {
       html: fullHtml,
-      totalCards: students.length,
+      totalCards: matchingStudentCount,
+      ...(isPaginated
+        ? {
+            page,
+            pageSize,
+            totalPages: Math.ceil(matchingStudentCount / pageSize),
+          }
+        : {}),
       templateKey: entity.key,
       templateName: entity.name,
     };
