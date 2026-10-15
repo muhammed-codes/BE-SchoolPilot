@@ -85,6 +85,8 @@ export const BASE_CARD_CSS = `
   .premium-card,
   .premium-card * {
     box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   @page {

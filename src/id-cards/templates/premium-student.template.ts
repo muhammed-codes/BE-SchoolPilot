@@ -43,7 +43,7 @@ export const renderPremiumStudentFront = (
     ">
       <!-- Top Decorative Accent -->
       <div style="
-        height: 2mm;
+        height: 1.2mm;
         background: linear-gradient(90deg, ${primaryColor} 0%, ${accentColor} 100%);
       "></div>
 
@@ -53,7 +53,8 @@ export const renderPremiumStudentFront = (
         display: flex;
         align-items: center;
         gap: 2mm;
-        border-bottom: 0.5mm solid ${primaryColor};
+        background: ${primaryColor};
+        color: #FFFFFF;
       ">
         <img src="${logoSrc}" alt="School Logo" style="
           width: 7.5mm;
@@ -66,9 +67,9 @@ export const renderPremiumStudentFront = (
         " />
         <div style="min-width: 0; flex: 1;">
           <div style="
-            font-size: 2.6mm;
-            font-weight: 900;
-            color: ${primaryColor};
+            font-size: 2.3mm;
+            font-weight: 800;
+            color: #FFFFFF;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             white-space: nowrap;
@@ -79,7 +80,7 @@ export const renderPremiumStudentFront = (
           <div style="
             font-size: 1.5mm;
             font-weight: 700;
-            color: ${primaryColor};
+            color: ${accentColor};
             text-transform: uppercase;
             letter-spacing: 0.12em;
             margin-top: 0.3mm;
