@@ -321,12 +321,12 @@ export class ExpenseReportsService {
       .addSelect('COUNT(r.id)', 'count');
     this.addPaidRequestFilters(paidRequestsQuery, schoolId, sessionId, termId);
     if (startDate)
-      paidRequestsQuery.andWhere('r.updatedAt::date >= :startDate', { startDate });
+      paidRequestsQuery.andWhere('r.updatedAt::date >= :startDate', {
+        startDate,
+      });
     if (endDate)
       paidRequestsQuery.andWhere('r.updatedAt::date <= :endDate', { endDate });
-    paidRequestsQuery
-      .groupBy('cat.id')
-      .addGroupBy('cat.name');
+    paidRequestsQuery.groupBy('cat.id').addGroupBy('cat.name');
     const paidRequests = await paidRequestsQuery.getRawMany<{
       key: string;
       label: string;
@@ -342,7 +342,9 @@ export class ExpenseReportsService {
         existing.totalAmount = String(
           Number(existing.totalAmount || 0) + Number(item.totalAmount || 0),
         );
-        existing.count = String(Number(existing.count || 0) + Number(item.count || 0));
+        existing.count = String(
+          Number(existing.count || 0) + Number(item.count || 0),
+        );
       } else {
         breakdownByCategory.set(item.key, { ...item });
       }
@@ -424,7 +426,8 @@ export class ExpenseReportsService {
           Number(existing?.totalSpent || 0) + Number(result.totalSpent || 0),
         ),
         expenseCount: String(
-          Number(existing?.expenseCount || 0) + Number(result.expenseCount || 0),
+          Number(existing?.expenseCount || 0) +
+            Number(result.expenseCount || 0),
         ),
       });
     }
@@ -517,7 +520,9 @@ export class ExpenseReportsService {
         existing.totalAmount = String(
           Number(existing.totalAmount || 0) + Number(item.totalAmount || 0),
         );
-        existing.count = String(Number(existing.count || 0) + Number(item.count || 0));
+        existing.count = String(
+          Number(existing.count || 0) + Number(item.count || 0),
+        );
       } else {
         breakdownByDepartment.set(item.key, { ...item });
       }
@@ -609,7 +614,9 @@ export class ExpenseReportsService {
         existing.totalAmount = String(
           Number(existing.totalAmount || 0) + Number(item.totalAmount || 0),
         );
-        existing.count = String(Number(existing.count || 0) + Number(item.count || 0));
+        existing.count = String(
+          Number(existing.count || 0) + Number(item.count || 0),
+        );
       } else {
         breakdownByVendor.set(vendorKey, { ...item });
       }

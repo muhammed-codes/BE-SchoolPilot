@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class DeduplicateExpenseCategories1791500000000
-  implements MigrationInterface
-{
+export class DeduplicateExpenseCategories1791500000000 implements MigrationInterface {
   name = 'DeduplicateExpenseCategories1791500000000';
 
   async up(queryRunner: QueryRunner): Promise<void> {

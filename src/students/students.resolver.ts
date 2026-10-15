@@ -102,9 +102,10 @@ export class StudentsResolver {
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
     const limit = Math.max(1, take ?? pagination.limit);
-    const page = skip === undefined
-      ? Math.max(1, pagination.page)
-      : Math.floor(Math.max(0, skip) / limit) + 1;
+    const page =
+      skip === undefined
+        ? Math.max(1, pagination.page)
+        : Math.floor(Math.max(0, skip) / limit) + 1;
     const classIdsPromise = TEACHER_ROLES.includes(user.role)
       ? this.studentsService.getTeacherClassIds(user.sub, user.schoolId)
       : Promise.resolve(undefined);

@@ -69,7 +69,8 @@ export class ExpensesService {
     schoolId: string,
     manager?: EntityManager,
   ): Promise<ExpenseCategory> => {
-    const categoryRepo = manager?.getRepository(ExpenseCategory) ?? this.categoryRepo;
+    const categoryRepo =
+      manager?.getRepository(ExpenseCategory) ?? this.categoryRepo;
     const normalizedName = input.name.trim();
     const existing = await categoryRepo
       .createQueryBuilder('category')
@@ -101,7 +102,8 @@ export class ExpensesService {
     schoolId: string,
     manager?: EntityManager,
   ): Promise<ExpenseCategory> => {
-    const categoryRepo = manager?.getRepository(ExpenseCategory) ?? this.categoryRepo;
+    const categoryRepo =
+      manager?.getRepository(ExpenseCategory) ?? this.categoryRepo;
     const category = await categoryRepo.findOne({
       where: { id: input.id, schoolId },
     });
@@ -118,7 +120,9 @@ export class ExpensesService {
         .andWhere('category.id != :id', { id: input.id })
         .getOne();
       if (existing) {
-        throw new BadRequestException(`Category "${normalizedName}" already exists`);
+        throw new BadRequestException(
+          `Category "${normalizedName}" already exists`,
+        );
       }
       category.name = normalizedName;
     }
@@ -133,7 +137,9 @@ export class ExpensesService {
     id: string,
     schoolId: string,
   ): Promise<ExpenseCategory> => {
-    const category = await this.categoryRepo.findOne({ where: { id, schoolId } });
+    const category = await this.categoryRepo.findOne({
+      where: { id, schoolId },
+    });
     if (!category) throw new NotFoundException('Category not found');
     category.isActive = false;
     return this.categoryRepo.save(category);

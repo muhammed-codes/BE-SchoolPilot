@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CreateIdCardTemplatesAndSettings1791800000000
-  implements MigrationInterface
-{
+export class CreateIdCardTemplatesAndSettings1791800000000 implements MigrationInterface {
   name = 'CreateIdCardTemplatesAndSettings1791800000000';
 
   async up(queryRunner: QueryRunner): Promise<void> {
@@ -69,7 +67,9 @@ export class CreateIdCardTemplatesAndSettings1791800000000
   async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP TABLE IF EXISTS "school_id_card_settings"`);
     await queryRunner.query(`DROP TABLE IF EXISTS "id_card_templates"`);
-    await queryRunner.query(`DROP TYPE IF EXISTS "public"."id_card_orientation_enum"`);
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "public"."id_card_orientation_enum"`,
+    );
     await queryRunner.query(`DROP TYPE IF EXISTS "public"."id_card_type_enum"`);
   }
 }

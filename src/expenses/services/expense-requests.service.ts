@@ -363,10 +363,14 @@ export class ExpenseRequestsService {
       request.status !== ExpenseRequestStatus.APPROVED &&
       request.status !== ExpenseRequestStatus.FUNDED
     ) {
-      throw new BadRequestException('Only approved requests can receive payments');
+      throw new BadRequestException(
+        'Only approved requests can receive payments',
+      );
     }
     if (request.expenseId) {
-      throw new BadRequestException('This request is already recorded as an expense');
+      throw new BadRequestException(
+        'This request is already recorded as an expense',
+      );
     }
 
     const approvedAmount = Number(
@@ -428,7 +432,9 @@ export class ExpenseRequestsService {
       input.paymentStatus ?? ExpenseRequestPaymentStatus.PAID;
     const amountPaid = input.amountPaid ?? input.actualAmount;
     if (amountPaid > input.actualAmount) {
-      throw new BadRequestException('Amount paid cannot exceed the actual amount');
+      throw new BadRequestException(
+        'Amount paid cannot exceed the actual amount',
+      );
     }
     if (
       (paymentStatus === ExpenseRequestPaymentStatus.PAID &&
@@ -437,7 +443,9 @@ export class ExpenseRequestsService {
         (amountPaid <= 0 || amountPaid >= input.actualAmount)) ||
       (paymentStatus === ExpenseRequestPaymentStatus.UNPAID && amountPaid !== 0)
     ) {
-      throw new BadRequestException('Payment status and amount paid do not match');
+      throw new BadRequestException(
+        'Payment status and amount paid do not match',
+      );
     }
 
     const expense = this.expenseRepo.create({

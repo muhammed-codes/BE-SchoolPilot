@@ -236,7 +236,8 @@ export class AccessResolver {
   setUserPermission(
     @Args('input', { type: () => SetUserPermissionInput, nullable: true })
     input: SetUserPermissionInput | undefined,
-    @Args('userId', { type: () => String, nullable: true }) userId: string | undefined,
+    @Args('userId', { type: () => String, nullable: true })
+    userId: string | undefined,
     @Args('resource', { type: () => AppResource, nullable: true })
     resource: AppResource | undefined,
     @Args('action', { type: () => PermissionAction, nullable: true })

@@ -1118,6 +1118,21 @@ enum Gender {
   MALE
 }
 
+input GenerateBatchStaffIdCardsPdfInput {
+  side: IdCardSide
+  staffIds: [String!]
+  templateId: String
+  templateKey: String
+}
+
+input GenerateBatchStudentIdCardsPdfInput {
+  classId: String
+  side: IdCardSide
+  studentIds: [String!]
+  templateId: String
+  templateKey: String
+}
+
 input GenerateInvoicesInput {
   forceRegenerate: Boolean
   sessionId: String!
@@ -1137,6 +1152,20 @@ input GenerateSchoolDayScheduleInput {
   startTime: String!
   teachingDurationMinutes: Int!
   unallocatedTimeAsPeriod: Boolean! = false
+}
+
+input GenerateStaffIdCardPdfInput {
+  side: IdCardSide
+  staffId: String!
+  templateId: String
+  templateKey: String
+}
+
+input GenerateStudentIdCardPdfInput {
+  side: IdCardSide
+  studentId: String!
+  templateId: String
+  templateKey: String
 }
 
 type GeneratedScheduleBlockResult {
@@ -1177,6 +1206,63 @@ enum GuardianRelationship {
   GUARDIAN
   MOTHER
   OTHER
+}
+
+"""Card orientation (Portrait or Landscape)"""
+enum IdCardOrientation {
+  LANDSCAPE
+  PORTRAIT
+}
+
+type IdCardPdfResult {
+  expiresAt: Int
+  pdfPrivateUrl: String
+  pdfUrl: String!
+  totalCards: Int!
+}
+
+type IdCardRenderResult {
+  backHtml: String
+  frontHtml: String
+  html: String!
+  page: Int
+  pageSize: Int
+  templateKey: String!
+  templateName: String!
+  totalCards: Int!
+  totalPages: Int
+}
+
+"""Card sides to render (Front, Back, or Both)"""
+enum IdCardSide {
+  BACK
+  BOTH
+  FRONT
+}
+
+type IdCardTemplate {
+  cardType: IdCardType!
+  createdAt: DateTime!
+  description: String!
+  designConfiguration: String
+  hasBackSide: Boolean!
+  heightMm: Float!
+  id: ID!
+  isActive: Boolean!
+  isSystemDefault: Boolean!
+  key: String!
+  name: String!
+  orientation: IdCardOrientation!
+  previewThumbnailUrl: String
+  updatedAt: DateTime!
+  version: String!
+  widthMm: Float!
+}
+
+"""Type of ID card (Student or Staff)"""
+enum IdCardType {
+  STAFF
+  STUDENT
 }
 
 type IncomeTrendPoint {
@@ -1297,10 +1383,22 @@ type Mutation {
   deleteTimetableEntry(id: String!): Boolean!
   forgotPassword(input: ForgotPasswordInput!): Boolean!
   fundExpenseRequest(id: ID!): ExpenseRequest!
+
+  """Generate print-ready PDF for multiple staff ID cards in batch"""
+  generateBatchStaffIdCardsPdf(input: GenerateBatchStaffIdCardsPdfInput!): IdCardPdfResult!
+
+  """Generate print-ready PDF for multiple student ID cards in batch"""
+  generateBatchStudentIdCardsPdf(input: GenerateBatchStudentIdCardsPdfInput!): IdCardPdfResult!
   generateBulkReportCards(resultSheetId: String!): String!
   generateInvoices(input: GenerateInvoicesInput!): GenerateInvoicesResult!
   generateReportCard(studentResultId: String!): String!
   generateSchoolDaySchedule(input: GenerateSchoolDayScheduleInput!): SchoolDayScheduleGenerationResult!
+
+  """Generate print-ready PDF for a single staff ID card"""
+  generateStaffIdCardPdf(input: GenerateStaffIdCardPdfInput!): IdCardPdfResult!
+
+  """Generate print-ready PDF for a single student ID card"""
+  generateStudentIdCardPdf(input: GenerateStudentIdCardPdfInput!): IdCardPdfResult!
   initDefaultPeriods: [Period!]!
   initDefaultSchoolDays: [SchoolDay!]!
   linkParent(parentUserId: String!, studentId: String!): Student!
@@ -1366,6 +1464,9 @@ type Mutation {
   updateRoom(input: UpdateRoomInput!): Room!
   updateSchool(id: String!, input: UpdateSchoolInput!): School!
   updateSchoolDay(input: UpdateSchoolDayInput!): SchoolDay!
+
+  """Update ID card configuration and default templates for the school"""
+  updateSchoolIdCardSettings(input: UpdateSchoolIdCardSettingsInput!): SchoolIdCardSettings!
   updateStudent(id: String!, input: UpdateStudentInput!): Student!
   updateSubject(code: String, id: String, input: UpdateSubjectInput, name: String): Subject!
   updateTeacherWorkload(input: UpdateTeacherWorkloadInput!): User!
@@ -1785,6 +1886,12 @@ type Query {
   feeStructure(id: String!): FeeStructure
   feeStructures(classId: String, sessionId: String!, termId: String): [FeeStructure!]!
   guardianStudents(guardianId: String!): [Student!]!
+
+  """Get an ID card template by ID or key"""
+  idCardTemplate(id: String!): IdCardTemplate!
+
+  """List all active ID card templates"""
+  idCardTemplates(cardType: IdCardType): [IdCardTemplate!]!
   invoice(id: String!): StudentInvoice
   invoices(filter: InvoiceFilterInput, limit: Int! = 50, page: Int! = 1): PaginatedStudentInvoice!
   me: User!
@@ -1816,6 +1923,18 @@ type Query {
   previewSchoolDaySchedule(input: PreviewSchoolDayScheduleInput!): SchoolDaySchedulePreviewResult!
   receiptTemplates: [ReceiptTemplate!]!
   recurringExpenses: [RecurringExpense!]!
+
+  """Render HTML for multiple staff ID cards in batch"""
+  renderBatchStaffIdCards(input: RenderBatchStaffIdCardsInput!): IdCardRenderResult!
+
+  """Render HTML for multiple student ID cards in batch"""
+  renderBatchStudentIdCards(input: RenderBatchStudentIdCardsInput!): IdCardRenderResult!
+
+  """Render HTML for a single staff ID card with preview"""
+  renderStaffIdCard(input: RenderStaffIdCardInput!): IdCardRenderResult!
+
+  """Render HTML for a single student ID card with preview"""
+  renderStudentIdCard(input: RenderStudentIdCardInput!): IdCardRenderResult!
   resolvedBankAccounts(feeCategoryId: String): [SchoolBankAccount!]!
   resultAnalytics(classId: String!, sessionId: String!, subjectId: String, termId: String!): ResultAnalytics!
   resultSheet(id: String!): ResultSheet!
@@ -1825,6 +1944,11 @@ type Query {
   school(id: String!): School!
   schoolClasses(limit: Int! = 50, page: Int! = 1, search: String): PaginatedClassEntity!
   schoolDays: [SchoolDay!]!
+
+  """
+  Get ID card configuration and default template settings for the current school
+  """
+  schoolIdCardSettings: SchoolIdCardSettings!
   schoolPaymentShares(search: String, status: PaymentShareStatus): [PaymentSubmissionStudentShare!]!
   schoolResultSheets(classId: String, status: ResultStatus, termId: String): [ResultSheet!]!
   schoolSubjects(limit: Int! = 50, page: Int! = 1, search: String): PaginatedSubject!
@@ -1961,6 +2085,37 @@ input RejectExpenseRequestInput {
 input RejectShareInput {
   reason: String!
   shareId: String!
+}
+
+input RenderBatchStaffIdCardsInput {
+  side: IdCardSide
+  staffIds: [String!]
+  templateId: String
+  templateKey: String
+}
+
+input RenderBatchStudentIdCardsInput {
+  classId: String
+  limit: Int
+  page: Int
+  side: IdCardSide
+  studentIds: [String!]
+  templateId: String
+  templateKey: String
+}
+
+input RenderStaffIdCardInput {
+  side: IdCardSide
+  staffId: String!
+  templateId: String
+  templateKey: String
+}
+
+input RenderStudentIdCardInput {
+  side: IdCardSide
+  studentId: String!
+  templateId: String
+  templateKey: String
 }
 
 input ReorderPeriodItem {
@@ -2168,6 +2323,21 @@ type SchoolDaySchedulePreviewResult {
   unallocatedTimeAsPeriod: Boolean!
   valid: Boolean!
   warnings: [String!]!
+}
+
+type SchoolIdCardSettings {
+  createdAt: DateTime!
+  customNote: String
+  defaultStaffTemplate: IdCardTemplate
+  defaultStaffTemplateId: String
+  defaultStudentTemplate: IdCardTemplate
+  defaultStudentTemplateId: String
+  id: ID!
+  schoolId: String!
+  showPrincipalSignature: Boolean!
+  showQrCode: Boolean!
+  showSchoolAddress: Boolean!
+  updatedAt: DateTime!
 }
 
 enum ScoreComponent {
@@ -2799,6 +2969,15 @@ input UpdateSchoolDayInput {
   id: String!
   isTeachingDay: Boolean!
   openingTime: String
+}
+
+input UpdateSchoolIdCardSettingsInput {
+  customNote: String
+  defaultStaffTemplateId: String
+  defaultStudentTemplateId: String
+  showPrincipalSignature: Boolean
+  showQrCode: Boolean
+  showSchoolAddress: Boolean
 }
 
 input UpdateSchoolInput {
