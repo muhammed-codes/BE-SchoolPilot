@@ -1,9 +1,9 @@
-# School Pilot Architecture
+# SchoolRight Architecture
 
 ## Applications
 
 ```text
-School Pilot
+SchoolRight
 ├── admin-SchoolPilot       School administration and configuration
 ├── FE-SchoolPilot          Staff day-to-day operations
 ├── guardian-SchoolPilot    Guardian child-specific portal

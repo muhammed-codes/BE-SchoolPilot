@@ -16,12 +16,12 @@ async function seed() {
 
     // 1. Ensure default School exists
     let school = await schoolRepo.findOne({
-      where: { name: 'SchoolPilot Demonstration School' },
+      where: { name: 'SchoolRight Demonstration School' },
     });
     if (!school) {
       console.log('Creating default Demonstration School...');
       school = schoolRepo.create({
-        name: 'SchoolPilot Demonstration School',
+        name: 'SchoolRight Demonstration School',
         address: 'Plot 10, Innovation Hub, Abuja, Nigeria',
         phone: '+2348000000000',
         email: 'info@schoolpilot.ng',

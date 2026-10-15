@@ -11,7 +11,7 @@ export const renderClassicStaffFront = (
 ): string => {
   const { school, cardData } = ctx;
   const primaryColor = school.primaryColor || '#146356';
-  const schoolName = escapeHtml(school.name || 'SchoolPilot');
+  const schoolName = escapeHtml(school.name || 'SchoolRight');
   const staffName = escapeHtml(cardData.fullName);
   const staffId = escapeHtml(cardData.staffId || '—');
   const designation = escapeHtml(
@@ -194,7 +194,7 @@ export const renderClassicStaffFront = (
         text-transform: uppercase;
       ">
         <span>Authorized Personnel</span>
-        <span style="color: ${primaryColor}; font-weight: 700;">SchoolPilot</span>
+        <span style="color: ${primaryColor}; font-weight: 700;">SchoolRight</span>
       </div>
     </div>
   `;
@@ -205,7 +205,7 @@ export const renderClassicStaffBack = (
 ): string => {
   const { school, options } = ctx;
   const primaryColor = school.primaryColor || '#146356';
-  const schoolName = escapeHtml(school.name || 'SchoolPilot');
+  const schoolName = escapeHtml(school.name || 'SchoolRight');
   const address = escapeHtml(school.address || 'Institution Premises');
   const phone = escapeHtml(school.phone || '');
   const email = escapeHtml(school.email || '');

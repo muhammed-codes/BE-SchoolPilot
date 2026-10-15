@@ -1806,7 +1806,7 @@ export class TimetableService implements OnModuleInit {
     });
 
     const renderData: TimetablePdfRenderData = {
-      schoolName: school?.name || 'SchoolPilot Academy',
+      schoolName: school?.name || 'SchoolRight Academy',
       schoolAddress: school?.address || undefined,
       termName: term.name,
       title,

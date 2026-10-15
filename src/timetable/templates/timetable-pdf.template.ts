@@ -285,7 +285,7 @@ export function renderTimetableHtml(data: TimetablePdfRenderData): string {
     </table>
 
     <div class="footer">
-      <span>SchoolPilot Official Academic Reference Sheet</span>
+      <span>SchoolRight Official Academic Reference Sheet</span>
       <span>Page 1 of 1</span>
     </div>
   </div>

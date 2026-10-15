@@ -27,7 +27,7 @@ export class MailService {
 
     return this.getResendClient()
       .emails.send({
-        from: 'SchoolPilot <noreply@schoolpilot.app>',
+        from: 'SchoolRight <noreply@schoolright.app>',
         to: email,
         subject: 'Reset Your Password',
         html: `
@@ -67,12 +67,12 @@ export class MailService {
 
     return this.getResendClient()
       .emails.send({
-        from: 'SchoolPilot <noreply@schoolpilot.app>',
+        from: 'SchoolRight <noreply@schoolright.app>',
         to: email,
-        subject: 'Set Up Your SchoolPilot Parent Account',
+        subject: 'Set Up Your SchoolRight Parent Account',
         html: `
           <h1>Parent Portal Account Created</h1>
-          <p>Your school created a SchoolPilot parent account for this email address.</p>
+          <p>Your school created a SchoolRight parent account for this email address.</p>
           <a href="${setupUrl}">Set Your Password</a>
           <p>This setup link expires in 30 minutes. If you did not expect this account, you can ignore this email.</p>
         `,
@@ -106,11 +106,11 @@ export class MailService {
 
     return this.getResendClient()
       .emails.send({
-        from: 'SchoolPilot <noreply@schoolpilot.app>',
+        from: 'SchoolRight <noreply@schoolright.app>',
         to: email,
         subject: 'Verify Your Email Address',
         html: `
-          <h1>Welcome to SchoolPilot!</h1>
+          <h1>Welcome to SchoolRight!</h1>
           <p>Please verify your email address by clicking the link below:</p>
           <a href="${verifyUrl}">Verify Email</a>
           <p>If you did not create an account, please ignore this email.</p>
@@ -147,17 +147,17 @@ export class MailService {
   ) => {
     const frontendUrl =
       this.configService.get<string>('FRONTEND_URL') ||
-      'https://schoolpilot.app';
+      'https://schoolright.app';
 
     return this.getResendClient()
       .emails.send({
-        from: 'SchoolPilot <noreply@schoolpilot.app>',
+        from: 'SchoolRight <noreply@schoolright.app>',
         to: email,
-        subject: `Welcome to SchoolPilot - Parent Portal Access for ${studentName}`,
+        subject: `Welcome to SchoolRight - Parent Portal Access for ${studentName}`,
         html: `
           <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 32px 24px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;">
             <div style="margin-bottom: 24px;">
-              <h2 style="color: #0f172a; margin: 0 0 8px 0; font-size: 22px; font-weight: 700;">Welcome to SchoolPilot</h2>
+              <h2 style="color: #0f172a; margin: 0 0 8px 0; font-size: 22px; font-weight: 700;">Welcome to SchoolRight</h2>
               <p style="color: #475569; font-size: 14px; margin: 0;">Parent &amp; Guardian Academic Portal</p>
             </div>
             

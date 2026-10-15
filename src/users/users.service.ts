@@ -173,7 +173,7 @@ export class UsersService {
               if (user.expoPushToken) {
                 void this.notificationsService.sendPushNotification(
                   user.expoPushToken,
-                  'Welcome to SchoolPilot',
+                  'Welcome to SchoolRight',
                   `Your account has been created. Login with your email: ${user.email}`,
                 );
               }
