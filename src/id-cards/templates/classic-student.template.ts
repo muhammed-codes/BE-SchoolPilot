@@ -2,6 +2,7 @@ import { RenderCardContext, StudentCardData } from './id-card-data.interface';
 import {
   escapeHtml,
   sanitizeUrl,
+  optimizeCardPhotoUrl,
   getDefaultAvatarSvg,
   getDefaultLogoSvg,
 } from './template-helpers';
@@ -22,7 +23,7 @@ export const renderClassicStudentFront = (
     ? sanitizeUrl(school.logoUrl)
     : getDefaultLogoSvg(school.name || 'SP');
   const photoSrc = cardData.passportPhotoUrl
-    ? sanitizeUrl(cardData.passportPhotoUrl)
+    ? sanitizeUrl(optimizeCardPhotoUrl(cardData.passportPhotoUrl))
     : getDefaultAvatarSvg(cardData.fullName);
 
   return `
@@ -103,7 +104,7 @@ export const renderClassicStudentFront = (
           align-items: center;
           justify-content: center;
         ">
-          <img src="${photoSrc}" alt="Student" style="
+          <img src="${photoSrc}" alt="Student" loading="lazy" decoding="async" style="
             width: 100%;
             height: 100%;
             object-fit: cover;

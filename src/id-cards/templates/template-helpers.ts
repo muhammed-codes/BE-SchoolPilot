@@ -22,6 +22,35 @@ export const sanitizeUrl = (url: string | null | undefined): string => {
   return '';
 };
 
+export const optimizeCardPhotoUrl = (url: string | null | undefined): string => {
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    if (
+      parsed.hostname !== 'res.cloudinary.com' &&
+      !parsed.hostname.endsWith('.res.cloudinary.com')
+    ) {
+      return url;
+    }
+    const uploadMarker = '/image/upload/';
+    const uploadIndex = parsed.pathname.indexOf(uploadMarker);
+    if (uploadIndex < 0) return url;
+
+    const transformIndex = uploadIndex + uploadMarker.length;
+    const nextPathSegment = parsed.pathname.slice(transformIndex).split('/')[0];
+    if (nextPathSegment.includes(',')) return url;
+
+    const pathBeforeTransform = parsed.pathname.slice(0, transformIndex);
+    const originalPhotoPath = parsed.pathname.slice(transformIndex);
+    const cardPhotoTransform = 'c_fill,w_360,h_400,q_auto,f_auto';
+    parsed.pathname =
+      `${pathBeforeTransform}${cardPhotoTransform}/${originalPhotoPath}`;
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+};
+
 export const getInitials = (name: string): string => {
   if (!name) return 'SP';
   const parts = name.trim().split(/\s+/);

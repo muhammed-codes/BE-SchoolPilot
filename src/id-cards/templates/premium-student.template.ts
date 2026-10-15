@@ -2,6 +2,7 @@ import { RenderCardContext, StudentCardData } from './id-card-data.interface';
 import {
   escapeHtml,
   sanitizeUrl,
+  optimizeCardPhotoUrl,
   getDefaultAvatarSvg,
   getDefaultLogoSvg,
 } from './template-helpers';
@@ -23,7 +24,7 @@ export const renderPremiumStudentFront = (
     ? sanitizeUrl(school.logoUrl)
     : getDefaultLogoSvg(school.name || 'SP');
   const photoSrc = cardData.passportPhotoUrl
-    ? sanitizeUrl(cardData.passportPhotoUrl)
+    ? sanitizeUrl(optimizeCardPhotoUrl(cardData.passportPhotoUrl))
     : getDefaultAvatarSvg(cardData.fullName, '#F8FAFC', '#0B3830');
 
   return `
@@ -52,6 +53,8 @@ export const renderPremiumStudentFront = (
         display: flex;
         align-items: center;
         gap: 2mm;
+        background: ${primaryColor};
+        color: #FFFFFF;
       ">
         <img src="${logoSrc}" alt="School Logo" style="
           width: 7.5mm;
@@ -60,12 +63,13 @@ export const renderPremiumStudentFront = (
           border-radius: 1.5mm;
           flex-shrink: 0;
           border: 0.2mm solid #E2E8F0;
+          background: #FFFFFF;
         " />
         <div style="min-width: 0; flex: 1;">
           <div style="
             font-size: 2.3mm;
             font-weight: 800;
-            color: #0F172A;
+            color: #FFFFFF;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             white-space: nowrap;
@@ -113,7 +117,7 @@ export const renderPremiumStudentFront = (
             overflow: hidden;
             background: #F8FAFC;
           ">
-            <img src="${photoSrc}" alt="Student" style="
+            <img src="${photoSrc}" alt="Student" loading="lazy" decoding="async" style="
               width: 100%;
               height: 100%;
               object-fit: cover;
