@@ -178,6 +178,22 @@ describe('IdCardsService', () => {
         currentClass: { id: 'class-1', name: 'JSS 1 A' },
       },
     ]),
+    findAndCount: jest.fn().mockResolvedValue([
+      [
+        {
+          id: 'student-1',
+          schoolId: 'school-123',
+          firstName: 'John',
+          lastName: 'Doe',
+          middleName: 'Edward',
+          admissionNumber: 'ADM-2025-042',
+          passportPhotoUrl: null,
+          gender: 'Male',
+          currentClass: { id: 'class-1', name: 'JSS 1 A' },
+        },
+      ],
+      1,
+    ]),
   };
 
   const mockSchoolRepo = {
