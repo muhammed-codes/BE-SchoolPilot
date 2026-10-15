@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import chromium from '@sparticuz/chromium';
 import { pathToFileURL } from 'url';
 
 import { StudentResult } from '../results/entities/student-result.entity';
@@ -29,17 +28,21 @@ import {
   SubjectScoreData,
 } from './templates/report-card-data.interface';
 
-type PuppeteerModule = typeof import('puppeteer-core');
-
-const importEsmModule = new Function(
-  'specifier',
-  'return import(specifier)',
-) as (specifier: string) => Promise<PuppeteerModule>;
+const importEsmModule = <TModule>(specifier: string): Promise<TModule> =>
+  (
+    new Function('specifier', 'return import(specifier)') as (
+      specifier: string,
+    ) => Promise<TModule>
+  )(specifier);
 
 const loadPuppeteer = (): Promise<PuppeteerModule> =>
-  importEsmModule(
-    pathToFileURL(require.resolve('puppeteer-core')).href,
-  );
+  importEsmModule(pathToFileURL(require.resolve('puppeteer-core')).href);
+
+type PuppeteerModule = typeof import('puppeteer-core');
+type ChromiumModule = typeof import('@sparticuz/chromium');
+
+const loadChromium = (): Promise<ChromiumModule> =>
+  importEsmModule(pathToFileURL(require.resolve('@sparticuz/chromium')).href);
 
 @Injectable()
 export class PdfService {
@@ -136,10 +139,12 @@ export class PdfService {
       args: string[];
     }> => {
       if (isProduction) {
-        return chromium.executablePath().then((executablePath) => ({
-          executablePath,
-          args: chromium.args,
-        }));
+        return loadChromium().then(({ default: chromium }) =>
+          chromium.executablePath().then((executablePath) => ({
+            executablePath,
+            args: chromium.args,
+          })),
+        );
       }
 
       const localPath = process.env.PUPPETEER_EXECUTABLE_PATH;
