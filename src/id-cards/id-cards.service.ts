@@ -653,7 +653,7 @@ export class IdCardsService implements OnModuleInit {
 
     return {
       html: fullHtml,
-      totalCards: matchingStudentCount,
+      totalCards: isPaginated ? matchingStudentCount : students.length,
       ...(isPaginated
         ? {
             page,
