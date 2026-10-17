@@ -1799,7 +1799,16 @@ enum PettyCashTransactionType {
 
 type PlatformStats {
   activeSchools: Int!
+  inactiveSchools: Int!
+  pendingSchools: Int!
+  rejectedSchools: Int!
+  schoolsAddedThisMonth: Int!
+  staffAddedThisMonth: Int!
+  studentsAddedThisMonth: Int!
+  suspendedSchools: Int!
+  totalGuardians: Int!
   totalSchools: Int!
+  totalStaff: Int!
   totalStudents: Int!
   totalUsers: Int!
 }
@@ -1943,6 +1952,8 @@ type Query {
   resultStats: ResultStats!
   rooms: [Room!]!
   school(id: String!): School!
+  schoolTypeOptions: [SchoolTypeOption!]!
+  schoolUsageStats(schoolId: String!): SchoolUsageStats!
   schoolClasses(limit: Int! = 50, page: Int! = 1, search: String): PaginatedClassEntity!
   schoolDays: [SchoolDay!]!
 
@@ -1955,7 +1966,7 @@ type Query {
   schoolSubjects(limit: Int! = 50, page: Int! = 1, search: String): PaginatedSubject!
   schoolTeachers: [User!]!
   schoolUsers(limit: Int! = 50, page: Int! = 1, role: UserRole, search: String): PaginatedUser!
-  schools(limit: Int! = 50, page: Int! = 1, search: String): PaginatedSchool!
+  schools(limit: Int! = 50, page: Int! = 1, search: String, status: String): PaginatedSchool!
   searchStudents(limit: Int = 5, query: String!): [Student!]!
   session(id: String!): Session
   sessions: [Session!]!
@@ -2264,6 +2275,7 @@ type School {
   email: String
   id: ID!
   isActive: Boolean!
+  platformStatus: String!
   logoUrl: String
   name: String!
   phone: String
@@ -2304,6 +2316,20 @@ type SchoolDay {
   orderIndex: Int!
   schoolId: String!
   updatedAt: DateTime!
+}
+
+type SchoolTypeOption {
+  description: String!
+  label: String!
+  value: String!
+}
+
+type SchoolUsageStats {
+  activeUsers: Int!
+  totalGuardians: Int!
+  totalStaff: Int!
+  totalStudents: Int!
+  totalUsers: Int!
 }
 
 type SchoolDayScheduleGenerationResult {
