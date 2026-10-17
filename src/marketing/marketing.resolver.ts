@@ -6,5 +6,7 @@ export class MarketingResolver {
   constructor(private readonly marketingContentService: MarketingContentService) {}
 
   @Query(() => String)
-  marketingLandingPage = (): string => this.marketingContentService.getLandingPage();
+  marketingLandingPage(): string {
+    return this.marketingContentService.getLandingPage();
+  }
 }
