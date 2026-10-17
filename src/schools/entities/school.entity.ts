@@ -55,6 +55,15 @@ export class School extends BaseEntity {
   @Column({ default: true })
   isActive!: boolean;
 
+  @Field(() => String)
+  get platformStatus(): string {
+    if (this.isActive) return 'ACTIVE';
+    if (this.verificationStatus === 'PENDING') return 'PENDING';
+    if (this.verificationStatus === 'SUSPENDED') return 'SUSPENDED';
+    if (this.verificationStatus === 'REJECTED') return 'REJECTED';
+    return 'INACTIVE';
+  }
+
   @Field({ nullable: true })
   @Column({ nullable: true })
   state?: string;
