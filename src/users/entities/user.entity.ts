@@ -52,7 +52,7 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   avatarUrl!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'varchar', nullable: true })
   adminThemePreference!: string | null;
 
