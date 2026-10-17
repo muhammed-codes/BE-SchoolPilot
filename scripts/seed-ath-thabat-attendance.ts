@@ -29,5 +29,5 @@ export const seedAthThabatAttendance = async (
       }, attendanceMarker.id, schoolId);
     }
   }
-  return classes.length * studentsByClass[0].length * attendanceDates.length;
+  return studentsByClass.reduce((total, students) => total + students.length, 0) * attendanceDates.length;
 };

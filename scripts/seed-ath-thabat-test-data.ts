@@ -27,9 +27,11 @@ import { ResultSheet } from '../src/results/entities/result-sheet.entity';
 import { ResultsService } from '../src/results/results.service';
 import { AttendanceService } from '../src/attendance/attendance.service';
 import { seedAthThabatAttendance } from './seed-ath-thabat-attendance';
+import { seedAthThabatInvoicePayments } from './seed-ath-thabat-invoice-payments';
 import {
   classFixtures,
   expenseFixtures,
+  feeCategoryIndexesByClass,
   feeFixtures,
   schoolCodeForTestData,
   schoolName,
@@ -201,8 +203,9 @@ const seed = async () => {
         () => feesService.createFeeCategory({ name: fixture.name, recurrence: FeeRecurrence.PER_TERM }, school.id, staff[0].id),
       ));
     }
-    for (const classEntity of classes.slice(0, 3)) {
-      for (const [index, category] of feeCategories.entries()) {
+    for (const [classIndex, classEntity] of classes.entries()) {
+      for (const categoryIndex of feeCategoryIndexesByClass[classIndex]) {
+        const category = feeCategories[categoryIndex];
         const existing = await feeStructureRepository.findOne({
           where: {
             schoolId: school.id,
@@ -218,7 +221,7 @@ const seed = async () => {
             classId: classEntity.id,
             sessionId: session.id,
             termId: term.id,
-            amount: feeFixtures[index].amount,
+            amount: feeFixtures[categoryIndex].amount,
           }, school.id, staff[0].id);
         }
       }
@@ -265,6 +268,14 @@ const seed = async () => {
       sessionId: session.id,
       termId: term.id,
     }, school.id);
+    const invoicePaymentStatusCounts = await seedAthThabatInvoicePayments(
+      feesService,
+      studentsByClass,
+      session.id,
+      term.id,
+      school.id,
+      attendanceMarker,
+    );
 
     process.stdout.write(JSON.stringify({
       school: school.name,
@@ -280,8 +291,10 @@ const seed = async () => {
       activeTerm: term.name,
       expenseCategoriesWithBudgets: expenseFixtures.length,
       feeCategories: feeCategories.length,
+      feeStructures: feeCategoryIndexesByClass.reduce((sum, indexes) => sum + indexes.length, 0),
       resultSheets: resultSheets.length,
       invoices: invoiceGeneration,
+      invoicePaymentStatusCounts,
     }, null, 2));
   } finally {
     await app.close();
