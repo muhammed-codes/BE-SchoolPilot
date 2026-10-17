@@ -17,6 +17,8 @@ import { SchoolsService } from './schools.service';
 import { PlatformAnalyticsService } from './platform-analytics.service';
 import { PlatformStats } from './dto/platform-stats.type';
 import { SchoolUsageStats } from './dto/school-usage-stats.type';
+import { SchoolTypeOption } from './dto/school-type-option.type';
+import { SchoolCatalogService } from './school-catalog.service';
 import { School } from './entities/school.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateSchoolInput } from './dto/create-school.input';
@@ -36,6 +38,7 @@ export class SchoolsResolver {
   constructor(
     private readonly schoolsService: SchoolsService,
     private readonly platformAnalyticsService: PlatformAnalyticsService,
+    private readonly schoolCatalogService: SchoolCatalogService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -137,6 +140,13 @@ export class SchoolsResolver {
   @Roles(UserRole.SUPER_ADMIN)
   platformStats() {
     return this.platformAnalyticsService.getPlatformStats();
+  }
+
+  @Query(() => [SchoolTypeOption])
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN)
+  schoolTypeOptions() {
+    return this.schoolCatalogService.getSchoolTypeOptions();
   }
 
   // ─── Authenticated Mutations ────────────────────────────────────────────────

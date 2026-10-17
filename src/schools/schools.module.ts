@@ -5,6 +5,7 @@ import { School } from './entities/school.entity';
 import { SchoolsService } from './schools.service';
 import { SchoolsResolver } from './schools.resolver';
 import { PlatformAnalyticsService } from './platform-analytics.service';
+import { SchoolCatalogService } from './school-catalog.service';
 import { UploadModule } from '../upload/upload.module';
 import { User } from '../users/entities/user.entity';
 
@@ -14,7 +15,12 @@ import { User } from '../users/entities/user.entity';
     UploadModule,
     JwtModule.register({}),
   ],
-  providers: [SchoolsService, PlatformAnalyticsService, SchoolsResolver],
+  providers: [
+    SchoolsService,
+    PlatformAnalyticsService,
+    SchoolCatalogService,
+    SchoolsResolver,
+  ],
   exports: [SchoolsService],
 })
 export class SchoolsModule {}
