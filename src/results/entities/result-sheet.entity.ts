@@ -33,7 +33,7 @@ export class ResultSheet extends BaseEntity {
   @Column({ type: 'uuid' })
   schoolId!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })
   createdByUserId!: string | null;
 
@@ -42,7 +42,7 @@ export class ResultSheet extends BaseEntity {
   @JoinColumn({ name: 'createdByUserId' })
   createdByUser!: User;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })
   approvedByUserId!: string | null;
 
@@ -51,7 +51,7 @@ export class ResultSheet extends BaseEntity {
   @JoinColumn({ name: 'approvedByUserId' })
   approvedByUser!: User | null;
 
-  @Field({ nullable: true })
+  @Field(() => Date, { nullable: true })
   @Column({ type: 'timestamp', nullable: true })
   approvedAt!: Date | null;
 
