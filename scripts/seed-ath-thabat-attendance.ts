@@ -13,21 +13,27 @@ export const seedAthThabatAttendance = async (
   attendanceMarker: User,
   schoolId: string,
 ) => {
-  for (const [classIndex, classEntity] of classes.entries()) {
-    for (const [dayIndex, date] of attendanceDates.entries()) {
-      await attendanceService.markStudentAttendance({
-        classId: classEntity.id,
-        date,
-        records: studentsByClass[classIndex].map((student, studentIndex) => ({
-          studentId: student.id,
-          status: studentIndex === dayIndex % 3
-            ? AttendanceStatus.LATE
-            : studentIndex === (dayIndex + 1) % 5
-              ? AttendanceStatus.ABSENT
-              : AttendanceStatus.PRESENT,
-        })),
-      }, attendanceMarker.id, schoolId);
-    }
-  }
+  await Promise.all(
+    classes.flatMap((classEntity, classIndex) =>
+      attendanceDates.map((date, dayIndex) =>
+        attendanceService.markStudentAttendance(
+          {
+            classId: classEntity.id,
+            date,
+            records: studentsByClass[classIndex].map((student, studentIndex) => ({
+              studentId: student.id,
+              status: studentIndex === dayIndex % 3
+                ? AttendanceStatus.LATE
+                : studentIndex === (dayIndex + 1) % 5
+                  ? AttendanceStatus.ABSENT
+                  : AttendanceStatus.PRESENT,
+            })),
+          },
+          attendanceMarker.id,
+          schoolId,
+        ),
+      ),
+    ),
+  );
   return studentsByClass.reduce((total, students) => total + students.length, 0) * attendanceDates.length;
 };

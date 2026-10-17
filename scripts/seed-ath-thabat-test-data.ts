@@ -152,7 +152,7 @@ const seed = async () => {
     }
 
     const studentsByClass: Student[][] = classes.map(() => []);
-    for (const fixture of studentFixtures) {
+    const seededStudents = await Promise.all(studentFixtures.map(async (fixture) => {
       const classEntity = classes[fixture.classIndex];
       const existing = await studentRepository.findOne({
         where: { schoolId: school.id, firstName: fixture.firstName, lastName: fixture.lastName },
@@ -171,7 +171,10 @@ const seed = async () => {
         status: StudentStatus.ACTIVE,
         notes: testRecordNote,
       }, school.id));
-      studentsByClass[fixture.classIndex].push(student);
+      return { student, classIndex: fixture.classIndex };
+    }));
+    for (const { student, classIndex } of seededStudents) {
+      studentsByClass[classIndex].push(student);
     }
 
     const attendanceMarker = await userRepository.findOne({
