@@ -253,8 +253,8 @@ const seed = async () => {
           scores: studentsByClass[classIndex].map((student, index) => ({
             studentId: student.id,
             componentScores: [
-              { component: ScoreComponent.CA, score: scoreSamples[index].ca },
-              { component: ScoreComponent.EXAM, score: scoreSamples[index].exam },
+            { component: ScoreComponent.CA, score: scoreSamples[index % scoreSamples.length].ca },
+            { component: ScoreComponent.EXAM, score: scoreSamples[index % scoreSamples.length].exam },
             ],
           })),
         }, staff[classIndex].id, school.id);
