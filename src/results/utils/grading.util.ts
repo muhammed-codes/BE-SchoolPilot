@@ -10,6 +10,8 @@ export const calculateGrade = (
   switch (system) {
     case GradingSystem.WAEC:
       return calculateWAEC(percentage);
+    case GradingSystem.NIGERIAN_BASIC:
+      return calculateLetter(percentage);
     case GradingSystem.PERCENTAGE:
       return `${Math.round(percentage)}%`;
     case GradingSystem.LETTER:
