@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 
 import { UsersService } from './users.service';
+import { UserPasswordService } from './user-password.service';
 import { User } from './entities/user.entity';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
@@ -28,7 +29,10 @@ const PaginatedUser = createPaginatedType(User);
 
 @Resolver(() => User)
 export class UsersResolver {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly userPasswordService: UserPasswordService,
+  ) {}
 
   @Query(() => User)
   @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -156,7 +160,7 @@ export class UsersResolver {
     @Args('newPassword') newPassword: string,
     @CurrentUser() user: { sub: string },
   ) {
-    return this.usersService.changePassword(user.sub, oldPassword, newPassword);
+    return this.userPasswordService.changePassword(user.sub, oldPassword, newPassword);
   }
 
   @Mutation(() => Boolean)
@@ -167,7 +171,7 @@ export class UsersResolver {
     @Args('newPassword') newPassword: string,
     @CurrentUser() user: { role: UserRole; schoolId: string },
   ) {
-    return this.usersService.adminResetPassword(
+    return this.userPasswordService.adminResetPassword(
       userId,
       newPassword,
       user.role,
@@ -183,7 +187,7 @@ export class UsersResolver {
     @Args('newPassword') newPassword: string,
     @CurrentUser() user: { role: UserRole },
   ) {
-    return this.usersService.adminResetSchoolPassword(
+    return this.userPasswordService.adminResetSchoolPassword(
       schoolId,
       newPassword,
       user.role,

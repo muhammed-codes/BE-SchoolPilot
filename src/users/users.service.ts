@@ -2,43 +2,27 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
-  UnauthorizedException,
   ConflictException,
-  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 
 import { User } from './entities/user.entity';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
-import { UploadService } from '../upload/upload.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { IdCardsService } from '../id-cards/id-cards.service';
-import { SchoolsService } from '../schools/schools.service';
 import { UserRole } from '../common/enums';
-import { PaginationArgs } from '../common/pagination';
 import { StudentParent } from '../students/entities/student-parent.entity';
+import { UserAccountProvisioningService } from './user-account-provisioning.service';
+import { UserDirectoryService } from './user-directory.service';
 
 @Injectable()
 export class UsersService {
-  private readonly singleLeadershipRoles: UserRole[] = [
-    UserRole.PRINCIPAL,
-    UserRole.VICE_PRINCIPAL,
-    UserRole.HEAD_TEACHER,
-  ];
-  private readonly singleLeadershipRoleUniqueConstraint =
-    'UQ_users_single_active_leadership_role_per_school';
-
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
-    private readonly uploadService: UploadService,
-    private readonly notificationsService: NotificationsService,
-    private readonly idCardsService: IdCardsService,
-    private readonly schoolsService: SchoolsService,
+    private readonly accountProvisioningService: UserAccountProvisioningService,
+    private readonly userDirectoryService: UserDirectoryService,
   ) {}
 
   findByEmail = (email: string) => {
@@ -108,141 +92,11 @@ export class UsersService {
     return this.usersRepository.update(id, data).then(() => this.findById(id));
   };
 
-  private formatRoleLabel = (role: UserRole) => {
-    return role.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
-  };
+  createUser = (input: CreateUserInput, schoolId: string) =>
+    this.accountProvisioningService.createUser(input, schoolId);
 
-  private ensureUniqueLeadershipRolePerSchool = (
-    schoolId?: string | null,
-    role?: UserRole,
-    excludeUserId?: string,
-    isActive?: boolean,
-  ) => {
-    if (!schoolId || !role || !this.singleLeadershipRoles.includes(role)) {
-      return Promise.resolve();
-    }
-
-    return this.usersRepository
-      .findOne({
-        where: {
-          schoolId,
-          role,
-          isActive: isActive ?? true,
-        },
-      })
-      .then((existing) => {
-        if (existing && existing.id !== excludeUserId) {
-          throw new ForbiddenException(
-            `This school already has an active ${this.formatRoleLabel(role)}.`,
-          );
-        }
-      });
-  };
-
-  private mapLeadershipRoleDbConstraintError = (
-    err: unknown,
-    role?: UserRole,
-  ): never => {
-    const errorCode =
-      typeof err === 'object' && err && 'code' in err ? err.code : undefined;
-    const errorConstraint =
-      typeof err === 'object' && err && 'constraint' in err
-        ? err.constraint
-        : undefined;
-
-    if (
-      errorCode === '23505' &&
-      errorConstraint === this.singleLeadershipRoleUniqueConstraint
-    ) {
-      if (role) {
-        throw new ForbiddenException(
-          `This school already has an active ${this.formatRoleLabel(role)}.`,
-        );
-      }
-      throw new ForbiddenException(
-        'This school already has an active user for that leadership role.',
-      );
-    }
-    throw err;
-  };
-
-  createUser = (input: CreateUserInput, adminSchoolId: string) => {
-    const isStaffRole =
-      input.role !== UserRole.PARENT && input.role !== UserRole.SUPER_ADMIN;
-
-    const staffIdPromise = isStaffRole
-      ? this.schoolsService
-          .findById(adminSchoolId)
-          .then((school) =>
-            this.idCardsService.generateStaffId(adminSchoolId, school.name),
-          )
-      : Promise.resolve(undefined);
-
-    return this.ensureUniqueLeadershipRolePerSchool(adminSchoolId, input.role)
-      .then(() => staffIdPromise)
-      .then((staffId) =>
-        bcrypt.hash(input.password, 12).then((passwordHash: string) =>
-          this.create({
-            email: input.email,
-            firstName: input.firstName,
-            lastName: input.lastName,
-            role: input.role,
-            namePrefix: input.namePrefix || null,
-            phone: input.phone,
-            schoolId: adminSchoolId,
-            passwordHash,
-            staffId,
-          })
-            .then((user) => {
-              if (user.expoPushToken) {
-                void this.notificationsService.sendPushNotification(
-                  user.expoPushToken,
-                  'Welcome to SchoolRight',
-                  `Your account has been created. Login with your email: ${user.email}`,
-                );
-              }
-              return user;
-            })
-            .catch((err) =>
-              this.mapLeadershipRoleDbConstraintError(err, input.role),
-            ),
-        ),
-      );
-  };
-
-  findBySchool = (
-    schoolId: string,
-    role?: UserRole,
-    pagination?: PaginationArgs,
-    search?: string,
-  ) => {
-    const page = pagination?.page || 1;
-    const limit = pagination?.limit || 50;
-    const skip = (page - 1) * limit;
-
-    const queryBuilder = this.usersRepository
-      .createQueryBuilder('user')
-      .where('user.schoolId = :schoolId', { schoolId });
-    if (role) queryBuilder.andWhere('user.role = :role', { role });
-    if (search?.trim()) {
-      queryBuilder.andWhere(
-        '(user.firstName ILIKE :search OR user.lastName ILIKE :search OR user.email ILIKE :search)',
-        { search: `%${search.trim()}%` },
-      );
-    }
-
-    return queryBuilder
-      .orderBy('user.createdAt', 'DESC')
-      .skip(skip)
-      .take(limit)
-      .getManyAndCount()
-      .then(([items, total]) => ({
-        items,
-        total,
-        page,
-        totalPages: Math.ceil(total / limit),
-      }));
-  };
+  findBySchool = (...args: Parameters<UserDirectoryService['findBySchool']>) =>
+    this.userDirectoryService.findBySchool(...args);
 
   updateUser = (
     id: string,
@@ -285,7 +139,7 @@ export class UsersService {
         );
       }
 
-      return this.ensureUniqueLeadershipRolePerSchool(
+      return this.accountProvisioningService.ensureUniqueLeadershipRolePerSchool(
         user.schoolId,
         input.role,
         user.id,
@@ -293,7 +147,7 @@ export class UsersService {
         this.usersRepository
           .update(id, input)
           .catch((err) =>
-            this.mapLeadershipRoleDbConstraintError(err, input.role),
+            this.accountProvisioningService.mapLeadershipRoleDatabaseError(err, input.role),
           )
           .then(() => this.findById(id)),
       );
@@ -319,7 +173,7 @@ export class UsersService {
       }
 
       // Prevent assigning duplicate leadership roles into the same school.
-      return this.ensureUniqueLeadershipRolePerSchool(
+      return this.accountProvisioningService.ensureUniqueLeadershipRolePerSchool(
         schoolId,
         user.role,
         user.id,
@@ -328,105 +182,10 @@ export class UsersService {
           this.usersRepository
             .update(userId, { schoolId })
             .catch((err) =>
-              this.mapLeadershipRoleDbConstraintError(err, user.role),
+              this.accountProvisioningService.mapLeadershipRoleDatabaseError(err, user.role),
             ),
         )
         .then(() => this.findById(userId));
-    });
-  };
-
-  changePassword = (
-    userId: string,
-    oldPassword: string,
-    newPassword: string,
-  ) => {
-    return this.findById(userId).then((user) => {
-      if (!user) throw new NotFoundException('User not found');
-
-      return bcrypt
-        .compare(oldPassword, user.passwordHash)
-        .then((isValid: boolean) => {
-          if (!isValid)
-            throw new UnauthorizedException('Current password is incorrect');
-
-          return bcrypt
-            .hash(newPassword, 12)
-            .then((passwordHash: string) =>
-              this.usersRepository
-                .update(userId, { passwordHash })
-                .then(() => true),
-            );
-        });
-    });
-  };
-
-  adminResetPassword = (
-    userId: string,
-    newPassword: string,
-    requesterRole: UserRole,
-    requesterSchoolId?: string,
-  ) => {
-    return this.findById(userId).then((user) => {
-      if (!user) throw new NotFoundException('User not found');
-
-      if (requesterRole !== UserRole.SUPER_ADMIN) {
-        if (
-          requesterRole !== UserRole.SCHOOL_ADMIN ||
-          user.schoolId !== requesterSchoolId
-        ) {
-          throw new ForbiddenException(
-            'You do not have permission to reset this user password',
-          );
-        }
-      }
-
-      return bcrypt
-        .hash(newPassword, 12)
-        .then((passwordHash: string) =>
-          this.usersRepository
-            .update(userId, { passwordHash })
-            .then(() => this.findById(userId))
-            .then((updatedUser) => {
-              if (!updatedUser) throw new NotFoundException('User not found');
-
-              return bcrypt
-                .compare(newPassword, updatedUser.passwordHash)
-                .then((passwordMatches: boolean) => {
-                  if (!passwordMatches) {
-                    throw new InternalServerErrorException(
-                      'Password update could not be confirmed',
-                    );
-                  }
-                  return true;
-                });
-            }),
-        );
-    });
-  };
-
-  adminResetSchoolPassword = (
-    schoolId: string,
-    newPassword: string,
-    requesterRole: UserRole,
-  ) => {
-    if (requesterRole !== UserRole.SUPER_ADMIN) {
-      throw new ForbiddenException(
-        'Only Super Admins can reset school passwords',
-      );
-    }
-
-    return this.usersRepository.find({ where: { schoolId } }).then((users) => {
-      if (!users || users.length === 0) {
-        throw new NotFoundException('No users found for this school');
-      }
-
-      return bcrypt
-        .hash(newPassword, 12)
-        .then((passwordHash: string) =>
-          this.usersRepository
-            .update({ schoolId }, { passwordHash })
-            .then(() => true),
-        );
     });
   };
 
@@ -518,10 +277,6 @@ export class UsersService {
       .count({ where: { parentId: userId } });
   };
 
-  findTeachersBySchool = (schoolId: string) => {
-    return this.usersRepository.find({
-      where: { schoolId, role: Not(UserRole.PARENT) },
-      order: { firstName: 'ASC' },
-    });
-  };
+  findTeachersBySchool = (schoolId: string) =>
+    this.userDirectoryService.findTeachersBySchool(schoolId);
 }
