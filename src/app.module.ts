@@ -25,6 +25,7 @@ import { TimetableModule } from './timetable/timetable.module';
 import { FeesModule } from './fees/fees.module';
 import { CommunicationModule } from './communication/communication.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { MarketingModule } from './marketing/marketing.module';
 import { validateEnvironment } from './config/environment.validation';
 
 const isProduction =
@@ -141,6 +142,7 @@ const isProduction =
     FeesModule,
     CommunicationModule,
     ExpensesModule,
+    MarketingModule,
   ],
   controllers: [AppController, RootHealthController],
   providers: [
