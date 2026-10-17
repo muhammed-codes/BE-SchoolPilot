@@ -160,7 +160,7 @@ export class SchoolsService implements OnModuleInit {
       });
   };
 
-  findAll = (pagination: PaginationArgs, search?: string) => {
+  findAll = (pagination: PaginationArgs, search?: string, status?: string) => {
     const { page = 1, limit = 50 } = pagination;
     const skip = (page - 1) * limit;
 
@@ -171,6 +171,22 @@ export class SchoolsService implements OnModuleInit {
         '(school.name ILIKE :search OR school.schoolCode ILIKE :search OR school.email ILIKE :search)',
         { search: `%${search.trim()}%` },
       );
+    }
+
+    if (status === 'ACTIVE') {
+      queryBuilder.andWhere('school.isActive = :isActive', { isActive: true });
+    } else if (status === 'PENDING') {
+      queryBuilder.andWhere('school.verificationStatus = :status', { status });
+    } else if (status === 'SUSPENDED' || status === 'REJECTED') {
+      queryBuilder.andWhere('school.verificationStatus = :status', { status });
+    } else if (status === 'INACTIVE') {
+      queryBuilder
+        .andWhere('school.isActive = :isActive', { isActive: false })
+        .andWhere('school.verificationStatus NOT IN (:...statuses)', {
+          statuses: ['PENDING', 'SUSPENDED', 'REJECTED'],
+        });
+    } else if (status) {
+      throw new BadRequestException('Unsupported school status filter');
     }
 
     return queryBuilder

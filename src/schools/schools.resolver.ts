@@ -3,9 +3,6 @@ import {
   Query,
   Mutation,
   Args,
-  ObjectType,
-  Field,
-  Int,
 } from '@nestjs/graphql';
 import {
   UseGuards,
@@ -18,6 +15,8 @@ import * as bcrypt from 'bcrypt';
 
 import { SchoolsService } from './schools.service';
 import { PlatformAnalyticsService } from './platform-analytics.service';
+import { PlatformStats } from './dto/platform-stats.type';
+import { SchoolUsageStats } from './dto/school-usage-stats.type';
 import { School } from './entities/school.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateSchoolInput } from './dto/create-school.input';
@@ -31,45 +30,6 @@ import { PaginationArgs, createPaginatedType } from '../common/pagination';
 import { AuthResponse } from '../auth/dto/auth-response.type';
 
 const PaginatedSchool = createPaginatedType(School);
-
-@ObjectType()
-export class PlatformStats {
-  @Field(() => Int)
-  totalSchools: number;
-
-  @Field(() => Int)
-  activeSchools: number;
-
-  @Field(() => Int)
-  totalUsers: number;
-
-  @Field(() => Int)
-  totalStudents: number;
-
-  @Field(() => Int)
-  totalStaff: number;
-
-  @Field(() => Int)
-  totalGuardians: number;
-
-  @Field(() => Int)
-  pendingSchools: number;
-
-  @Field(() => Int)
-  suspendedSchools: number;
-
-  @Field(() => Int)
-  rejectedSchools: number;
-
-  @Field(() => Int)
-  schoolsAddedThisMonth: number;
-
-  @Field(() => Int)
-  studentsAddedThisMonth: number;
-
-  @Field(() => Int)
-  staffAddedThisMonth: number;
-}
 
 @Resolver(() => School)
 export class SchoolsResolver {
@@ -142,8 +102,9 @@ export class SchoolsResolver {
   schools(
     @Args() pagination: PaginationArgs,
     @Args('search', { type: () => String, nullable: true }) search?: string,
+    @Args('status', { type: () => String, nullable: true }) status?: string,
   ) {
-    return this.schoolsService.findAll(pagination, search);
+    return this.schoolsService.findAll(pagination, search, status);
   }
 
   @Query(() => School)
@@ -151,6 +112,15 @@ export class SchoolsResolver {
   @Roles(UserRole.SUPER_ADMIN)
   school(@Args('id') id: string) {
     return this.schoolsService.findById(id);
+  }
+
+  @Query(() => SchoolUsageStats)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN)
+  schoolUsageStats(@Args('schoolId') schoolId: string) {
+    return this.schoolsService
+      .findById(schoolId)
+      .then(() => this.platformAnalyticsService.getSchoolUsageStats(schoolId));
   }
 
   @Query(() => School)

@@ -4,6 +4,7 @@ import { DataSource, In, MoreThanOrEqual, Repository } from 'typeorm';
 import { UserRole } from '../common/enums';
 import { School } from './entities/school.entity';
 import { User } from '../users/entities/user.entity';
+import { SchoolUsageStats } from './dto/school-usage-stats.type';
 
 @Injectable()
 export class PlatformAnalyticsService {
@@ -14,6 +15,37 @@ export class PlatformAnalyticsService {
     private readonly usersRepository: Repository<User>,
     private readonly dataSource: DataSource,
   ) {}
+
+  getSchoolUsageStats = async (schoolId: string): Promise<SchoolUsageStats> => {
+    const staffRoles = [
+      UserRole.SCHOOL_ADMIN,
+      UserRole.PRINCIPAL,
+      UserRole.VICE_PRINCIPAL,
+      UserRole.HEAD_TEACHER,
+      UserRole.CLASS_TEACHER,
+      UserRole.SUBJECT_TEACHER,
+      UserRole.BURSAR,
+    ];
+    const studentsRepository = this.dataSource.getRepository('students');
+    const [totalStudents, totalStaff, totalGuardians, totalUsers, activeUsers] =
+      await Promise.all([
+        studentsRepository.count({ where: { schoolId, isArchived: false } }),
+        this.usersRepository.count({
+          where: { schoolId, role: In(staffRoles) },
+        }),
+        this.usersRepository.count({ where: { schoolId, role: UserRole.PARENT } }),
+        this.usersRepository.count({ where: { schoolId } }),
+        this.usersRepository.count({ where: { schoolId, isActive: true } }),
+      ]);
+
+    return {
+      totalStudents,
+      totalStaff,
+      totalGuardians,
+      totalUsers,
+      activeUsers,
+    };
+  };
 
   getPlatformStats = () => {
     const monthStart = new Date();
@@ -40,6 +72,14 @@ export class PlatformAnalyticsService {
       this.schoolsRepository.count({ where: { verificationStatus: 'PENDING' } }),
       this.schoolsRepository.count({ where: { verificationStatus: 'SUSPENDED' } }),
       this.schoolsRepository.count({ where: { verificationStatus: 'REJECTED' } }),
+      this.schoolsRepository
+        .createQueryBuilder('school')
+        .where('school.isActive = :isActive', { isActive: false })
+        .andWhere(
+          'school.verificationStatus NOT IN (:...statuses)',
+          { statuses: ['PENDING', 'SUSPENDED', 'REJECTED'] },
+        )
+        .getCount(),
       this.schoolsRepository.count({
         where: { createdAt: MoreThanOrEqual(monthStart) },
       }),
@@ -68,6 +108,7 @@ export class PlatformAnalyticsService {
         pendingSchools,
         suspendedSchools,
         rejectedSchools,
+        inactiveSchools,
         schoolsAddedThisMonth,
         studentsAddedThisMonth,
         staffAddedThisMonth,
@@ -81,6 +122,7 @@ export class PlatformAnalyticsService {
         pendingSchools,
         suspendedSchools,
         rejectedSchools,
+        inactiveSchools,
         schoolsAddedThisMonth,
         studentsAddedThisMonth,
         staffAddedThisMonth,
