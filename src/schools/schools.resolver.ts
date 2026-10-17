@@ -17,6 +17,7 @@ import { SchoolsService } from './schools.service';
 import { PlatformAnalyticsService } from './platform-analytics.service';
 import { PlatformStats } from './dto/platform-stats.type';
 import { SchoolUsageStats } from './dto/school-usage-stats.type';
+import { SchoolAdminAccount } from './dto/school-admin-account.type';
 import { SchoolTypeOption } from './dto/school-type-option.type';
 import { SchoolCatalogService } from './school-catalog.service';
 import { School } from './entities/school.entity';
@@ -124,6 +125,15 @@ export class SchoolsResolver {
     return this.schoolsService
       .findById(schoolId)
       .then(() => this.platformAnalyticsService.getSchoolUsageStats(schoolId));
+  }
+
+  @Query(() => [SchoolAdminAccount])
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN)
+  schoolAdminAccounts(@Args('schoolId') schoolId: string) {
+    return this.schoolsService
+      .findById(schoolId)
+      .then(() => this.platformAnalyticsService.getSchoolAdminAccounts(schoolId));
   }
 
   @Query(() => School)

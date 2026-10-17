@@ -5,6 +5,7 @@ import { UserRole } from '../common/enums';
 import { School } from './entities/school.entity';
 import { User } from '../users/entities/user.entity';
 import { SchoolUsageStats } from './dto/school-usage-stats.type';
+import { SchoolAdminAccount } from './dto/school-admin-account.type';
 
 @Injectable()
 export class PlatformAnalyticsService {
@@ -46,6 +47,19 @@ export class PlatformAnalyticsService {
       activeUsers,
     };
   };
+
+  getSchoolAdminAccounts = (schoolId: string): Promise<SchoolAdminAccount[]> =>
+    this.usersRepository.find({
+      where: { schoolId, role: UserRole.SCHOOL_ADMIN },
+      order: { createdAt: 'ASC' },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        isActive: true,
+      },
+    });
 
   getPlatformStats = () => {
     const monthStart = new Date();

@@ -1952,8 +1952,7 @@ type Query {
   resultStats: ResultStats!
   rooms: [Room!]!
   school(id: String!): School!
-  schoolTypeOptions: [SchoolTypeOption!]!
-  schoolUsageStats(schoolId: String!): SchoolUsageStats!
+  schoolAdminAccounts(schoolId: String!): [SchoolAdminAccount!]!
   schoolClasses(limit: Int! = 50, page: Int! = 1, search: String): PaginatedClassEntity!
   schoolDays: [SchoolDay!]!
 
@@ -1965,6 +1964,8 @@ type Query {
   schoolResultSheets(classId: String, status: ResultStatus, termId: String): [ResultSheet!]!
   schoolSubjects(limit: Int! = 50, page: Int! = 1, search: String): PaginatedSubject!
   schoolTeachers: [User!]!
+  schoolTypeOptions: [SchoolTypeOption!]!
+  schoolUsageStats(schoolId: String!): SchoolUsageStats!
   schoolUsers(limit: Int! = 50, page: Int! = 1, role: UserRole, search: String): PaginatedUser!
   schools(limit: Int! = 50, page: Int! = 1, search: String, status: String): PaginatedSchool!
   searchStudents(limit: Int = 5, query: String!): [Student!]!
@@ -2275,10 +2276,10 @@ type School {
   email: String
   id: ID!
   isActive: Boolean!
-  platformStatus: String!
   logoUrl: String
   name: String!
   phone: String
+  platformStatus: String!
   schoolCapacity: String
   schoolCode: String
   schoolStartTime: String
@@ -2289,6 +2290,14 @@ type School {
   updatedAt: DateTime!
   verificationStatus: String
   whatsappNumber: String
+}
+
+type SchoolAdminAccount {
+  email: String
+  firstName: String!
+  id: ID!
+  isActive: Boolean!
+  lastName: String!
 }
 
 type SchoolBankAccount {
@@ -2316,20 +2325,6 @@ type SchoolDay {
   orderIndex: Int!
   schoolId: String!
   updatedAt: DateTime!
-}
-
-type SchoolTypeOption {
-  description: String!
-  label: String!
-  value: String!
-}
-
-type SchoolUsageStats {
-  activeUsers: Int!
-  totalGuardians: Int!
-  totalStaff: Int!
-  totalStudents: Int!
-  totalUsers: Int!
 }
 
 type SchoolDayScheduleGenerationResult {
@@ -2365,6 +2360,20 @@ type SchoolIdCardSettings {
   showQrCode: Boolean!
   showSchoolAddress: Boolean!
   updatedAt: DateTime!
+}
+
+type SchoolTypeOption {
+  description: String!
+  label: String!
+  value: String!
+}
+
+type SchoolUsageStats {
+  activeUsers: Int!
+  totalGuardians: Int!
+  totalStaff: Int!
+  totalStudents: Int!
+  totalUsers: Int!
 }
 
 enum ScoreComponent {
