@@ -3047,6 +3047,7 @@ input UpdateTimetableEntryInput {
 }
 
 input UpdateUserInput {
+  adminThemePreference: String
   email: String
   firstName: String
   lastName: String
@@ -3077,6 +3078,7 @@ input UpsertApprovalConfigInput {
 }
 
 type User {
+  adminThemePreference: String
   assignedClassId: String
   avatarUrl: String
   createdAt: DateTime!

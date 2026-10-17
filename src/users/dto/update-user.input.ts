@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsEmail, IsEnum, IsOptional } from 'class-validator';
+import { IsEmail, IsEnum, IsIn, IsOptional } from 'class-validator';
 import { NamePrefix, UserRole } from '../../common/enums';
 
 @InputType()
@@ -30,4 +30,9 @@ export class UpdateUserInput {
   @IsOptional()
   @IsEnum(NamePrefix)
   namePrefix?: NamePrefix;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsIn(['schoolright', 'classic'])
+  adminThemePreference?: string;
 }

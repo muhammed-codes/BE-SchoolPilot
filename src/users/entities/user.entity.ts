@@ -52,6 +52,10 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   avatarUrl!: string;
 
+  @Field({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
+  adminThemePreference!: string | null;
+
   @Column({ nullable: true })
   avatarPublicId!: string;
 
