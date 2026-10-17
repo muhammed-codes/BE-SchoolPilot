@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { School } from './entities/school.entity';
 import { SchoolsService } from './schools.service';
 import { SchoolsResolver } from './schools.resolver';
+import { PlatformAnalyticsService } from './platform-analytics.service';
 import { UploadModule } from '../upload/upload.module';
 import { User } from '../users/entities/user.entity';
 
@@ -13,7 +14,7 @@ import { User } from '../users/entities/user.entity';
     UploadModule,
     JwtModule.register({}),
   ],
-  providers: [SchoolsService, SchoolsResolver],
+  providers: [SchoolsService, PlatformAnalyticsService, SchoolsResolver],
   exports: [SchoolsService],
 })
 export class SchoolsModule {}

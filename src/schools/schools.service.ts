@@ -267,26 +267,6 @@ export class SchoolsService implements OnModuleInit {
   };
 
   /**
-   * Platform statistics for the SUPER_ADMIN dashboard.
-   */
-  getPlatformStats = () => {
-    return Promise.all([
-      this.schoolsRepository.count(),
-      this.schoolsRepository.count({ where: { isActive: true } }),
-      this.usersRepository.count(),
-      this.dataSource
-        .getRepository('students')
-        .count({ where: { isArchived: false } })
-        .catch(() => 0),
-    ]).then(([totalSchools, activeSchools, totalUsers, totalStudents]) => ({
-      totalSchools,
-      activeSchools,
-      totalUsers,
-      totalStudents,
-    }));
-  };
-
-  /**
    * Persist hashed refresh token on a user record.
    * Used by the resolver after generating JWT tokens on registerSchool.
    */

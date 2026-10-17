@@ -17,6 +17,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 
 import { SchoolsService } from './schools.service';
+import { PlatformAnalyticsService } from './platform-analytics.service';
 import { School } from './entities/school.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateSchoolInput } from './dto/create-school.input';
@@ -44,12 +45,37 @@ export class PlatformStats {
 
   @Field(() => Int)
   totalStudents: number;
+
+  @Field(() => Int)
+  totalStaff: number;
+
+  @Field(() => Int)
+  totalGuardians: number;
+
+  @Field(() => Int)
+  pendingSchools: number;
+
+  @Field(() => Int)
+  suspendedSchools: number;
+
+  @Field(() => Int)
+  rejectedSchools: number;
+
+  @Field(() => Int)
+  schoolsAddedThisMonth: number;
+
+  @Field(() => Int)
+  studentsAddedThisMonth: number;
+
+  @Field(() => Int)
+  staffAddedThisMonth: number;
 }
 
 @Resolver(() => School)
 export class SchoolsResolver {
   constructor(
     private readonly schoolsService: SchoolsService,
+    private readonly platformAnalyticsService: PlatformAnalyticsService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -140,7 +166,7 @@ export class SchoolsResolver {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
   platformStats() {
-    return this.schoolsService.getPlatformStats();
+    return this.platformAnalyticsService.getPlatformStats();
   }
 
   // ─── Authenticated Mutations ────────────────────────────────────────────────
