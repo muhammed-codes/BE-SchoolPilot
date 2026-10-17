@@ -47,6 +47,7 @@ const ensureRecord = async <T extends { id: string }>(
   existing: T | null,
   create: () => Promise<T>,
 ) => existing ?? create();
+const studentBatchSize = 4;
 
 const seed = async () => {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
@@ -152,29 +153,32 @@ const seed = async () => {
     }
 
     const studentsByClass: Student[][] = classes.map(() => []);
-    const seededStudents = await Promise.all(studentFixtures.map(async (fixture) => {
-      const classEntity = classes[fixture.classIndex];
-      const existing = await studentRepository.findOne({
-        where: { schoolId: school.id, firstName: fixture.firstName, lastName: fixture.lastName },
-      });
-      if (existing && (existing.notes !== testRecordNote || existing.currentClassId !== classEntity.id)) {
-        throw new Error(`Student ${fixture.firstName} ${fixture.lastName} exists outside this test fixture.`);
+    for (let startIndex = 0; startIndex < studentFixtures.length; startIndex += studentBatchSize) {
+      const batch = studentFixtures.slice(startIndex, startIndex + studentBatchSize);
+      const seededStudents = await Promise.all(batch.map(async (fixture) => {
+        const classEntity = classes[fixture.classIndex];
+        const existing = await studentRepository.findOne({
+          where: { schoolId: school.id, firstName: fixture.firstName, lastName: fixture.lastName },
+        });
+        if (existing && (existing.notes !== testRecordNote || existing.currentClassId !== classEntity.id)) {
+          throw new Error(`Student ${fixture.firstName} ${fixture.lastName} exists outside this test fixture.`);
+        }
+        const student = await ensureRecord(existing, () => studentsService.createStudent({
+          firstName: fixture.firstName,
+          lastName: fixture.lastName,
+          gender: fixture.gender,
+          dateOfBirth: fixture.dateOfBirth,
+          dateOfAdmission: '2026-09-14',
+          admissionClassId: classEntity.id,
+          classId: classEntity.id,
+          status: StudentStatus.ACTIVE,
+          notes: testRecordNote,
+        }, school.id));
+        return { student, classIndex: fixture.classIndex };
+      }));
+      for (const { student, classIndex } of seededStudents) {
+        studentsByClass[classIndex].push(student);
       }
-      const student = await ensureRecord(existing, () => studentsService.createStudent({
-        firstName: fixture.firstName,
-        lastName: fixture.lastName,
-        gender: fixture.gender,
-        dateOfBirth: fixture.dateOfBirth,
-        dateOfAdmission: '2026-09-14',
-        admissionClassId: classEntity.id,
-        classId: classEntity.id,
-        status: StudentStatus.ACTIVE,
-        notes: testRecordNote,
-      }, school.id));
-      return { student, classIndex: fixture.classIndex };
-    }));
-    for (const { student, classIndex } of seededStudents) {
-      studentsByClass[classIndex].push(student);
     }
 
     const attendanceMarker = await userRepository.findOne({
