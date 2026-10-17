@@ -159,6 +159,7 @@ export class ResultsService {
           classId: input.classId,
           termId: input.termId,
           schoolId,
+          createdByUserId: userId,
           gradingSystem: input.gradingSystem,
           scoreComponents: input.scoreComponents,
           status: ResultStatus.DRAFT,
@@ -242,6 +243,7 @@ export class ResultsService {
     });
 
     if (!sheet) throw new NotFoundException('Result sheet not found');
+    this.assertSheetIsEditable(sheet);
 
     const isClassTeacher = sheet.classEntity.classTeacherId === teacherId;
 
@@ -273,6 +275,7 @@ export class ResultsService {
       .findOne({ where: { id: input.resultSheetId, schoolId } })
       .then((sheet) => {
         if (!sheet) throw new NotFoundException('Result sheet not found');
+        this.assertSheetIsEditable(sheet);
         return this.processScores(input, sheet, adminId);
       });
   };
@@ -304,6 +307,7 @@ export class ResultsService {
     sheet: ResultSheet,
     userId: string,
   ) => {
+    this.assertSheetIsEditable(sheet);
     const effectiveSubjectId = await this.resolveSubjectId(
       input.subjectId,
       sheet.classId,
@@ -412,6 +416,12 @@ export class ResultsService {
             .then(() => savedScores)
         : this.recalculateStudentTotals(sheet.id).then(() => savedScores),
     );
+  };
+
+  private assertSheetIsEditable = (sheet: ResultSheet) => {
+    if (sheet.status === ResultStatus.PUBLISHED) {
+      throw new BadRequestException('Approved results cannot be edited');
+    }
   };
 
   private validateSubmitPayload = (
@@ -577,9 +587,16 @@ export class ResultsService {
       .findOne({ where: { id: resultSheetId, schoolId } })
       .then((sheet) => {
         if (!sheet) throw new NotFoundException('Result sheet not found');
+        if (sheet.status === ResultStatus.PUBLISHED) {
+          throw new BadRequestException('Result sheet has already been approved');
+        }
 
         return this.resultSheetRepo
-          .update(resultSheetId, { status: ResultStatus.PUBLISHED })
+          .update(resultSheetId, {
+            status: ResultStatus.PUBLISHED,
+            approvedByUserId: principalId,
+            approvedAt: new Date(),
+          })
           .then(() => this.calculatePositions(resultSheetId))
           .then(() => this.sendResultNotifications(sheet))
           .then(() =>
@@ -603,7 +620,11 @@ export class ResultsService {
           );
         }
         return this.resultSheetRepo
-          .update(resultSheetId, { status: ResultStatus.PUBLISHED })
+          .update(resultSheetId, {
+            status: ResultStatus.PUBLISHED,
+            approvedByUserId: userId,
+            approvedAt: new Date(),
+          })
           .then(() => this.calculatePositions(resultSheetId))
           .then(() => this.sendResultNotifications(sheet))
           .then(() =>
@@ -776,9 +797,12 @@ export class ResultsService {
         'classEntity',
         'classEntity.classSubjects',
         'classEntity.classSubjects.subject',
+      'createdByUser',
+      'approvedByUser',
         'studentResults',
         'studentResults.subjectScores',
         'studentResults.subjectScores.subject',
+      'studentResults.subjectScores.enteredByUser',
         'studentResults.student',
       ],
     });

@@ -6,6 +6,7 @@ import { ScoreComponentConfig } from '../dto/score-component-config.type';
 import { StudentResult } from './student-result.entity';
 import { ClassEntity } from '../../classes/entities/class.entity';
 import { Term } from '../../terms/entities/term.entity';
+import { User } from '../../users/entities/user.entity';
 
 @ObjectType()
 @Entity('result_sheets')
@@ -31,6 +32,28 @@ export class ResultSheet extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
   schoolId!: string;
+
+  @Field({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
+  createdByUserId!: string | null;
+
+  @Field(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, eager: false })
+  @JoinColumn({ name: 'createdByUserId' })
+  createdByUser!: User;
+
+  @Field({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
+  approvedByUserId!: string | null;
+
+  @Field(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, eager: false })
+  @JoinColumn({ name: 'approvedByUserId' })
+  approvedByUser!: User | null;
+
+  @Field({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
+  approvedAt!: Date | null;
 
   @Field(() => GradingSystem)
   @Column({ type: 'enum', enum: GradingSystem })

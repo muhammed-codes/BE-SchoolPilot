@@ -4,6 +4,7 @@ import { BaseEntity } from '../../common/entities/base.entity';
 import { StudentResult } from './student-result.entity';
 import { ComponentScore } from '../dto/component-score.type';
 import { Subject } from '../../subjects/entities/subject.entity';
+import { User } from '../../users/entities/user.entity';
 
 @ObjectType()
 @Entity('subject_scores')
@@ -52,6 +53,11 @@ export class SubjectScore extends BaseEntity {
   @Field()
   @Column({ type: 'uuid' })
   enteredByUserId!: string;
+
+  @Field(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, eager: false })
+  @JoinColumn({ name: 'enteredByUserId' })
+  enteredByUser!: User;
 
   @Field(() => StudentResult)
   @ManyToOne(() => StudentResult, (sr) => sr.subjectScores)
