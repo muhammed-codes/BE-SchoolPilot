@@ -40,10 +40,16 @@ export class RegisterSchoolInput {
 
   @Field(() => String, { nullable: true })
   @IsOptional()
+  @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
+    message: 'Enter a valid phone number',
+  })
   adminPhone?: string;
 
   @Field(() => String, { nullable: true })
   @IsOptional()
+  @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
+    message: 'Enter a valid phone number',
+  })
   whatsappNumber?: string;
 
   // ── School Details ──────────────────────────────────────────────────────────
@@ -81,6 +87,9 @@ export class RegisterSchoolInput {
 
   @Field(() => String, { nullable: true })
   @IsOptional()
+  @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
+    message: 'Enter a valid phone number',
+  })
   schoolPhone?: string;
 
   @Field(() => String, { nullable: true })

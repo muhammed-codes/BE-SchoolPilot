@@ -13,6 +13,9 @@ export class CreateSchoolInput {
 
   @Field({ nullable: true })
   @IsOptional()
+  @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
+    message: 'Enter a valid phone number',
+  })
   phone?: string;
 
   @Field({ nullable: true })

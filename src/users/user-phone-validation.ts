@@ -3,7 +3,7 @@ import * as yup from 'yup';
 
 const userPhoneSchema = yup
   .string()
-  .matches(/^(?:\d{7,15})?$/, 'Phone number must contain 7 to 15 digits')
+  .matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, 'Enter a valid phone number')
   .nullable()
   .optional();
 

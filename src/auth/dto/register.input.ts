@@ -6,6 +6,7 @@ import {
   IsEnum,
   IsOptional,
   IsUUID,
+  Matches,
 } from 'class-validator';
 import { UserRole } from '../../common/enums';
 
@@ -39,5 +40,8 @@ export class RegisterInput {
 
   @Field({ nullable: true })
   @IsOptional()
+  @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
+    message: 'Enter a valid phone number',
+  })
   phone?: string;
 }

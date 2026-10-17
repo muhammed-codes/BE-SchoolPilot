@@ -5,6 +5,7 @@ import {
   IsString,
   IsUUID,
   IsEmail,
+  Matches,
 } from 'class-validator';
 
 @InputType()
@@ -22,6 +23,9 @@ export class CreateExpenseVendorInput {
   @Field({ nullable: true })
   @IsOptional()
   @IsString()
+  @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
+    message: 'Enter a valid phone number',
+  })
   phone?: string;
 
   @Field({ nullable: true })
@@ -59,6 +63,9 @@ export class UpdateExpenseVendorInput {
   @Field({ nullable: true })
   @IsOptional()
   @IsString()
+  @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
+    message: 'Enter a valid phone number',
+  })
   phone?: string;
 
   @Field({ nullable: true })

@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsNotEmpty, IsOptional, IsEnum, IsDateString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsEnum, IsDateString, Matches } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { Gender, StudentStatus } from '../../common/enums';
 
@@ -87,6 +87,9 @@ export class CreateStudentInput {
 
   @Field({ nullable: true })
   @IsOptional()
+  @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
+    message: 'Enter a valid phone number',
+  })
   parentPhone?: string;
 
   @Field(() => [GuardianInput], { nullable: true })
@@ -106,6 +109,9 @@ export class GuardianInput {
 
   @Field()
   @IsNotEmpty()
+  @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})$/, {
+    message: 'Enter a valid phone number',
+  })
   phone!: string;
 
   @Field({ nullable: true })

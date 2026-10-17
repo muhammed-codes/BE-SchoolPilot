@@ -22,8 +22,8 @@ export class UpdateUserInput {
   @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
-  @Matches(/^(?:\d{7,15})?$/, {
-    message: 'Phone number must contain 7 to 15 digits',
+  @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
+    message: 'Enter a valid phone number',
   })
   phone?: string;
 
