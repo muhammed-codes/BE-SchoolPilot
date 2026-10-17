@@ -176,9 +176,13 @@ export class SchoolsService implements OnModuleInit {
     if (status === 'ACTIVE') {
       queryBuilder.andWhere('school.isActive = :isActive', { isActive: true });
     } else if (status === 'PENDING') {
-      queryBuilder.andWhere('school.verificationStatus = :status', { status });
+      queryBuilder
+        .andWhere('school.isActive = :isActive', { isActive: false })
+        .andWhere('school.verificationStatus = :status', { status });
     } else if (status === 'SUSPENDED' || status === 'REJECTED') {
-      queryBuilder.andWhere('school.verificationStatus = :status', { status });
+      queryBuilder
+        .andWhere('school.isActive = :isActive', { isActive: false })
+        .andWhere('school.verificationStatus = :status', { status });
     } else if (status === 'INACTIVE') {
       queryBuilder
         .andWhere('school.isActive = :isActive', { isActive: false })

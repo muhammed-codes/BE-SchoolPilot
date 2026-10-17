@@ -69,9 +69,15 @@ export class PlatformAnalyticsService {
       studentsRepository.count({ where: { isArchived: false } }).catch(() => 0),
       this.usersRepository.count({ where: { role: In(staffRoles) } }),
       this.usersRepository.count({ where: { role: UserRole.PARENT } }),
-      this.schoolsRepository.count({ where: { verificationStatus: 'PENDING' } }),
-      this.schoolsRepository.count({ where: { verificationStatus: 'SUSPENDED' } }),
-      this.schoolsRepository.count({ where: { verificationStatus: 'REJECTED' } }),
+      this.schoolsRepository.count({
+        where: { isActive: false, verificationStatus: 'PENDING' },
+      }),
+      this.schoolsRepository.count({
+        where: { isActive: false, verificationStatus: 'SUSPENDED' },
+      }),
+      this.schoolsRepository.count({
+        where: { isActive: false, verificationStatus: 'REJECTED' },
+      }),
       this.schoolsRepository
         .createQueryBuilder('school')
         .where('school.isActive = :isActive', { isActive: false })
