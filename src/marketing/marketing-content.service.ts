@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
+const whatsappLink = (topic = 'SchoolRight school management software') =>
+  `https://wa.me/2349157777295?text=${encodeURIComponent(
+    `Hello SchoolRight, I would like to learn more about ${topic}. Can we discuss a demo for my school?`,
+  )}`;
+
 @Injectable()
 export class MarketingContentService {
   getLandingPage = (): string =>
@@ -27,7 +32,7 @@ export class MarketingContentService {
         mobileImageAlt: 'SchoolRight mobile school management interface',
         trustBadge: { title: 'Trusted by', value: '500+ Schools' },
         primaryAction: { label: 'Get Started Today', href: '/register' },
-        secondaryAction: { label: 'Chat on WhatsApp', href: 'https://wa.me/2349157777295' },
+        secondaryAction: { label: 'Chat on WhatsApp', href: whatsappLink('a SchoolRight demo') },
         assurances: ['Easy to use', 'Affordable', 'Reliable support'],
       },
       featureSummary: [
@@ -147,15 +152,15 @@ export class MarketingContentService {
         title: 'Ready to transform your school?',
         description: 'Join hundreds of schools already using SchoolRight to save time, stay organized and provide a better learning experience.',
         primaryAction: { label: 'Get Started Today', href: '/register' },
-        secondaryAction: { label: 'Chat on WhatsApp', href: 'https://wa.me/2349157777295' },
+        secondaryAction: { label: 'Chat on WhatsApp', href: whatsappLink('a SchoolRight demo') },
       },
       footer: {
         tagline: 'Smarter Schools. Brighter Futures.',
         copyrightText: 'SchoolRight. All rights reserved.',
         columns: [
           { title: 'Product', links: [{ label: 'Features', href: '#features' }, { label: 'Pricing', href: '#pricing' }, { label: 'Demo', href: '#product-tour' }, { label: 'Updates', href: '#product-tour' }] },
-          { title: 'Company', links: [{ label: 'About Us', href: '#why-schoolright' }, { label: 'Contact', href: 'https://wa.me/2349157777295' }, { label: 'Privacy Policy', href: 'https://wa.me/2349157777295' }, { label: 'Terms of Service', href: 'https://wa.me/2349157777295' }] },
-          { title: 'Support', links: [{ label: 'Help Center', href: 'https://wa.me/2349157777295' }, { label: 'Documentation', href: '#product-tour' }, { label: 'Contact Support', href: 'https://wa.me/2349157777295' }] },
+          { title: 'Company', links: [{ label: 'About Us', href: '#why-schoolright' }, { label: 'Contact', href: whatsappLink('SchoolRight sales or support') }, { label: 'Privacy Policy', href: whatsappLink('SchoolRight privacy policy') }, { label: 'Terms of Service', href: whatsappLink('SchoolRight terms of service') }] },
+          { title: 'Support', links: [{ label: 'Help Center', href: whatsappLink('SchoolRight help and support') }, { label: 'Documentation', href: '#product-tour' }, { label: 'Contact Support', href: whatsappLink('SchoolRight sales or support') }] },
         ],
       },
       copyrightYear: new Date().getFullYear(),
