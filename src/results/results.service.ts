@@ -549,6 +549,7 @@ export class ResultsService {
       .findOne({ where: { id: resultSheetId, schoolId } })
       .then((sheet) => {
         if (!sheet) throw new NotFoundException('Result sheet not found');
+        this.assertSheetIsEditable(sheet);
         return this.resultSheetRepo
           .update(resultSheetId, {
             status: ResultStatus.PENDING_ADMIN_REVIEW,
@@ -568,6 +569,7 @@ export class ResultsService {
       .findOne({ where: { id: resultSheetId, schoolId } })
       .then((sheet) => {
         if (!sheet) throw new NotFoundException('Result sheet not found');
+        this.assertSheetIsEditable(sheet);
         return this.resultSheetRepo
           .update(resultSheetId, {
             status: ResultStatus.PENDING_PRINCIPAL_APPROVAL,
@@ -643,6 +645,7 @@ export class ResultsService {
       .findOne({ where: { id: resultSheetId, schoolId } })
       .then((sheet) => {
         if (!sheet) throw new NotFoundException('Result sheet not found');
+        this.assertSheetIsEditable(sheet);
 
         return this.resultSheetRepo
           .update(resultSheetId, {
@@ -739,50 +742,60 @@ export class ResultsService {
       });
   };
 
-  saveTeacherRemark = (
+  saveTeacherRemark = async (
     subjectScoreId: string,
     remark: string,
     userId: string,
     schoolId: string,
   ) => {
-    return this.subjectScoreRepo
-      .findOne({ where: { id: subjectScoreId }, relations: ['studentResult'] })
-      .then((score) => {
-        if (!score || score.studentResult.schoolId !== schoolId) {
-          throw new NotFoundException('Subject score not found');
-        }
-        score.teacherRemark = remark;
-        return this.subjectScoreRepo.save(score);
-      });
+    const score = await this.subjectScoreRepo.findOne({
+      where: { id: subjectScoreId },
+      relations: ['studentResult'],
+    });
+    if (!score || score.studentResult.schoolId !== schoolId) {
+      throw new NotFoundException('Subject score not found');
+    }
+    const sheet = await this.resultSheetRepo.findOne({
+      where: { id: score.resultSheetId, schoolId },
+    });
+    if (sheet) this.assertSheetIsEditable(sheet);
+    score.teacherRemark = remark;
+    return this.subjectScoreRepo.save(score);
   };
 
-  savePrincipalRemark = (
+  savePrincipalRemark = async (
     studentResultId: string,
     remark: string,
     schoolId: string,
   ) => {
-    return this.studentResultRepo
-      .findOne({ where: { id: studentResultId, schoolId } })
-      .then((result) => {
-        if (!result) throw new NotFoundException('Student result not found');
-        result.principalRemark = remark;
-        return this.studentResultRepo.save(result);
-      });
+    const result = await this.studentResultRepo.findOne({
+      where: { id: studentResultId, schoolId },
+    });
+    if (!result) throw new NotFoundException('Student result not found');
+    const sheet = await this.resultSheetRepo.findOne({
+      where: { id: result.resultSheetId, schoolId },
+    });
+    if (sheet) this.assertSheetIsEditable(sheet);
+    result.principalRemark = remark;
+    return this.studentResultRepo.save(result);
   };
 
-  saveClassTeacherRemark = (
+  saveClassTeacherRemark = async (
     studentResultId: string,
     remark: string,
     userId: string,
     schoolId: string,
   ) => {
-    return this.studentResultRepo
-      .findOne({ where: { id: studentResultId, schoolId } })
-      .then((result) => {
-        if (!result) throw new NotFoundException('Student result not found');
-        result.classTeacherRemark = remark;
-        return this.studentResultRepo.save(result);
-      });
+    const result = await this.studentResultRepo.findOne({
+      where: { id: studentResultId, schoolId },
+    });
+    if (!result) throw new NotFoundException('Student result not found');
+    const sheet = await this.resultSheetRepo.findOne({
+      where: { id: result.resultSheetId, schoolId },
+    });
+    if (sheet) this.assertSheetIsEditable(sheet);
+    result.classTeacherRemark = remark;
+    return this.studentResultRepo.save(result);
   };
 
   getResultSheet = async (
