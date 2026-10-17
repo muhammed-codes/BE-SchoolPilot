@@ -8,6 +8,7 @@ import { SchoolsService } from '../schools/schools.service';
 import { UserRole } from '../common/enums';
 import { CreateUserInput } from './dto/create-user.input';
 import { User } from './entities/user.entity';
+import { validateUserPhone } from './user-phone-validation';
 
 @Injectable()
 export class UserAccountProvisioningService {
@@ -70,6 +71,7 @@ export class UserAccountProvisioningService {
   };
 
   createUser = async (input: CreateUserInput, schoolId: string) => {
+    await validateUserPhone(input.phone);
     const isStaffRole = input.role !== UserRole.PARENT && input.role !== UserRole.SUPER_ADMIN;
     const staffId = isStaffRole
       ? await this.schoolsService

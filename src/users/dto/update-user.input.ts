@@ -1,5 +1,12 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsEmail, IsEnum, IsIn, IsOptional } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsIn,
+  IsOptional,
+  IsString,
+  Matches,
+} from 'class-validator';
 import { NamePrefix, UserRole } from '../../common/enums';
 
 @InputType()
@@ -12,8 +19,12 @@ export class UpdateUserInput {
   @IsOptional()
   lastName?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
+  @IsString()
+  @Matches(/^(?:\d{7,15})?$/, {
+    message: 'Phone number must contain 7 to 15 digits',
+  })
   phone?: string;
 
   @Field({ nullable: true })

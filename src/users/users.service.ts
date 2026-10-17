@@ -15,6 +15,7 @@ import { UserRole } from '../common/enums';
 import { StudentParent } from '../students/entities/student-parent.entity';
 import { UserAccountProvisioningService } from './user-account-provisioning.service';
 import { UserDirectoryService } from './user-directory.service';
+import { validateUserPhone } from './user-phone-validation';
 
 @Injectable()
 export class UsersService {
@@ -105,53 +106,60 @@ export class UsersService {
     requesterRole: UserRole,
     requesterSchoolId: string,
   ) => {
-    return this.findById(id).then((user) => {
-      if (!user) throw new NotFoundException('User not found');
+    return validateUserPhone(input.phone)
+      .then(() => this.findById(id))
+      .then((user) => {
+        if (!user) throw new NotFoundException('User not found');
 
-      const isSelfUpdate = requesterId === id;
-      const isAdmin =
-        requesterRole === UserRole.SUPER_ADMIN ||
-        requesterRole === UserRole.SCHOOL_ADMIN;
+        const isSelfUpdate = requesterId === id;
+        const isAdmin =
+          requesterRole === UserRole.SUPER_ADMIN ||
+          requesterRole === UserRole.SCHOOL_ADMIN;
 
-      if (!isSelfUpdate && !isAdmin) {
-        throw new ForbiddenException('You can only update your own profile');
-      }
+        if (!isSelfUpdate && !isAdmin) {
+          throw new ForbiddenException('You can only update your own profile');
+        }
 
-      if (
-        requesterRole === UserRole.SCHOOL_ADMIN &&
-        user.schoolId !== requesterSchoolId
-      ) {
-        throw new ForbiddenException(
-          'You can only update users in your own school',
-        );
-      }
+        if (
+          requesterRole === UserRole.SCHOOL_ADMIN &&
+          user.schoolId !== requesterSchoolId
+        ) {
+          throw new ForbiddenException(
+            'You can only update users in your own school',
+          );
+        }
 
-      if (input.role && !isAdmin) {
-        throw new ForbiddenException('Only admins can update user roles');
-      }
+        if (input.role && !isAdmin) {
+          throw new ForbiddenException('Only admins can update user roles');
+        }
 
-      if (
-        input.role === UserRole.SUPER_ADMIN &&
-        requesterRole !== UserRole.SUPER_ADMIN
-      ) {
-        throw new ForbiddenException(
-          'Only super admins can assign the super admin role',
-        );
-      }
+        if (
+          input.role === UserRole.SUPER_ADMIN &&
+          requesterRole !== UserRole.SUPER_ADMIN
+        ) {
+          throw new ForbiddenException(
+            'Only super admins can assign the super admin role',
+          );
+        }
 
-      return this.accountProvisioningService.ensureUniqueLeadershipRolePerSchool(
-        user.schoolId,
-        input.role,
-        user.id,
-      ).then(() =>
-        this.usersRepository
-          .update(id, input)
-          .catch((err) =>
-            this.accountProvisioningService.mapLeadershipRoleDatabaseError(err, input.role),
+        return this.accountProvisioningService
+          .ensureUniqueLeadershipRolePerSchool(
+            user.schoolId,
+            input.role,
+            user.id,
           )
-          .then(() => this.findById(id)),
-      );
-    });
+          .then(() =>
+            this.usersRepository
+              .update(id, input)
+              .catch((err) =>
+                this.accountProvisioningService.mapLeadershipRoleDatabaseError(
+                  err,
+                  input.role,
+                ),
+              )
+              .then(() => this.findById(id)),
+          );
+      });
   };
 
   assignSchool = (
