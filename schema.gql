@@ -1894,6 +1894,7 @@ type Query {
   idCardTemplates(cardType: IdCardType): [IdCardTemplate!]!
   invoice(id: String!): StudentInvoice
   invoices(filter: InvoiceFilterInput, limit: Int! = 50, page: Int! = 1): PaginatedStudentInvoice!
+  marketingLandingPage: String!
   me: User!
   myAvailabilities: [TeacherAvailability!]!
   myChildResults(studentId: String!): [StudentResult!]!
