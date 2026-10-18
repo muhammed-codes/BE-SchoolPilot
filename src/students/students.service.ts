@@ -17,6 +17,7 @@ import { PromotionResult } from './dto/promotion-result.type';
 import { UsersService } from '../users/users.service';
 import { UploadService } from '../upload/upload.service';
 import { Gender, UserRole, StudentStatus } from '../common/enums';
+import { TEACHER_ROLES } from '../common/constants/roles.constant';
 import { ClassesService } from '../classes/classes.service';
 import { SchoolsService } from '../schools/schools.service';
 import { User } from '../users/entities/user.entity';
@@ -544,6 +545,82 @@ export class StudentsService {
         if (!student) throw new NotFoundException('Student not found');
         return student;
       });
+  }
+
+  async getStudentByIdForUser(
+    id: string,
+    userId: string,
+    role: UserRole,
+    schoolId: string,
+  ) {
+    const student = await this.getStudentById(id, schoolId);
+    if (role === UserRole.PARENT) {
+      const link = await this.studentParentsRepository.findOne({
+        where: { studentId: student.id, parentId: userId },
+      });
+      if (!link) throw new NotFoundException('Student not found');
+      return student;
+    }
+    if (TEACHER_ROLES.includes(role)) {
+      const classIds = await this.getTeacherClassIds(userId, schoolId);
+      if (
+        !student.currentClassId ||
+        !classIds.includes(student.currentClassId)
+      ) {
+        throw new NotFoundException('Student not found');
+      }
+    }
+    return student;
+  }
+
+  async assertClassAccessibleForUser(
+    classId: string,
+    userId: string,
+    role: UserRole,
+    schoolId: string,
+  ) {
+    if (role === UserRole.PARENT) {
+      throw new NotFoundException('Class not found');
+    }
+    if (TEACHER_ROLES.includes(role)) {
+      const classIds = await this.getTeacherClassIds(userId, schoolId);
+      if (!classIds.includes(classId))
+        throw new NotFoundException('Class not found');
+    }
+  }
+
+  async assertStudentsAccessibleForUser(
+    studentIds: string[],
+    userId: string,
+    role: UserRole,
+    schoolId: string,
+  ) {
+    await Promise.all(
+      Array.from(new Set(studentIds)).map((studentId) =>
+        this.getStudentByIdForUser(studentId, userId, role, schoolId),
+      ),
+    );
+  }
+
+  async getStudentsByParentForUser(
+    guardianId: string,
+    userId: string,
+    role: UserRole,
+    schoolId: string,
+  ) {
+    if (role === UserRole.PARENT && guardianId !== userId) {
+      throw new NotFoundException('Guardian not found');
+    }
+    const students = await this.getStudentsByParent(
+      role === UserRole.PARENT ? userId : guardianId,
+      schoolId,
+    );
+    if (!TEACHER_ROLES.includes(role)) return students;
+    const classIds = await this.getTeacherClassIds(userId, schoolId);
+    return students.filter(
+      (student) =>
+        student.currentClassId && classIds.includes(student.currentClassId),
+    );
   }
 
   searchStudents = (

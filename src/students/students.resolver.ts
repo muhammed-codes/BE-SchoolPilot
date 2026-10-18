@@ -26,19 +26,38 @@ export class StudentsResolver {
 
   @Query(() => [Student])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
   @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   studentsByClass(
     @Args('classId') classId: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
-    return this.studentsService.getStudentsByClass(classId, user.schoolId);
+    return this.studentsService
+      .assertClassAccessibleForUser(classId, user.sub, user.role, user.schoolId)
+      .then(() =>
+        this.studentsService.getStudentsByClass(classId, user.schoolId),
+      );
   }
 
   @Query(() => Student, { nullable: true })
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
-  student(@Args('id') id: string, @CurrentUser() user: { schoolId: string }) {
-    return this.studentsService.getStudentById(id, user.schoolId);
+  student(
+    @Args('id') id: string,
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+  ) {
+    return this.studentsService.getStudentByIdForUser(
+      id,
+      user.sub,
+      user.role,
+      user.schoolId,
+    );
   }
 
   @Query(() => [Student])
@@ -51,16 +70,35 @@ export class StudentsResolver {
 
   @Query(() => [Student])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
   @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   guardianStudents(
     @Args('guardianId') guardianId: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
-    return this.studentsService.getStudentsByParent(guardianId, user.schoolId);
+    return this.studentsService.getStudentsByParentForUser(
+      guardianId,
+      user.sub,
+      user.role,
+      user.schoolId,
+    );
   }
 
   @Query(() => [Student])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
   @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   searchStudents(
     @Args('query') query: string,
@@ -87,6 +125,13 @@ export class StudentsResolver {
 
   @Query(() => PaginatedStudent)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
   @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   studentsPage(
     @Args('query', { type: () => String, defaultValue: '' }) query: string,
@@ -125,6 +170,13 @@ export class StudentsResolver {
 
   @Query(() => StudentStatistics)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
   @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   studentStatistics(
     @Args('query', { type: () => String, defaultValue: '' }) query: string,
@@ -148,103 +200,220 @@ export class StudentsResolver {
 
   @Mutation(() => Student)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
   @RequirePermission(AppResource.STUDENTS, PermissionAction.CREATE)
   createStudent(
     @Args('input') input: CreateStudentInput,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
-    return this.studentsService.createStudent(input, user.schoolId);
+    return (
+      TEACHER_ROLES.includes(user.role) && input.classId
+        ? this.studentsService.assertClassAccessibleForUser(
+            input.classId,
+            user.sub,
+            user.role,
+            user.schoolId,
+          )
+        : Promise.resolve()
+    ).then(() => this.studentsService.createStudent(input, user.schoolId));
   }
 
   @Mutation(() => Student)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
   @RequirePermission(AppResource.STUDENTS, PermissionAction.UPDATE)
   updateStudent(
     @Args('id') id: string,
     @Args('input') input: UpdateStudentInput,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
-    return this.studentsService.updateStudent(id, input, user.schoolId);
+    return this.studentsService
+      .getStudentByIdForUser(id, user.sub, user.role, user.schoolId)
+      .then(() =>
+        input.classId && TEACHER_ROLES.includes(user.role)
+          ? this.studentsService.assertClassAccessibleForUser(
+              input.classId,
+              user.sub,
+              user.role,
+              user.schoolId,
+            )
+          : undefined,
+      )
+      .then(() => this.studentsService.updateStudent(id, input, user.schoolId));
   }
 
   @Mutation(() => BulkImportResult)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
   @RequirePermission(AppResource.STUDENTS, PermissionAction.CREATE)
   bulkImportStudents(
     @Args('students', { type: () => [CreateStudentInput] })
     students: CreateStudentInput[],
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
-    return this.studentsService.bulkImportStudents(students, user.schoolId);
+    return (
+      TEACHER_ROLES.includes(user.role)
+        ? Promise.all(
+            students.map((student) =>
+              this.studentsService.assertClassAccessibleForUser(
+                student.classId,
+                user.sub,
+                user.role,
+                user.schoolId,
+              ),
+            ),
+          )
+        : Promise.resolve()
+    ).then(() =>
+      this.studentsService.bulkImportStudents(students, user.schoolId),
+    );
   }
 
   @Mutation(() => Student)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+  )
   @RequirePermission(AppResource.STUDENTS, PermissionAction.UPDATE)
   linkParent(
     @Args('studentId') studentId: string,
     @Args('parentUserId') parentUserId: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
-    return this.studentsService.linkParent(
-      studentId,
-      parentUserId,
-      user.schoolId,
-    );
+    return this.studentsService
+      .getStudentByIdForUser(studentId, user.sub, user.role, user.schoolId)
+      .then(() =>
+        this.studentsService.linkParent(studentId, parentUserId, user.schoolId),
+      );
   }
 
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+  )
   @RequirePermission(AppResource.STUDENTS, PermissionAction.UPDATE)
   unlinkParent(
     @Args('studentId') studentId: string,
     @Args('parentUserId') parentUserId: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
-    return this.studentsService.unlinkParent(
-      studentId,
-      parentUserId,
-      user.schoolId,
-    );
+    return this.studentsService
+      .getStudentByIdForUser(studentId, user.sub, user.role, user.schoolId)
+      .then(() =>
+        this.studentsService.unlinkParent(
+          studentId,
+          parentUserId,
+          user.schoolId,
+        ),
+      );
   }
 
   @Query(() => [StudentParent])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+  )
   @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   studentParents(
     @Args('studentId') studentId: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
-    return this.studentsService.getParentsByStudent(studentId, user.schoolId);
+    return this.studentsService
+      .getStudentByIdForUser(studentId, user.sub, user.role, user.schoolId)
+      .then(() =>
+        this.studentsService.getParentsByStudent(studentId, user.schoolId),
+      );
   }
 
   @Mutation(() => Student)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+  )
   @RequirePermission(AppResource.STUDENTS, PermissionAction.CREATE)
   uploadPassportPhoto(
     @Args('studentId') studentId: string,
     @Args('imageUrl') imageUrl: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
-    return this.studentsService.uploadPassportPhoto(
-      studentId,
-      imageUrl,
-      user.schoolId,
-    );
+    return this.studentsService
+      .getStudentByIdForUser(studentId, user.sub, user.role, user.schoolId)
+      .then(() =>
+        this.studentsService.uploadPassportPhoto(
+          studentId,
+          imageUrl,
+          user.schoolId,
+        ),
+      );
   }
 
   @Mutation(() => PromotionResult)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+  )
   @RequirePermission(AppResource.STUDENTS, PermissionAction.UPDATE)
   promoteStudents(
     @Args('input') input: PromoteStudentsInput,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
-    return this.studentsService.promoteStudents(input, user.schoolId);
+    return (
+      TEACHER_ROLES.includes(user.role)
+        ? this.studentsService
+            .assertClassAccessibleForUser(
+              input.fromClassId,
+              user.sub,
+              user.role,
+              user.schoolId,
+            )
+            .then(() =>
+              this.studentsService.assertStudentsAccessibleForUser(
+                input.studentIds,
+                user.sub,
+                user.role,
+                user.schoolId,
+              ),
+            )
+        : Promise.resolve()
+    ).then(() => this.studentsService.promoteStudents(input, user.schoolId));
   }
 
   @Query(() => [Student])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+  )
   @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   archivedStudents(@CurrentUser() user: { schoolId: string }) {
     return this.studentsService.getArchivedStudents(user.schoolId);
