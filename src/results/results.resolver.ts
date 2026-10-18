@@ -13,7 +13,7 @@ import { ResultAnalytics } from './dto/result-analytics.type';
 import { PaginatedClassScores } from './dto/paginated-class-scores.type';
 import { TeacherScoringAssignment } from './dto/teacher-scoring-assignment.type';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
-import { CurrentUser, RequirePermission } from '../common/decorators';
+import { CurrentUser, RequirePermission, Roles } from '../common/decorators';
 import { UserRole, ResultStatus } from '../common/enums';
 
 @Resolver()
@@ -37,21 +37,35 @@ export class ResultsResolver {
 
   @Query(() => [ResultSheet])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
   @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
   resultSheetsByClass(
     @Args('classId') classId: string,
     @Args('termId') termId: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
     return this.resultsService.getResultSheetsByClass(
       classId,
       termId,
       user.schoolId,
+      user.sub,
+      user.role,
     );
   }
 
   @Query(() => [ResultSheet])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+  )
   @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
   pendingPrincipalApprovals(@CurrentUser() user: { schoolId: string }) {
     return this.resultsService.getPendingApprovals(user.schoolId);
@@ -110,13 +124,20 @@ export class ResultsResolver {
 
   @Query(() => ResultAnalytics)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
   @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
   resultAnalytics(
     @Args('classId') classId: string,
     @Args('sessionId') sessionId: string,
     @Args('termId') termId: string,
     @Args('subjectId', { nullable: true }) subjectId: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
     return this.resultsService.getResultAnalytics(
       classId,
@@ -124,11 +145,20 @@ export class ResultsResolver {
       termId,
       subjectId,
       user.schoolId,
+      user.sub,
+      user.role,
     );
   }
 
   @Query(() => PaginatedClassScores)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+    UserRole.CLASS_TEACHER,
+    UserRole.SUBJECT_TEACHER,
+  )
   @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
   classScores(
     @Args('classId') classId: string,
@@ -137,7 +167,7 @@ export class ResultsResolver {
     @Args('search', { nullable: true }) search: string,
     @Args('skip', { type: () => Int, defaultValue: 0 }) skip: number,
     @Args('take', { type: () => Int, defaultValue: 50 }) take: number,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
     return this.resultsService.getClassScores(
       classId,
@@ -147,6 +177,8 @@ export class ResultsResolver {
       skip,
       take,
       user.schoolId,
+      user.sub,
+      user.role,
     );
   }
 

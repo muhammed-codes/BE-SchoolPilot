@@ -590,7 +590,9 @@ export class ResultsService {
       .then((sheet) => {
         if (!sheet) throw new NotFoundException('Result sheet not found');
         if (sheet.status === ResultStatus.PUBLISHED) {
-          throw new BadRequestException('Result sheet has already been approved');
+          throw new BadRequestException(
+            'Result sheet has already been approved',
+          );
         }
 
         return this.resultSheetRepo
@@ -810,12 +812,12 @@ export class ResultsService {
         'classEntity',
         'classEntity.classSubjects',
         'classEntity.classSubjects.subject',
-      'createdByUser',
-      'approvedByUser',
+        'createdByUser',
+        'approvedByUser',
         'studentResults',
         'studentResults.subjectScores',
         'studentResults.subjectScores.subject',
-      'studentResults.subjectScores.enteredByUser',
+        'studentResults.subjectScores.enteredByUser',
         'studentResults.student',
       ],
     });
@@ -842,12 +844,17 @@ export class ResultsService {
         const allowedSubjectIds = sheet.classEntity.classSubjects.map(
           (cs) => cs.subjectId,
         );
+        if (allowedSubjectIds.length === 0) {
+          throw new NotFoundException('Result sheet not found');
+        }
 
         sheet.studentResults.forEach((sr) => {
           sr.subjectScores = sr.subjectScores.filter((ss) =>
             allowedSubjectIds.includes(ss.subjectId),
           );
         });
+      } else if (!isClassTeacher) {
+        throw new NotFoundException('Result sheet not found');
       }
     }
 
@@ -863,18 +870,90 @@ export class ResultsService {
     classId: string,
     termId: string,
     schoolId: string,
+    userId: string,
+    role: UserRole,
   ) => {
-    return this.resultSheetRepo.find({
-      where: { classId, termId, schoolId },
-      relations: [
-        'classEntity',
-        'term',
-        'studentResults',
-        'studentResults.student',
-        'studentResults.subjectScores',
-      ],
-      order: { createdAt: 'DESC' },
+    return this.assertClassResultAccess(
+      classId,
+      schoolId,
+      userId,
+      role,
+      role === UserRole.SUBJECT_TEACHER ? '*' : undefined,
+    ).then(async () => {
+      const sheets = await this.resultSheetRepo.find({
+        where: { classId, termId, schoolId, isArchived: false },
+        relations: [
+          'classEntity',
+          'classEntity.classSubjects',
+          'term',
+          'studentResults',
+          'studentResults.student',
+          'studentResults.subjectScores',
+        ],
+        order: { createdAt: 'DESC' },
+      });
+      if (role !== UserRole.SUBJECT_TEACHER) return sheets;
+      const assignments = await this.classSubjectRepo.find({
+        where: { classId, subjectTeacherId: userId },
+      });
+      const allowedSubjectIds = new Set(
+        assignments.map((assignment) => assignment.subjectId),
+      );
+      for (const sheet of sheets) {
+        sheet.classEntity.classSubjects =
+          sheet.classEntity.classSubjects.filter((assignment) =>
+            allowedSubjectIds.has(assignment.subjectId),
+          );
+        for (const studentResult of sheet.studentResults) {
+          studentResult.subjectScores = studentResult.subjectScores.filter(
+            (score) => allowedSubjectIds.has(score.subjectId),
+          );
+        }
+      }
+      return sheets;
     });
+  };
+
+  private assertClassResultAccess = async (
+    classId: string,
+    schoolId: string,
+    userId: string,
+    role: UserRole,
+    subjectId?: string,
+  ) => {
+    const classEntity = await this.classRepo.findOne({
+      where: { id: classId, schoolId },
+    });
+    if (!classEntity) throw new NotFoundException('Class not found');
+    if (
+      [
+        UserRole.SUPER_ADMIN,
+        UserRole.SCHOOL_ADMIN,
+        UserRole.SCHOOL_MANAGEMENT,
+      ].includes(role)
+    ) {
+      return;
+    }
+    if (
+      role === UserRole.CLASS_TEACHER &&
+      classEntity.classTeacherId === userId
+    ) {
+      return;
+    }
+    if (role === UserRole.SUBJECT_TEACHER) {
+      if (!subjectId || subjectId === 'ALL') {
+        throw new NotFoundException('Class results not found');
+      }
+      const assignment = await this.classSubjectRepo.findOne({
+        where: {
+          classId,
+          subjectTeacherId: userId,
+          ...(subjectId === '*' ? {} : { subjectId }),
+        },
+      });
+      if (assignment) return;
+    }
+    throw new NotFoundException('Class not found');
   };
 
   getPendingApprovals = (schoolId: string) => {
@@ -1090,60 +1169,85 @@ export class ResultsService {
     };
   };
 
-  getStudentResult = (
+  getStudentResult = async (
     studentId: string,
     termId: string,
     schoolId: string,
     userId?: string,
     userRole?: UserRole,
   ) => {
-    const parentCheck =
-      userRole === UserRole.PARENT && userId
-        ? this.studentParentRepo.findOne({
-            where: { studentId, parentId: userId },
-          })
-        : Promise.resolve(true);
-
-    return parentCheck.then((link) => {
-      if (!link) {
-        throw new ForbiddenException(
-          'You do not have access to this student result',
+    let allowedSubjectIds: Set<string> | undefined;
+    const student = await this.studentRepo.findOne({
+      where: { id: studentId, schoolId },
+    });
+    if (!student) throw new NotFoundException('Student not found');
+    if (userRole === UserRole.PARENT && userId) {
+      const link = await this.studentParentRepo.findOne({
+        where: { studentId, parentId: userId },
+      });
+      if (!link) throw new NotFoundException('Student result not found');
+    } else if (
+      userRole === UserRole.CLASS_TEACHER ||
+      userRole === UserRole.SUBJECT_TEACHER
+    ) {
+      if (!student.currentClassId) {
+        throw new NotFoundException('Student result not found');
+      }
+      await this.assertClassResultAccess(
+        student.currentClassId,
+        schoolId,
+        userId || '',
+        userRole,
+        userRole === UserRole.SUBJECT_TEACHER ? '*' : undefined,
+      );
+      if (userRole === UserRole.SUBJECT_TEACHER) {
+        const assignments = await this.classSubjectRepo.find({
+          where: {
+            classId: student.currentClassId,
+            subjectTeacherId: userId,
+          },
+        });
+        allowedSubjectIds = new Set(
+          assignments.map((assignment) => assignment.subjectId),
         );
       }
+    }
 
-      const qb = this.studentResultRepo
-        .createQueryBuilder('sr')
-        .innerJoinAndSelect('sr.resultSheet', 'rs')
-        .leftJoinAndSelect('rs.term', 't')
-        .leftJoinAndSelect('t.session', 'sess')
-        .leftJoinAndSelect('sr.subjectScores', 'ss')
-        .leftJoinAndSelect('ss.subject', 'sub')
-        .where('sr.studentId = :studentId', { studentId })
-        .andWhere('rs.termId = :termId', { termId })
-        .andWhere('sr.schoolId = :schoolId', { schoolId });
+    const qb = this.studentResultRepo
+      .createQueryBuilder('sr')
+      .innerJoinAndSelect('sr.resultSheet', 'rs')
+      .leftJoinAndSelect('rs.term', 't')
+      .leftJoinAndSelect('t.session', 'sess')
+      .leftJoinAndSelect('sr.subjectScores', 'ss')
+      .leftJoinAndSelect('ss.subject', 'sub')
+      .where('sr.studentId = :studentId', { studentId })
+      .andWhere('rs.termId = :termId', { termId })
+      .andWhere('sr.schoolId = :schoolId', { schoolId });
 
-      if (userRole === UserRole.PARENT) {
-        qb.andWhere('rs.status = :publishedStatus', {
-          publishedStatus: ResultStatus.PUBLISHED,
-        });
-      }
-
-      return qb.getOne().then((result) => {
-        if (!result) return null;
-        return this.resultSheetRepo
-          .findOne({ where: { id: result.resultSheetId, schoolId } })
-          .then((sheet) => {
-            if (sheet) {
-              this.applyComputedMetrics(
-                sheet.scoreComponents || [],
-                [result],
-                sheet.gradingSystem,
-              );
-            }
-            return result;
-          });
+    if (userRole === UserRole.PARENT) {
+      qb.andWhere('rs.status = :publishedStatus', {
+        publishedStatus: ResultStatus.PUBLISHED,
       });
+    }
+
+    const result = await qb.getOne();
+    if (!result) return null;
+    if (allowedSubjectIds) {
+      result.subjectScores = result.subjectScores.filter((score) =>
+        allowedSubjectIds.has(score.subjectId),
+      );
+    }
+    const sheet = await this.resultSheetRepo.findOne({
+      where: { id: result.resultSheetId, schoolId },
     });
+    if (sheet) {
+      this.applyComputedMetrics(
+        sheet.scoreComponents || [],
+        [result],
+        sheet.gradingSystem,
+      );
+    }
+    return result;
   };
 
   getMyChildResults = (
@@ -1324,7 +1428,7 @@ export class ResultsService {
 
     const where: FindOptionsWhere<ResultSheet> = {
       schoolId,
-      isArchived: true,
+      isArchived: false,
     };
     if (status) where.status = status;
     where.classId = In(Array.from(classIds));
@@ -1341,7 +1445,16 @@ export class ResultsService {
     termId: string,
     subjectId: string | undefined,
     schoolId: string,
+    userId: string,
+    role: UserRole,
   ): Promise<ResultAnalytics> => {
+    await this.assertClassResultAccess(
+      classId,
+      schoolId,
+      userId,
+      role,
+      subjectId,
+    );
     const sheet = await this.resultSheetRepo.findOne({
       where: { classId, termId, schoolId, isArchived: false },
     });
@@ -1576,7 +1689,16 @@ export class ResultsService {
     skip = 0,
     take = 50,
     schoolId: string,
+    userId: string,
+    role: UserRole,
   ): Promise<PaginatedClassScores> => {
+    await this.assertClassResultAccess(
+      classId,
+      schoolId,
+      userId,
+      role,
+      subjectId,
+    );
     const sheet = await this.resultSheetRepo.findOne({
       where: { classId, termId, schoolId, isArchived: false },
       relations: ['classEntity'],
