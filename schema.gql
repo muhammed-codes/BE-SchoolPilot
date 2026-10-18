@@ -1188,6 +1188,7 @@ type GradeDistributionItem {
 enum GradingSystem {
   GPA
   LETTER
+  NIGERIAN_BASIC
   PERCENTAGE
   WAEC
 }
@@ -1966,7 +1967,7 @@ type Query {
   schoolTeachers: [User!]!
   schoolTypeOptions: [SchoolTypeOption!]!
   schoolUsageStats(schoolId: String!): SchoolUsageStats!
-  schoolUsers(limit: Int! = 50, page: Int! = 1, role: UserRole, search: String): PaginatedUser!
+  schoolUsers(excludeRole: UserRole, limit: Int! = 50, page: Int! = 1, role: UserRole, search: String): PaginatedUser!
   schools(limit: Int! = 50, page: Int! = 1, search: String, status: String): PaginatedSchool!
   searchStudents(limit: Int = 5, query: String!): [Student!]!
   session(id: String!): Session
@@ -2161,9 +2162,14 @@ type ResultAnalytics {
 }
 
 type ResultSheet {
+  approvedAt: DateTime
+  approvedByUser: User
+  approvedByUserId: String
   classEntity: ClassEntity
   classId: String!
   createdAt: DateTime!
+  createdByUser: User
+  createdByUserId: String
   gradingSystem: GradingSystem!
   id: ID!
   isArchived: Boolean!
@@ -2726,6 +2732,7 @@ type SubjectPerformanceItem {
 
 type SubjectScore {
   createdAt: DateTime!
+  enteredByUser: User
   enteredByUserId: String!
   grade: String
   id: ID!

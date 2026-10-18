@@ -60,16 +60,19 @@ export class UsersResolver {
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.USERS, PermissionAction.READ)
   schoolUsers(
-    @Args('role', { type: () => UserRole, nullable: true }) role: UserRole,
-    @Args('search', { type: () => String, nullable: true }) search: string,
-    @Args() pagination: PaginationArgs,
-    @CurrentUser() user: { schoolId: string },
+    @Args('role', { type: () => UserRole, nullable: true }) role?: UserRole,
+    @Args('excludeRole', { type: () => UserRole, nullable: true })
+    excludeRole?: UserRole,
+    @Args('search', { type: () => String, nullable: true }) search?: string,
+    @Args() pagination?: PaginationArgs,
+    @CurrentUser() user?: { schoolId: string },
   ) {
     return this.usersService.findBySchool(
-      user.schoolId,
+      user?.schoolId || '',
       role,
       pagination,
       search,
+      excludeRole,
     );
   }
 

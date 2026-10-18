@@ -17,13 +17,18 @@ export class UserDirectoryService {
     role?: UserRole,
     pagination?: PaginationArgs,
     search?: string,
+    excludeRole?: UserRole,
   ) => {
     const page = pagination?.page || 1;
     const limit = pagination?.limit || 50;
     const query = this.usersRepository
       .createQueryBuilder('user')
       .where('user.schoolId = :schoolId', { schoolId });
-    if (role) query.andWhere('user.role = :role', { role });
+    if (role) {
+      query.andWhere('user.role = :role', { role });
+    } else if (excludeRole) {
+      query.andWhere('user.role != :excludeRole', { excludeRole });
+    }
     if (search?.trim()) {
       query.andWhere(
         '(user.firstName ILIKE :search OR user.lastName ILIKE :search OR user.email ILIKE :search)',
