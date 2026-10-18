@@ -61,43 +61,14 @@ export class AccessService implements OnModuleInit {
       return true;
     }
     if (!schoolId) return false;
-
     const normalizedAction = this.normalizeAction(action);
-    const legacyAction = {
-      [PermissionAction.CREATE]: 'canCreate',
-      [PermissionAction.READ]: 'canRead',
-      [PermissionAction.UPDATE]: 'canUpdate',
-      [PermissionAction.DELETE]: 'canDelete',
-    }[normalizedAction];
-
-    let allowed = false;
-    if (legacyAction) {
-      const rolePermissions = await this.getPermissionsByRole(role, schoolId);
-      const permission = rolePermissions.find((p) => p.resource === resource);
-      allowed = permission?.[legacyAction as keyof RolePermission] === true;
-    }
-
-    const assignments = await this.userGroupRepo.find({
-      where: { userId, schoolId },
-    });
-    if (assignments.length > 0) {
-      const groupPermissions = await this.groupPermissionRepo.find({
-        where: {
-          schoolId,
-          groupId: In(assignments.map((assignment) => assignment.groupId)),
-          resource,
-          action: normalizedAction,
-        },
-      });
-      allowed = allowed || groupPermissions.length > 0;
-    }
-
-    const individual = await this.userPermissionRepo.findOne({
-      where: { userId, schoolId, resource, action: normalizedAction },
-    });
-    if (individual?.effect === PermissionEffect.DENY) return false;
-    if (individual?.effect === PermissionEffect.GRANT) return true;
-    return allowed;
+    const permissions = await this.getEffectivePermissions(userId, role, schoolId);
+    return permissions.some(
+      (permission) =>
+        permission.resource === resource &&
+        permission.action === normalizedAction &&
+        permission.allowed,
+    );
   }
 
   getPermissionGroups = (schoolId: string) =>
@@ -128,11 +99,20 @@ export class AccessService implements OnModuleInit {
     const assignments = await this.userGroupRepo.find({
       where: { userId, schoolId },
     });
-    const groupPermissions = assignments.length
+    const activeGroupIds = assignments.length
+      ? (await this.groupRepo.find({
+          where: {
+            id: In(assignments.map((assignment) => assignment.groupId)),
+            schoolId,
+            isActive: true,
+          },
+        })).map((group) => group.id)
+      : [];
+    const groupPermissions = activeGroupIds.length
       ? await this.groupPermissionRepo.find({
           where: {
             schoolId,
-            groupId: In(assignments.map((assignment) => assignment.groupId)),
+            groupId: In(activeGroupIds),
           },
         })
       : [];
@@ -140,7 +120,7 @@ export class AccessService implements OnModuleInit {
       where: { userId, schoolId },
     });
 
-    return resources.flatMap((resource) =>
+    const resolved = resources.flatMap((resource) =>
       actions.map((action) => {
         const rolePermission = rolePermissions.find(
           (permission) => permission.resource === resource,
@@ -174,6 +154,28 @@ export class AccessService implements OnModuleInit {
         };
       }),
     );
+
+    // A mutation or deletion action cannot be effective when the resource is
+    // not readable. Apply this after overrides so a grant cannot bypass it.
+    const readableResources = new Set(
+      resolved
+        .filter(
+          (permission) =>
+            permission.action === PermissionAction.READ && permission.allowed,
+        )
+        .map((permission) => permission.resource),
+    );
+    return resolved.map((permission) => ({
+      ...permission,
+      allowed:
+        [
+          PermissionAction.CREATE,
+          PermissionAction.UPDATE,
+          PermissionAction.DELETE,
+        ].includes(permission.action) && !readableResources.has(permission.resource)
+          ? false
+          : permission.allowed,
+    }));
   }
 
   async getEffectivePermissionsForUser(userId: string, schoolId: string) {
@@ -235,16 +237,11 @@ export class AccessService implements OnModuleInit {
 
   async deletePermissionGroup(groupId: string, schoolId: string) {
     await this.assertSchoolGroup(groupId, schoolId);
-    const assignments = await this.userGroupRepo.count({
-      where: { groupId, schoolId },
+    await this.groupRepo.manager.transaction(async (manager) => {
+      await manager.getRepository(UserPermissionGroup).delete({ groupId, schoolId });
+      await manager.getRepository(PermissionGroupPermission).delete({ groupId, schoolId });
+      await manager.getRepository(PermissionGroup).delete({ id: groupId, schoolId });
     });
-    if (assignments > 0) {
-      throw new ForbiddenException(
-        'Remove staff assignments before deleting this group',
-      );
-    }
-    await this.groupPermissionRepo.delete({ groupId, schoolId });
-    await this.groupRepo.delete({ id: groupId, schoolId });
     return true;
   }
 
@@ -254,14 +251,20 @@ export class AccessService implements OnModuleInit {
     schoolId: string,
   ) {
     await this.assertSchoolGroup(groupId, schoolId);
-    await this.groupPermissionRepo.delete({ groupId, schoolId });
-    if (permissions.length > 0) {
-      await this.groupPermissionRepo.save(
-        permissions.map((permission) =>
-          this.groupPermissionRepo.create({ groupId, schoolId, ...permission }),
-        ),
-      );
-    }
+    const uniquePermissions = Array.from(
+      new Map(permissions.map((permission) => [`${permission.resource}:${permission.action}`, permission])).values(),
+    );
+    await this.groupPermissionRepo.manager.transaction(async (manager) => {
+      const repository = manager.getRepository(PermissionGroupPermission);
+      await repository.delete({ groupId, schoolId });
+      if (uniquePermissions.length > 0) {
+        await repository.save(
+          uniquePermissions.map((permission) =>
+            repository.create({ groupId, schoolId, ...permission }),
+          ),
+        );
+      }
+    });
     return this.groupPermissionRepo.find({ where: { groupId, schoolId } });
   }
 
@@ -556,36 +559,26 @@ export class AccessService implements OnModuleInit {
    * Falls back to global rows (schoolId IS NULL) if no school-specific rows exist.
    * Auto-seeds school default permissions in background if missing.
    */
-  getPermissionsByRole = (role: UserRole, schoolId?: string | null) => {
+  getPermissionsByRole = async (role: UserRole, schoolId?: string | null) => {
     if (role === UserRole.SUPER_ADMIN || !schoolId) {
-      return this.permissionRepo.find({
-        where: { role, schoolId: IsNull() },
-      });
+      return this.permissionRepo.find({ where: { role, schoolId: IsNull() } });
     }
 
-    return this.permissionRepo
-      .find({ where: { role, schoolId } })
-      .then((schoolPerms) => {
-        if (schoolPerms.length > 0) return schoolPerms;
-
-        // Trigger school permission seeding in background for missing schools
-        void this.seedDefaultPermissions(schoolId);
-
-        // Fallback to global rows (schoolId IS NULL)
-        return this.permissionRepo.find({
-          where: { role, schoolId: IsNull() },
-        });
-      });
+    // Initialize tenant defaults before resolving them. Returning global rows
+    // during the first request made edits appear to work but remain ephemeral.
+    await this.seedDefaultPermissions(schoolId);
+    return this.permissionRepo.find({ where: { role, schoolId } });
   };
 
   /**
    * Returns all permissions for a given school (for settings page).
    * SUPER_ADMIN requesting with no schoolId gets global rows.
    */
-  getAllPermissions = (schoolId?: string | null) => {
+  getAllPermissions = async (schoolId?: string | null) => {
     if (!schoolId) {
       return this.permissionRepo.find({ where: { schoolId: IsNull() } });
     }
+    await this.seedDefaultPermissions(schoolId);
     return this.permissionRepo.find({ where: { schoolId } });
   };
 
@@ -612,9 +605,30 @@ export class AccessService implements OnModuleInit {
         );
       }
 
+      if (existing.role === UserRole.SUPER_ADMIN) {
+        throw new ForbiddenException('Platform permissions cannot be changed here');
+      }
+      if (requesterRole === UserRole.SCHOOL_ADMIN) {
+        if (!requesterSchoolId || existing.schoolId !== requesterSchoolId) {
+          throw new ForbiddenException(
+            'You can only update permissions for your own school',
+          );
+        }
+        if (existing.role === UserRole.SCHOOL_ADMIN) {
+          throw new ForbiddenException('School Admin permissions are fixed');
+        }
+      }
+
+      const normalized = { ...updates };
+      const canRead = normalized.canRead ?? existing.canRead;
+      if (!canRead) {
+        normalized.canCreate = false;
+        normalized.canUpdate = false;
+        normalized.canDelete = false;
+      }
       return this.permissionRepo
-        .update(id, updates)
-        .then(() => this.permissionRepo.findOne({ where: { id } }));
+        .update({ id, schoolId: existing.schoolId, role: existing.role, resource: existing.resource }, normalized)
+        .then(() => this.permissionRepo.findOne({ where: { id, schoolId: existing.schoolId } }));
     });
   };
 

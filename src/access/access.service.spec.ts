@@ -38,11 +38,12 @@ describe('AccessService effective permissions', () => {
       groupPermissions?: any[];
       userPermissions?: any[];
       users?: any[];
+      groups?: any[];
     } = {},
   ) =>
     new AccessService(
       repository(config.rolePermissions) as any,
-      repository() as any,
+      repository(config.groups) as any,
       repository(config.groupPermissions) as any,
       repository(config.groupAssignments) as any,
       repository(config.userPermissions) as any,
@@ -129,6 +130,7 @@ describe('AccessService effective permissions', () => {
           action: PermissionAction.READ,
         },
       ],
+      groups: [{ id: 'group-a', schoolId: 'school-a', isActive: true }],
     });
 
     await expect(
@@ -222,5 +224,43 @@ describe('AccessService effective permissions', () => {
           permission.action === PermissionAction.READ,
       )?.allowed,
     ).toBe(true);
+  });
+
+  it('removes update and delete when read is unavailable', async () => {
+    const service = makeService({
+      rolePermissions: [
+        {
+          role: UserRole.CLASS_TEACHER,
+          schoolId: 'school-a',
+          resource: AppResource.RESULTS,
+          canRead: false,
+          canCreate: true,
+          canUpdate: true,
+          canDelete: true,
+        },
+      ],
+      userPermissions: [
+        {
+          userId: 'user-a',
+          schoolId: 'school-a',
+          resource: AppResource.RESULTS,
+          action: PermissionAction.UPDATE,
+          effect: PermissionEffect.GRANT,
+        },
+      ],
+    });
+
+    const effective = await service.getEffectivePermissions(
+      'user-a',
+      UserRole.CLASS_TEACHER,
+      'school-a',
+    );
+    expect(
+      effective.find(
+        (permission) =>
+          permission.resource === AppResource.RESULTS &&
+          permission.action === PermissionAction.UPDATE,
+      )?.allowed,
+    ).toBe(false);
   });
 });
