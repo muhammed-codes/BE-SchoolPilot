@@ -37,7 +37,7 @@ import { ExpensesService } from './expenses.service';
 const MANAGEMENT_ROLES = [
   UserRole.SUPER_ADMIN,
   UserRole.SCHOOL_ADMIN,
-  UserRole.PRINCIPAL,
+  UserRole.SCHOOL_MANAGEMENT,
   UserRole.BURSAR,
 ];
 
@@ -681,7 +681,7 @@ export class ExpenseRequestsService {
       const approvers = await this.userRepo.find({
         where: [
           { schoolId, role: UserRole.SCHOOL_ADMIN, isActive: true },
-          { schoolId, role: UserRole.PRINCIPAL, isActive: true },
+          { schoolId, role: UserRole.SCHOOL_MANAGEMENT, isActive: true },
           { schoolId, role: UserRole.BURSAR, isActive: true },
         ],
       });

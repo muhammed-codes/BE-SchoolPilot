@@ -262,5 +262,14 @@ describe('AccessService effective permissions', () => {
           permission.action === PermissionAction.UPDATE,
       )?.allowed,
     ).toBe(false);
+    await expect(
+      service.hasPermission(
+        'user-a',
+        UserRole.CLASS_TEACHER,
+        'school-a',
+        AppResource.RESULTS,
+        PermissionAction.UPDATE,
+      ),
+    ).resolves.toBe(false);
   });
 });

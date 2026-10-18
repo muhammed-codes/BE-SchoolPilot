@@ -7,7 +7,7 @@ import {
   IsString,
   Matches,
 } from 'class-validator';
-import { NamePrefix, UserRole } from '../../common/enums';
+import { NamePrefix, UserRole, SchoolAssignableRole } from '../../common/enums';
 
 @InputType()
 export class UpdateUserInput {
@@ -32,9 +32,9 @@ export class UpdateUserInput {
   @IsEmail()
   email?: string;
 
-  @Field(() => UserRole, { nullable: true })
+  @Field(() => SchoolAssignableRole, { nullable: true })
   @IsOptional()
-  @IsEnum(UserRole)
+  @IsEnum(SchoolAssignableRole)
   role?: UserRole;
 
   @Field(() => NamePrefix, { nullable: true })

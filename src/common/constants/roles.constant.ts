@@ -5,15 +5,10 @@ export const TEACHER_ROLES: UserRole[] = [
   UserRole.SUBJECT_TEACHER,
 ];
 
-export const LEADERSHIP_ROLES: UserRole[] = [
-  UserRole.PRINCIPAL,
-  UserRole.VICE_PRINCIPAL,
-  UserRole.HEAD_TEACHER,
-];
+export const LEADERSHIP_ROLES: UserRole[] = [UserRole.SCHOOL_MANAGEMENT];
 
 export const SCHOOL_STAFF_ROLES: UserRole[] = [
   UserRole.SCHOOL_ADMIN,
-  UserRole.BURSAR,
   ...LEADERSHIP_ROLES,
   ...TEACHER_ROLES,
 ];

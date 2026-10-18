@@ -7,7 +7,12 @@ import { PermissionEffect } from '../enums/permission-effect.enum';
 
 @ObjectType()
 @Entity('user_permissions')
-@Unique('UQ_user_permissions', ['userId', 'resource', 'action'])
+@Unique('UQ_user_permissions_scoped', [
+  'userId',
+  'schoolId',
+  'resource',
+  'action',
+])
 export class UserPermission extends BaseEntity {
   @Field()
   @Index('IDX_user_permissions_userId')

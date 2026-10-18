@@ -20,9 +20,7 @@ export class PlatformAnalyticsService {
   getSchoolUsageStats = async (schoolId: string): Promise<SchoolUsageStats> => {
     const staffRoles = [
       UserRole.SCHOOL_ADMIN,
-      UserRole.PRINCIPAL,
-      UserRole.VICE_PRINCIPAL,
-      UserRole.HEAD_TEACHER,
+      UserRole.SCHOOL_MANAGEMENT,
       UserRole.CLASS_TEACHER,
       UserRole.SUBJECT_TEACHER,
       UserRole.BURSAR,
@@ -67,9 +65,7 @@ export class PlatformAnalyticsService {
     monthStart.setUTCHours(0, 0, 0, 0);
     const staffRoles = [
       UserRole.SCHOOL_ADMIN,
-      UserRole.PRINCIPAL,
-      UserRole.VICE_PRINCIPAL,
-      UserRole.HEAD_TEACHER,
+      UserRole.SCHOOL_MANAGEMENT,
       UserRole.CLASS_TEACHER,
       UserRole.SUBJECT_TEACHER,
       UserRole.BURSAR,

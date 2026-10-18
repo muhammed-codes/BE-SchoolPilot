@@ -29,13 +29,17 @@ export class User extends BaseEntity {
   @Column()
   passwordHash!: string;
 
-  @Field(() => UserRole)
+  @Field(() => String)
   @Column({ type: 'enum', enum: UserRole })
   role!: UserRole;
 
   @Field()
   @Column({ default: true })
   isActive!: boolean;
+
+  @Field()
+  @Column({ default: false })
+  permissionReviewRequired!: boolean;
 
   @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })

@@ -1,8 +1,8 @@
-import { registerEnumType } from '@nestjs/graphql';
-
 export enum UserRole {
   SUPER_ADMIN = 'super_admin',
   SCHOOL_ADMIN = 'school_admin',
+  SCHOOL_MANAGEMENT = 'school_management',
+  // Retained only so the migration can read and consolidate legacy records.
   PRINCIPAL = 'principal',
   VICE_PRINCIPAL = 'vice_principal',
   HEAD_TEACHER = 'head_teacher',
@@ -11,5 +11,3 @@ export enum UserRole {
   BURSAR = 'bursar',
   PARENT = 'parent',
 }
-
-registerEnumType(UserRole, { name: 'UserRole' });

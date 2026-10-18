@@ -8,7 +8,7 @@ import {
   IsUUID,
   Matches,
 } from 'class-validator';
-import { UserRole } from '../../common/enums';
+import { UserRole, SchoolAssignableRole } from '../../common/enums';
 
 @InputType()
 export class RegisterInput {
@@ -29,8 +29,8 @@ export class RegisterInput {
   @IsNotEmpty()
   lastName: string;
 
-  @Field(() => UserRole)
-  @IsEnum(UserRole)
+  @Field(() => SchoolAssignableRole)
+  @IsEnum(SchoolAssignableRole)
   role: UserRole;
 
   @Field({ nullable: true })

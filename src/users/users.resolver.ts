@@ -23,6 +23,7 @@ import { UpdateUserInput } from './dto/update-user.input';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission, Roles } from '../common/decorators';
 import { UserRole } from '../common/enums';
+import { SchoolAssignableRole } from '../common/enums';
 import { PaginationArgs, createPaginatedType } from '../common/pagination';
 
 const PaginatedUser = createPaginatedType(User);
@@ -60,19 +61,20 @@ export class UsersResolver {
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.USERS, PermissionAction.READ)
   schoolUsers(
-    @Args('role', { type: () => UserRole, nullable: true }) role?: UserRole,
-    @Args('excludeRole', { type: () => UserRole, nullable: true })
-    excludeRole?: UserRole,
+    @Args('role', { type: () => SchoolAssignableRole, nullable: true })
+    role?: SchoolAssignableRole,
+    @Args('excludeRole', { type: () => SchoolAssignableRole, nullable: true })
+    excludeRole?: SchoolAssignableRole,
     @Args('search', { type: () => String, nullable: true }) search?: string,
     @Args() pagination?: PaginationArgs,
     @CurrentUser() user?: { schoolId: string },
   ) {
     return this.usersService.findBySchool(
       user?.schoolId || '',
-      role,
+      role as unknown as UserRole | undefined,
       pagination,
       search,
-      excludeRole,
+      excludeRole as unknown as UserRole | undefined,
     );
   }
 
@@ -90,18 +92,11 @@ export class UsersResolver {
     @Args('input') input: CreateUserInput,
     @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
   ) {
-    const leadershipRoles = [
-      UserRole.SCHOOL_ADMIN,
-      UserRole.PRINCIPAL,
-      UserRole.VICE_PRINCIPAL,
-      UserRole.HEAD_TEACHER,
-    ];
+    const leadershipRoles = [UserRole.SCHOOL_ADMIN, UserRole.SCHOOL_MANAGEMENT];
 
     if (leadershipRoles.includes(user.role)) {
       const allowedRoles = [
-        UserRole.PRINCIPAL,
-        UserRole.VICE_PRINCIPAL,
-        UserRole.HEAD_TEACHER,
+        UserRole.SCHOOL_MANAGEMENT,
         UserRole.CLASS_TEACHER,
         UserRole.SUBJECT_TEACHER,
         UserRole.PARENT,
@@ -115,11 +110,23 @@ export class UsersResolver {
     }
 
     if (user.role === UserRole.SUPER_ADMIN) {
+      if (
+        [
+          UserRole.PRINCIPAL,
+          UserRole.VICE_PRINCIPAL,
+          UserRole.HEAD_TEACHER,
+          UserRole.BURSAR,
+        ].includes(input.role)
+      ) {
+        throw new ForbiddenException('Legacy roles cannot be assigned');
+      }
       return this.usersService.createUser(
         input,
         input.schoolId || user.schoolId,
       );
     }
+
+    throw new ForbiddenException('You cannot create user accounts');
   }
 
   @Mutation(() => User)
@@ -163,7 +170,11 @@ export class UsersResolver {
     @Args('newPassword') newPassword: string,
     @CurrentUser() user: { sub: string },
   ) {
-    return this.userPasswordService.changePassword(user.sub, oldPassword, newPassword);
+    return this.userPasswordService.changePassword(
+      user.sub,
+      oldPassword,
+      newPassword,
+    );
   }
 
   @Mutation(() => Boolean)
@@ -251,6 +262,11 @@ export class UsersResolver {
       user.role,
       user.schoolId,
     );
+  }
+
+  @ResolveField(() => String)
+  role(@Parent() user: User) {
+    return user.role.toUpperCase();
   }
 
   @ResolveField(() => Int)

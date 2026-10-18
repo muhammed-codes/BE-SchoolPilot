@@ -8,7 +8,7 @@ import {
   IsString,
   Matches,
 } from 'class-validator';
-import { NamePrefix, UserRole } from '../../common/enums';
+import { NamePrefix, UserRole, SchoolAssignableRole } from '../../common/enums';
 
 @InputType()
 export class CreateUserInput {
@@ -29,8 +29,8 @@ export class CreateUserInput {
   @IsNotEmpty()
   lastName: string;
 
-  @Field(() => UserRole)
-  @IsEnum(UserRole)
+  @Field(() => SchoolAssignableRole)
+  @IsEnum(SchoolAssignableRole)
   role: UserRole;
 
   @Field(() => String, { nullable: true })

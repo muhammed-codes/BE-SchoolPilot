@@ -71,6 +71,11 @@ export class AuthService {
   };
 
   register = (input: RegisterInput) => {
+    if (input.role !== UserRole.PARENT) {
+      throw new ForbiddenException(
+        'Public registration is limited to Parent accounts',
+      );
+    }
     this.logger.log(`New user registration attempt for email: ${input.email}`);
     return this.usersService
       .findByEmail(input.email)

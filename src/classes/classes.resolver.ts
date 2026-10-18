@@ -22,9 +22,7 @@ export class ClassesResolver {
     return [
       UserRole.SUPER_ADMIN,
       UserRole.SCHOOL_ADMIN,
-      UserRole.PRINCIPAL,
-      UserRole.VICE_PRINCIPAL,
-      UserRole.HEAD_TEACHER,
+      UserRole.SCHOOL_MANAGEMENT,
     ].includes(role);
   };
 

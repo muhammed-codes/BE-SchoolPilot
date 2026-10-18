@@ -1,4 +1,11 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import {
+  Resolver,
+  Query,
+  Mutation,
+  Args,
+  ResolveField,
+  Parent,
+} from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { AccessService } from './access.service';
 import { RolePermission } from './entities/role-permission.entity';
@@ -28,6 +35,11 @@ import { EffectivePermission } from './dto/effective-permission.type';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AccessResolver {
   constructor(private readonly accessService: AccessService) {}
+
+  @ResolveField(() => String)
+  role(@Parent() permission: RolePermission) {
+    return permission.role.toUpperCase();
+  }
 
   private schoolIdFor(
     user: { role: UserRole; schoolId?: string },
@@ -132,6 +144,19 @@ export class AccessResolver {
   ) {
     return this.accessService.getUserPermissionGroups(
       userId,
+      this.schoolIdFor(user, schoolId),
+    );
+  }
+
+  @Query(() => [UserPermissionGroup], { name: 'permissionGroupMembers' })
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  permissionGroupMembers(
+    @Args('groupId') groupId: string,
+    @CurrentUser() user: { role: UserRole; schoolId?: string },
+    @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
+  ) {
+    return this.accessService.getPermissionGroupMembers(
+      groupId,
       this.schoolIdFor(user, schoolId),
     );
   }

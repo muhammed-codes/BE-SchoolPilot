@@ -3,6 +3,7 @@ import {
   OnModuleInit,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, Repository } from 'typeorm';
@@ -57,12 +58,17 @@ export class AccessService implements OnModuleInit {
     resource: AppResource,
     action: ActionType,
   ): Promise<boolean> {
-    if (role === UserRole.SUPER_ADMIN || role === UserRole.SCHOOL_ADMIN) {
+    if (role === UserRole.SUPER_ADMIN) {
       return true;
     }
     if (!schoolId) return false;
+    if (role === UserRole.SCHOOL_ADMIN) return true;
     const normalizedAction = this.normalizeAction(action);
-    const permissions = await this.getEffectivePermissions(userId, role, schoolId);
+    const permissions = await this.getEffectivePermissions(
+      userId,
+      role,
+      schoolId,
+    );
     return permissions.some(
       (permission) =>
         permission.resource === resource &&
@@ -77,6 +83,11 @@ export class AccessService implements OnModuleInit {
   getUserPermissionGroups = (userId: string, schoolId: string) =>
     this.userGroupRepo.find({ where: { userId, schoolId } });
 
+  getPermissionGroupMembers = (groupId: string, schoolId: string) =>
+    this.assertSchoolGroup(groupId, schoolId).then(() =>
+      this.userGroupRepo.find({ where: { groupId, schoolId } }),
+    );
+
   getUserPermissionOverrides = (userId: string, schoolId: string) =>
     this.userPermissionRepo.find({ where: { userId, schoolId } });
 
@@ -88,25 +99,32 @@ export class AccessService implements OnModuleInit {
     const resources = Object.values(AppResource);
     const actions = Object.values(PermissionAction);
 
-    if (role === UserRole.SUPER_ADMIN || role === UserRole.SCHOOL_ADMIN) {
+    if (role === UserRole.SUPER_ADMIN) {
       return resources.flatMap((resource) =>
         actions.map((action) => ({ resource, action, allowed: true })),
       );
     }
     if (!schoolId) return [];
+    if (role === UserRole.SCHOOL_ADMIN) {
+      return resources.flatMap((resource) =>
+        actions.map((action) => ({ resource, action, allowed: true })),
+      );
+    }
 
     const rolePermissions = await this.getPermissionsByRole(role, schoolId);
     const assignments = await this.userGroupRepo.find({
       where: { userId, schoolId },
     });
     const activeGroupIds = assignments.length
-      ? (await this.groupRepo.find({
-          where: {
-            id: In(assignments.map((assignment) => assignment.groupId)),
-            schoolId,
-            isActive: true,
-          },
-        })).map((group) => group.id)
+      ? (
+          await this.groupRepo.find({
+            where: {
+              id: In(assignments.map((assignment) => assignment.groupId)),
+              schoolId,
+              isActive: true,
+            },
+          })
+        ).map((group) => group.id)
       : [];
     const groupPermissions = activeGroupIds.length
       ? await this.groupPermissionRepo.find({
@@ -172,7 +190,8 @@ export class AccessService implements OnModuleInit {
           PermissionAction.CREATE,
           PermissionAction.UPDATE,
           PermissionAction.DELETE,
-        ].includes(permission.action) && !readableResources.has(permission.resource)
+        ].includes(permission.action) &&
+        !readableResources.has(permission.resource)
           ? false
           : permission.allowed,
     }));
@@ -207,12 +226,28 @@ export class AccessService implements OnModuleInit {
     input: { name: string; description?: string; schoolId?: string },
     schoolId: string,
   ) {
+    const name = input.name.trim();
+    if (!name) throw new BadRequestException('A group name is required');
     const group = this.groupRepo.create({
       schoolId,
-      name: input.name.trim(),
+      name,
       description: input.description?.trim() || null,
     });
-    return this.groupRepo.save(group);
+    try {
+      return await this.groupRepo.save(group);
+    } catch (error) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === '23505'
+      ) {
+        throw new ConflictException(
+          'A permission group with this name already exists',
+        );
+      }
+      throw error;
+    }
   }
 
   async updatePermissionGroup(
@@ -225,6 +260,9 @@ export class AccessService implements OnModuleInit {
     schoolId: string,
   ) {
     await this.assertSchoolGroup(input.id, schoolId);
+    if (input.name !== undefined && !input.name.trim()) {
+      throw new BadRequestException('A group name is required');
+    }
     await this.groupRepo.update(input.id, {
       ...(input.name === undefined ? {} : { name: input.name.trim() }),
       ...(input.description === undefined
@@ -238,9 +276,15 @@ export class AccessService implements OnModuleInit {
   async deletePermissionGroup(groupId: string, schoolId: string) {
     await this.assertSchoolGroup(groupId, schoolId);
     await this.groupRepo.manager.transaction(async (manager) => {
-      await manager.getRepository(UserPermissionGroup).delete({ groupId, schoolId });
-      await manager.getRepository(PermissionGroupPermission).delete({ groupId, schoolId });
-      await manager.getRepository(PermissionGroup).delete({ id: groupId, schoolId });
+      await manager
+        .getRepository(UserPermissionGroup)
+        .delete({ groupId, schoolId });
+      await manager
+        .getRepository(PermissionGroupPermission)
+        .delete({ groupId, schoolId });
+      await manager
+        .getRepository(PermissionGroup)
+        .delete({ id: groupId, schoolId });
     });
     return true;
   }
@@ -252,7 +296,12 @@ export class AccessService implements OnModuleInit {
   ) {
     await this.assertSchoolGroup(groupId, schoolId);
     const uniquePermissions = Array.from(
-      new Map(permissions.map((permission) => [`${permission.resource}:${permission.action}`, permission])).values(),
+      new Map(
+        permissions.map((permission) => [
+          `${permission.resource}:${permission.action}`,
+          permission,
+        ]),
+      ).values(),
     );
     await this.groupPermissionRepo.manager.transaction(async (manager) => {
       const repository = manager.getRepository(PermissionGroupPermission);
@@ -278,10 +327,20 @@ export class AccessService implements OnModuleInit {
     groupId: string,
     schoolId: string,
   ) {
-    await this.assertSchoolUser(userId, schoolId);
-    await this.assertSchoolGroup(groupId, schoolId);
+    const user = await this.assertSchoolUser(userId, schoolId);
+    if (user.role === UserRole.SCHOOL_ADMIN) {
+      throw new ForbiddenException(
+        'School Admin accounts cannot be group-managed',
+      );
+    }
+    const group = await this.assertSchoolGroup(groupId, schoolId);
+    if (!group.isActive) {
+      throw new BadRequestException(
+        'Inactive permission groups cannot be assigned',
+      );
+    }
     const existing = await this.userGroupRepo.findOne({
-      where: { userId, groupId },
+      where: { userId, groupId, schoolId },
     });
     if (existing) return existing;
     return this.userGroupRepo.save(
@@ -294,7 +353,12 @@ export class AccessService implements OnModuleInit {
     groupId: string,
     schoolId: string,
   ) {
-    await this.assertSchoolUser(userId, schoolId);
+    const user = await this.assertSchoolUser(userId, schoolId);
+    if (user.role === UserRole.SCHOOL_ADMIN) {
+      throw new ForbiddenException(
+        'School Admin accounts cannot be group-managed',
+      );
+    }
     await this.assertSchoolGroup(groupId, schoolId);
     await this.userGroupRepo.delete({ userId, groupId, schoolId });
     return true;
@@ -324,7 +388,12 @@ export class AccessService implements OnModuleInit {
       );
     }
 
-    await this.assertSchoolUser(userId, schoolId);
+    const user = await this.assertSchoolUser(userId, schoolId);
+    if (user.role === UserRole.SCHOOL_ADMIN) {
+      throw new ForbiddenException(
+        'School Admin accounts cannot have permission overrides',
+      );
+    }
     const existing = await this.userPermissionRepo.findOne({
       where: {
         userId,
@@ -354,7 +423,12 @@ export class AccessService implements OnModuleInit {
     action: PermissionAction,
     schoolId: string,
   ) {
-    await this.assertSchoolUser(userId, schoolId);
+    const user = await this.assertSchoolUser(userId, schoolId);
+    if (user.role === UserRole.SCHOOL_ADMIN) {
+      throw new ForbiddenException(
+        'School Admin accounts cannot have permission overrides',
+      );
+    }
     await this.userPermissionRepo.delete({
       userId,
       schoolId,
@@ -394,16 +468,7 @@ export class AccessService implements OnModuleInit {
       // Safe fallback if type doesn't exist yet or already has value
     }
     try {
-      await this.permissionRepo.query(
-        `ALTER TYPE "role_permissions_role_enum" ADD VALUE IF NOT EXISTS 'bursar'`,
-      );
-    } catch {
-      // Safe fallback if type doesn't exist yet or already has value
-    }
-
-    try {
       await this.seedGlobalDefaultPermissions();
-      await this.repairExistingPermissions();
     } catch (err) {
       console.error('Error initializing permissions in AccessService:', err);
     }
@@ -431,30 +496,9 @@ export class AccessService implements OnModuleInit {
       };
     }
 
-    // 2. PRINCIPAL: Full access to all operational & academic modules
-    if (role === UserRole.PRINCIPAL) {
-      const isSettings = resource === AppResource.SETTINGS;
-      return {
-        canRead: true,
-        canCreate: !isSettings,
-        canUpdate: !isSettings,
-        canDelete: !isSettings,
-      };
-    }
-
-    // 3. VICE_PRINCIPAL: Full access to academic & user modules
-    if (role === UserRole.VICE_PRINCIPAL) {
-      const isSettings = resource === AppResource.SETTINGS;
-      return {
-        canRead: true,
-        canCreate: !isSettings,
-        canUpdate: !isSettings,
-        canDelete: !isSettings,
-      };
-    }
-
-    // 4. HEAD_TEACHER: Academic & staff management access
-    if (role === UserRole.HEAD_TEACHER) {
+    // Conservatively use the former Head Teacher defaults. Legacy role rows
+    // are migrated using the intersection of existing configurations.
+    if (role === UserRole.SCHOOL_MANAGEMENT) {
       const isSettings = resource === AppResource.SETTINGS;
       const canDeleteRes = [
         AppResource.RESULTS,
@@ -514,15 +558,14 @@ export class AccessService implements OnModuleInit {
       };
     }
 
-    // BURSAR retains finance role access (fees and expenses).
+    // Legacy Bursar accounts receive no implicit financial permissions. Their
+    // school admin must grant the required actions through a permission group.
     if (role === UserRole.BURSAR) {
-      const isFinance =
-        resource === AppResource.FEES || resource === AppResource.EXPENSES;
       return {
-        canRead: isFinance,
-        canCreate: isFinance,
-        canUpdate: isFinance,
-        canDelete: isFinance,
+        canRead: false,
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
       };
     }
 
@@ -560,9 +603,15 @@ export class AccessService implements OnModuleInit {
    * Auto-seeds school default permissions in background if missing.
    */
   getPermissionsByRole = async (role: UserRole, schoolId?: string | null) => {
+    if (role === UserRole.BURSAR) return [];
     if (role === UserRole.SUPER_ADMIN || !schoolId) {
       return this.permissionRepo.find({ where: { role, schoolId: IsNull() } });
     }
+
+    const current = await this.permissionRepo.find({
+      where: { role, schoolId },
+    });
+    if (current.length > 0) return current;
 
     // Initialize tenant defaults before resolving them. Returning global rows
     // during the first request made edits appear to work but remain ephemeral.
@@ -579,7 +628,17 @@ export class AccessService implements OnModuleInit {
       return this.permissionRepo.find({ where: { schoolId: IsNull() } });
     }
     await this.seedDefaultPermissions(schoolId);
-    return this.permissionRepo.find({ where: { schoolId } });
+    const permissions = await this.permissionRepo.find({ where: { schoolId } });
+    return permissions.filter(
+      (permission) =>
+        ![
+          UserRole.SUPER_ADMIN,
+          UserRole.PRINCIPAL,
+          UserRole.VICE_PRINCIPAL,
+          UserRole.HEAD_TEACHER,
+          UserRole.BURSAR,
+        ].includes(permission.role),
+    );
   };
 
   /**
@@ -606,7 +665,9 @@ export class AccessService implements OnModuleInit {
       }
 
       if (existing.role === UserRole.SUPER_ADMIN) {
-        throw new ForbiddenException('Platform permissions cannot be changed here');
+        throw new ForbiddenException(
+          'Platform permissions cannot be changed here',
+        );
       }
       if (requesterRole === UserRole.SCHOOL_ADMIN) {
         if (!requesterSchoolId || existing.schoolId !== requesterSchoolId) {
@@ -616,6 +677,18 @@ export class AccessService implements OnModuleInit {
         }
         if (existing.role === UserRole.SCHOOL_ADMIN) {
           throw new ForbiddenException('School Admin permissions are fixed');
+        }
+        if (
+          ![
+            UserRole.SCHOOL_MANAGEMENT,
+            UserRole.CLASS_TEACHER,
+            UserRole.SUBJECT_TEACHER,
+            UserRole.PARENT,
+          ].includes(existing.role)
+        ) {
+          throw new ForbiddenException(
+            'This role is not configurable by a school',
+          );
         }
       }
 
@@ -627,8 +700,20 @@ export class AccessService implements OnModuleInit {
         normalized.canDelete = false;
       }
       return this.permissionRepo
-        .update({ id, schoolId: existing.schoolId, role: existing.role, resource: existing.resource }, normalized)
-        .then(() => this.permissionRepo.findOne({ where: { id, schoolId: existing.schoolId } }));
+        .update(
+          {
+            id,
+            schoolId: existing.schoolId ?? IsNull(),
+            role: existing.role,
+            resource: existing.resource,
+          },
+          normalized,
+        )
+        .then(() =>
+          this.permissionRepo.findOne({
+            where: { id, schoolId: existing.schoolId ?? IsNull() },
+          }),
+        );
     });
   };
 
@@ -637,7 +722,15 @@ export class AccessService implements OnModuleInit {
    * Called once on module init.
    */
   seedGlobalDefaultPermissions = () => {
-    const roles = Object.values(UserRole);
+    const roles = Object.values(UserRole).filter(
+      (role) =>
+        ![
+          UserRole.PRINCIPAL,
+          UserRole.VICE_PRINCIPAL,
+          UserRole.HEAD_TEACHER,
+          UserRole.BURSAR,
+        ].includes(role),
+    );
     const resources = Object.values(AppResource);
 
     return this.permissionRepo
@@ -681,7 +774,14 @@ export class AccessService implements OnModuleInit {
    */
   seedDefaultPermissions = (schoolId: string) => {
     const roles = Object.values(UserRole).filter(
-      (r) => r !== UserRole.SUPER_ADMIN,
+      (role) =>
+        ![
+          UserRole.SUPER_ADMIN,
+          UserRole.PRINCIPAL,
+          UserRole.VICE_PRINCIPAL,
+          UserRole.HEAD_TEACHER,
+          UserRole.BURSAR,
+        ].includes(role),
     );
     const resources = Object.values(AppResource);
 
@@ -718,67 +818,5 @@ export class AccessService implements OnModuleInit {
         }
         return Promise.resolve();
       });
-  };
-
-  /**
-   * Auto-repairs existing permission rows in the DB to ensure Leadership
-   * and Teachers have proper read & create access according to the latest RBAC matrix.
-   */
-  private repairExistingPermissions = () => {
-    return this.permissionRepo.find().then((allPermissions) => {
-      const updates: Promise<unknown>[] = [];
-
-      allPermissions.forEach((p) => {
-        const expected = this.getDefaultRolePermissions(p.role, p.resource);
-        let needsUpdate = false;
-
-        // If leadership or teacher should have read access but it's currently false
-        if (expected.canRead && !p.canRead) {
-          p.canRead = true;
-          needsUpdate = true;
-        }
-
-        // If leadership should have create or update access but it's currently false
-        if (
-          [
-            UserRole.PRINCIPAL,
-            UserRole.VICE_PRINCIPAL,
-            UserRole.HEAD_TEACHER,
-          ].includes(p.role)
-        ) {
-          if (expected.canCreate && !p.canCreate) {
-            p.canCreate = true;
-            needsUpdate = true;
-          }
-          if (expected.canUpdate && !p.canUpdate) {
-            p.canUpdate = true;
-            needsUpdate = true;
-          }
-        }
-
-        if (needsUpdate) {
-          updates.push(this.permissionRepo.save(p));
-        }
-      });
-
-      const schoolIds = Array.from(
-        new Set(
-          allPermissions
-            .map((p) => p.schoolId)
-            .filter((id): id is string => Boolean(id)),
-        ),
-      );
-      const seedPromises = schoolIds.map((sId) =>
-        this.seedDefaultPermissions(sId),
-      );
-
-      return Promise.all([...updates, ...seedPromises]).then(() => {
-        if (updates.length > 0) {
-          console.log(
-            `Repaired ${updates.length} existing permission records.`,
-          );
-        }
-      });
-    });
   };
 }

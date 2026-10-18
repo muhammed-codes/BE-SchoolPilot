@@ -8,7 +8,7 @@ import { AppResource } from '../enums/resource.enum';
 @Entity('role_permissions')
 @Unique('UQ_role_permissions_scoped', ['role', 'resource', 'schoolId'])
 export class RolePermission extends BaseEntity {
-  @Field(() => UserRole)
+  @Field(() => String)
   @Column({ type: 'enum', enum: UserRole })
   role!: UserRole;
 

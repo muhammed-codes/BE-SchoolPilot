@@ -1927,6 +1927,7 @@ type Query {
   pendingPrincipalApprovals: [ResultSheet!]!
   periods: [Period!]!
   permissionGroupPermissions(groupId: String!, schoolId: String): [PermissionGroupPermission!]!
+  permissionGroupMembers(groupId: String!, schoolId: String): [UserPermissionGroup!]!
   permissionGroups(schoolId: String): [PermissionGroup!]!
   pettyCashAccount: PettyCashAccount!
   pettyCashTransactions(limit: Int = 50): [PettyCashTransaction!]!
@@ -2213,7 +2214,7 @@ type RolePermission {
   createdAt: DateTime!
   id: ID!
   resource: AppResource!
-  role: UserRole!
+  role: String!
   schoolId: String
   updatedAt: DateTime!
 }
@@ -3138,8 +3139,9 @@ type User {
   maxPeriodsPerDay: Int
   maxPeriodsPerWeek: Int
   namePrefix: NamePrefix
+  permissionReviewRequired: Boolean!
   phone: String
-  role: UserRole!
+  role: String!
   roleInSchool: String
   schoolId: String
   staffId: String
@@ -3168,15 +3170,11 @@ type UserPermissionGroup {
 }
 
 enum UserRole {
-  BURSAR
   CLASS_TEACHER
-  HEAD_TEACHER
   PARENT
-  PRINCIPAL
   SCHOOL_ADMIN
+  SCHOOL_MANAGEMENT
   SUBJECT_TEACHER
-  SUPER_ADMIN
-  VICE_PRINCIPAL
 }
 
 input VoidExpenseInput {

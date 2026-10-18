@@ -51,9 +51,7 @@ import {
 const ADMIN_ROLES = [
   UserRole.SUPER_ADMIN,
   UserRole.SCHOOL_ADMIN,
-  UserRole.PRINCIPAL,
-  UserRole.VICE_PRINCIPAL,
-  UserRole.HEAD_TEACHER,
+  UserRole.SCHOOL_MANAGEMENT,
 ];
 
 @Resolver()

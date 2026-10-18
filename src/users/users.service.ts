@@ -134,6 +134,40 @@ export class UsersService {
         }
 
         if (
+          input.role &&
+          [
+            UserRole.PRINCIPAL,
+            UserRole.VICE_PRINCIPAL,
+            UserRole.HEAD_TEACHER,
+            UserRole.BURSAR,
+          ].includes(input.role)
+        ) {
+          throw new ForbiddenException('Legacy roles cannot be assigned');
+        }
+
+        if (
+          input.role === UserRole.SCHOOL_ADMIN &&
+          requesterRole !== UserRole.SUPER_ADMIN
+        ) {
+          throw new ForbiddenException(
+            'Only platform administrators can assign School Admin',
+          );
+        }
+
+        if (
+          requesterRole === UserRole.SCHOOL_ADMIN &&
+          input.role &&
+          ![
+            UserRole.SCHOOL_MANAGEMENT,
+            UserRole.CLASS_TEACHER,
+            UserRole.SUBJECT_TEACHER,
+            UserRole.PARENT,
+          ].includes(input.role)
+        ) {
+          throw new ForbiddenException('This school role cannot be assigned');
+        }
+
+        if (
           input.role === UserRole.SUPER_ADMIN &&
           requesterRole !== UserRole.SUPER_ADMIN
         ) {
@@ -181,16 +215,16 @@ export class UsersService {
       }
 
       // Prevent assigning duplicate leadership roles into the same school.
-      return this.accountProvisioningService.ensureUniqueLeadershipRolePerSchool(
-        schoolId,
-        user.role,
-        user.id,
-      )
+      return this.accountProvisioningService
+        .ensureUniqueLeadershipRolePerSchool(schoolId, user.role, user.id)
         .then(() =>
           this.usersRepository
             .update(userId, { schoolId })
             .catch((err) =>
-              this.accountProvisioningService.mapLeadershipRoleDatabaseError(err, user.role),
+              this.accountProvisioningService.mapLeadershipRoleDatabaseError(
+                err,
+                user.role,
+              ),
             ),
         )
         .then(() => this.findById(userId));

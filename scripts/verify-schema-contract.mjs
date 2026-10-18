@@ -6,7 +6,13 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const projectDirectory = dirname(scriptDirectory);
 
 const enumSources = {
-  UserRole: join(projectDirectory, 'src/common/enums/role.enum.ts'),
+  UserRole: {
+    sourcePath: join(
+      projectDirectory,
+      'src/common/enums/school-assignable-role.enum.ts',
+    ),
+    sourceEnum: 'SchoolAssignableRole',
+  },
   AppResource: join(projectDirectory, 'src/access/enums/resource.enum.ts'),
   PermissionAction: join(
     projectDirectory,
@@ -35,9 +41,13 @@ const enumBlock = (schema, enumName) => {
 const schema = await readFile(join(projectDirectory, 'schema.gql'), 'utf8');
 const failures = [];
 
-for (const [enumName, sourcePath] of Object.entries(enumSources)) {
+for (const [enumName, enumSource] of Object.entries(enumSources)) {
+  const sourcePath =
+    typeof enumSource === 'string' ? enumSource : enumSource.sourcePath;
+  const sourceEnum =
+    typeof enumSource === 'string' ? enumName : enumSource.sourceEnum;
   const source = await readFile(sourcePath, 'utf8');
-  const expected = enumMembers(source, enumName);
+  const expected = enumMembers(source, sourceEnum);
   const block = enumBlock(schema, enumName);
 
   if (!block) {

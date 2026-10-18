@@ -72,9 +72,7 @@ const STAFF_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.SCHOOL_ADMIN,
   UserRole.BURSAR,
-  UserRole.PRINCIPAL,
-  UserRole.VICE_PRINCIPAL,
-  UserRole.HEAD_TEACHER,
+  UserRole.SCHOOL_MANAGEMENT,
   UserRole.CLASS_TEACHER,
   UserRole.SUBJECT_TEACHER,
 ];

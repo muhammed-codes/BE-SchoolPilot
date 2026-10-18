@@ -189,7 +189,7 @@ export class AttendanceService {
       const canViewAllClassAttendance =
         role === UserRole.SUPER_ADMIN ||
         role === UserRole.SCHOOL_ADMIN ||
-        role === UserRole.PRINCIPAL;
+        role === UserRole.SCHOOL_MANAGEMENT;
 
       if (!canViewAllClassAttendance && classEntity.classTeacherId !== userId) {
         throw new ForbiddenException(

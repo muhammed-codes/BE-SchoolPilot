@@ -825,9 +825,7 @@ export class ResultsService {
     const isLeadership = [
       UserRole.SUPER_ADMIN,
       UserRole.SCHOOL_ADMIN,
-      UserRole.PRINCIPAL,
-      UserRole.VICE_PRINCIPAL,
-      UserRole.HEAD_TEACHER,
+      UserRole.SCHOOL_MANAGEMENT,
     ].includes(role);
 
     if (!isLeadership) {
@@ -904,9 +902,7 @@ export class ResultsService {
     const isLeadership = [
       UserRole.SUPER_ADMIN,
       UserRole.SCHOOL_ADMIN,
-      UserRole.PRINCIPAL,
-      UserRole.VICE_PRINCIPAL,
-      UserRole.HEAD_TEACHER,
+      UserRole.SCHOOL_MANAGEMENT,
     ].includes(role);
 
     if (isLeadership) {
@@ -1001,9 +997,7 @@ export class ResultsService {
     const isLeadership = [
       UserRole.SUPER_ADMIN,
       UserRole.SCHOOL_ADMIN,
-      UserRole.PRINCIPAL,
-      UserRole.VICE_PRINCIPAL,
-      UserRole.HEAD_TEACHER,
+      UserRole.SCHOOL_MANAGEMENT,
     ].includes(role);
 
     const allClasses = await this.classRepo.find({
@@ -1292,9 +1286,7 @@ export class ResultsService {
     const isLeadership = [
       UserRole.SUPER_ADMIN,
       UserRole.SCHOOL_ADMIN,
-      UserRole.PRINCIPAL,
-      UserRole.VICE_PRINCIPAL,
-      UserRole.HEAD_TEACHER,
+      UserRole.SCHOOL_MANAGEMENT,
     ].includes(role);
 
     if (isLeadership) {

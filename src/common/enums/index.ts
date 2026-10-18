@@ -1,4 +1,5 @@
 export { UserRole } from './role.enum';
+export { SchoolAssignableRole } from './school-assignable-role.enum';
 export { AttendanceStatus } from './attendance-status.enum';
 export { GradingSystem } from './grading-system.enum';
 export { ScoreComponent } from './score-component.enum';

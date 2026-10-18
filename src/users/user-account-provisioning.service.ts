@@ -12,11 +12,6 @@ import { validateUserPhone } from './user-phone-validation';
 
 @Injectable()
 export class UserAccountProvisioningService {
-  private readonly singleLeadershipRoles: UserRole[] = [
-    UserRole.PRINCIPAL,
-    UserRole.VICE_PRINCIPAL,
-    UserRole.HEAD_TEACHER,
-  ];
   private readonly leadershipRoleConstraint =
     'UQ_users_single_active_leadership_role_per_school';
 
@@ -34,19 +29,12 @@ export class UserAccountProvisioningService {
     excludeUserId?: string,
     isActive?: boolean,
   ) => {
-    if (!schoolId || !role || !this.singleLeadershipRoles.includes(role)) {
-      return Promise.resolve();
-    }
-
-    return this.usersRepository
-      .findOne({ where: { schoolId, role, isActive: isActive ?? true } })
-      .then((existingUser) => {
-        if (existingUser && existingUser.id !== excludeUserId) {
-          throw new ForbiddenException(
-            `This school already has an active ${this.formatRoleLabel(role)}.`,
-          );
-        }
-      });
+    // Consolidated leadership roles may have multiple staff assignments.
+    void schoolId;
+    void role;
+    void excludeUserId;
+    void isActive;
+    return Promise.resolve();
   };
 
   mapLeadershipRoleDatabaseError = (error: unknown, role?: UserRole): never => {
