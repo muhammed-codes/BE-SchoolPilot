@@ -17,6 +17,23 @@ describe('validateEnvironment', () => {
     });
   });
 
+  it('allows TLS to be disabled for an isolated non-production database', () => {
+    const environment = validEnvironment();
+    environment.DATABASE_SSL = 'false';
+
+    expect(validateEnvironment(environment).DATABASE_SSL).toBe('false');
+  });
+
+  it('rejects disabling database TLS in production', () => {
+    const environment = validEnvironment();
+    environment.NODE_ENV = 'production';
+    environment.DATABASE_SSL = 'false';
+
+    expect(() => validateEnvironment(environment)).toThrow(
+      'Production PostgreSQL connections must use TLS',
+    );
+  });
+
   it('rejects missing database configuration', () => {
     const environment = validEnvironment();
     delete environment.DATABASE_URL;

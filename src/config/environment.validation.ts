@@ -59,6 +59,12 @@ export const validateEnvironment = (
   const isProduction =
     environment.NODE_ENV === 'production' ||
     environment.VERCEL_ENV === 'production';
+  if (
+    environment.DATABASE_SSL !== undefined &&
+    !['true', 'false'].includes(environment.DATABASE_SSL)
+  ) {
+    throw new Error('DATABASE_SSL must be true or false');
+  }
   validateDatabaseConfiguration(environment);
 
   const accessSecret = requiredValue(environment, 'JWT_ACCESS_SECRET');
@@ -78,6 +84,9 @@ export const validateEnvironment = (
   environment.JWT_REFRESH_EXPIRES ||= '7d';
 
   if (isProduction) {
+    if (environment.DATABASE_SSL === 'false') {
+      throw new Error('Production PostgreSQL connections must use TLS');
+    }
     if (environment.DATABASE_SSL_REJECT_UNAUTHORIZED === 'false') {
       throw new Error(
         'Production PostgreSQL connections must verify TLS certificates',

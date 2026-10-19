@@ -98,11 +98,14 @@ const isProduction =
             keepAlive: true,
             keepAliveInitialDelayMillis: 10000,
           },
-          ssl: {
-            rejectUnauthorized:
-              config.get<string>('DATABASE_SSL_REJECT_UNAUTHORIZED') !==
-              'false',
-          },
+          ssl:
+            config.get<string>('DATABASE_SSL') === 'false'
+              ? false
+              : {
+                  rejectUnauthorized:
+                    config.get<string>('DATABASE_SSL_REJECT_UNAUTHORIZED') !==
+                    'false',
+                },
           synchronize: false,
           autoLoadEntities: true,
           migrationsRun: false,

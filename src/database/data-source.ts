@@ -57,10 +57,13 @@ export const dataSourceOptions: DataSourceOptions = {
         database: process.env.SUPABASE_DB_NAME || process.env.DB_NAME,
       }),
   extra: endpointId ? { options: `endpoint=${endpointId}` } : undefined,
-  ssl: {
-    rejectUnauthorized:
-      process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false',
-  },
+  ssl:
+    process.env.DATABASE_SSL === 'false'
+      ? false
+      : {
+          rejectUnauthorized:
+            process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false',
+        },
   entities: [join(__dirname, '../**/*.entity{.ts,.js}')],
   migrations: [join(__dirname, '../migrations/*{.ts,.js}')],
   synchronize: false,
