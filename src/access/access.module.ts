@@ -8,6 +8,7 @@ import { PermissionGroupPermission } from './entities/permission-group-permissio
 import { UserPermissionGroup } from './entities/user-permission-group.entity';
 import { UserPermission } from './entities/user-permission.entity';
 import { User } from '../users/entities/user.entity';
+import { PermissionAuditLog } from './entities/permission-audit-log.entity';
 
 @Global()
 @Module({
@@ -19,6 +20,7 @@ import { User } from '../users/entities/user.entity';
       UserPermissionGroup,
       UserPermission,
       User,
+      PermissionAuditLog,
     ]),
   ],
   providers: [AccessService, AccessResolver],

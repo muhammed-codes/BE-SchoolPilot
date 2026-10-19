@@ -6,7 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, IsNull, Repository } from 'typeorm';
+import { EntityManager, In, IsNull, Repository } from 'typeorm';
 import { RolePermission } from './entities/role-permission.entity';
 import { UserRole } from '../common/enums/role.enum';
 import { AppResource } from './enums/resource.enum';
@@ -19,6 +19,7 @@ import { UserPermission } from './entities/user-permission.entity';
 import { ActionType } from '../common/decorators/require-permission.decorator';
 import { User } from '../users/entities/user.entity';
 import { EffectivePermission } from './dto/effective-permission.type';
+import { PermissionAuditLog } from './entities/permission-audit-log.entity';
 
 @Injectable()
 export class AccessService implements OnModuleInit {
@@ -35,7 +36,19 @@ export class AccessService implements OnModuleInit {
     private readonly userPermissionRepo: Repository<UserPermission>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(PermissionAuditLog)
+    private readonly permissionAuditRepo: Repository<PermissionAuditLog>,
   ) {}
+
+  private recordPermissionAudit = (
+    event: Omit<PermissionAuditLog, 'id' | 'createdAt'>,
+    manager?: EntityManager,
+  ) => {
+    const repository = manager
+      ? manager.getRepository(PermissionAuditLog)
+      : this.permissionAuditRepo;
+    return repository.save(repository.create(event));
+  };
 
   private normalizeAction(action: ActionType): PermissionAction {
     const legacyMap: Record<string, PermissionAction> = {
@@ -225,6 +238,7 @@ export class AccessService implements OnModuleInit {
   async createPermissionGroup(
     input: { name: string; description?: string; schoolId?: string },
     schoolId: string,
+    actorUserId: string,
   ) {
     const name = input.name.trim();
     if (!name) throw new BadRequestException('A group name is required');
@@ -234,13 +248,28 @@ export class AccessService implements OnModuleInit {
       description: input.description?.trim() || null,
     });
     try {
-      return await this.groupRepo.save(group);
+      return await this.groupRepo.manager.transaction(async (manager) => {
+        const saved = await manager.getRepository(PermissionGroup).save(group);
+        await this.recordPermissionAudit(
+          {
+            schoolId,
+            actorUserId,
+            targetType: 'permission_group',
+            targetId: saved.id,
+            operation: 'create',
+            beforeState: null,
+            afterState: { name: saved.name, description: saved.description },
+          },
+          manager,
+        );
+        return saved;
+      });
     } catch (error) {
       if (
         typeof error === 'object' &&
         error !== null &&
         'code' in error &&
-        error.code === '23505'
+        Reflect.get(error, 'code') === '23505'
       ) {
         throw new ConflictException(
           'A permission group with this name already exists',
@@ -258,23 +287,62 @@ export class AccessService implements OnModuleInit {
       isActive?: boolean;
     },
     schoolId: string,
+    actorUserId: string,
   ) {
-    await this.assertSchoolGroup(input.id, schoolId);
+    const before = await this.assertSchoolGroup(input.id, schoolId);
     if (input.name !== undefined && !input.name.trim()) {
       throw new BadRequestException('A group name is required');
     }
-    await this.groupRepo.update(input.id, {
-      ...(input.name === undefined ? {} : { name: input.name.trim() }),
-      ...(input.description === undefined
-        ? {}
-        : { description: input.description.trim() || null }),
-      ...(input.isActive === undefined ? {} : { isActive: input.isActive }),
+    return this.groupRepo.manager.transaction(async (manager) => {
+      await manager.getRepository(PermissionGroup).update(
+        { id: input.id, schoolId },
+        {
+          ...(input.name === undefined ? {} : { name: input.name.trim() }),
+          ...(input.description === undefined
+            ? {}
+            : { description: input.description.trim() || null }),
+          ...(input.isActive === undefined ? {} : { isActive: input.isActive }),
+        },
+      );
+      const after = await manager
+        .getRepository(PermissionGroup)
+        .findOneByOrFail({ id: input.id, schoolId });
+      await this.recordPermissionAudit(
+        {
+          schoolId,
+          actorUserId,
+          targetType: 'permission_group',
+          targetId: input.id,
+          operation: 'update',
+          beforeState: {
+            name: before.name,
+            description: before.description,
+            isActive: before.isActive,
+          },
+          afterState: {
+            name: after.name,
+            description: after.description,
+            isActive: after.isActive,
+          },
+        },
+        manager,
+      );
+      return after;
     });
-    return this.groupRepo.findOneByOrFail({ id: input.id, schoolId });
   }
 
-  async deletePermissionGroup(groupId: string, schoolId: string) {
-    await this.assertSchoolGroup(groupId, schoolId);
+  async deletePermissionGroup(
+    groupId: string,
+    schoolId: string,
+    actorUserId: string,
+  ) {
+    const group = await this.assertSchoolGroup(groupId, schoolId);
+    const permissions = await this.groupPermissionRepo.find({
+      where: { groupId, schoolId },
+    });
+    const members = await this.userGroupRepo.find({
+      where: { groupId, schoolId },
+    });
     await this.groupRepo.manager.transaction(async (manager) => {
       await manager
         .getRepository(UserPermissionGroup)
@@ -285,6 +353,18 @@ export class AccessService implements OnModuleInit {
       await manager
         .getRepository(PermissionGroup)
         .delete({ id: groupId, schoolId });
+      await this.recordPermissionAudit(
+        {
+          schoolId,
+          actorUserId,
+          targetType: 'permission_group',
+          targetId: groupId,
+          operation: 'delete',
+          beforeState: { group, permissions, members },
+          afterState: null,
+        },
+        manager,
+      );
     });
     return true;
   }
@@ -293,8 +373,12 @@ export class AccessService implements OnModuleInit {
     groupId: string,
     permissions: { resource: AppResource; action: PermissionAction }[],
     schoolId: string,
+    actorUserId: string,
   ) {
     await this.assertSchoolGroup(groupId, schoolId);
+    const before = await this.groupPermissionRepo.find({
+      where: { groupId, schoolId },
+    });
     const uniquePermissions = Array.from(
       new Map(
         permissions.map((permission) => [
@@ -313,6 +397,18 @@ export class AccessService implements OnModuleInit {
           ),
         );
       }
+      await this.recordPermissionAudit(
+        {
+          schoolId,
+          actorUserId,
+          targetType: 'permission_group',
+          targetId: groupId,
+          operation: 'set_permissions',
+          beforeState: before,
+          afterState: uniquePermissions,
+        },
+        manager,
+      );
     });
     return this.groupPermissionRepo.find({ where: { groupId, schoolId } });
   }
@@ -326,6 +422,7 @@ export class AccessService implements OnModuleInit {
     userId: string,
     groupId: string,
     schoolId: string,
+    actorUserId: string,
   ) {
     const user = await this.assertSchoolUser(userId, schoolId);
     if (user.role === UserRole.SCHOOL_ADMIN) {
@@ -343,15 +440,32 @@ export class AccessService implements OnModuleInit {
       where: { userId, groupId, schoolId },
     });
     if (existing) return existing;
-    return this.userGroupRepo.save(
-      this.userGroupRepo.create({ userId, groupId, schoolId }),
-    );
+    return this.userGroupRepo.manager.transaction(async (manager) => {
+      const repository = manager.getRepository(UserPermissionGroup);
+      const membership = await repository.save(
+        repository.create({ userId, groupId, schoolId }),
+      );
+      await this.recordPermissionAudit(
+        {
+          schoolId,
+          actorUserId,
+          targetType: 'permission_group_membership',
+          targetId: membership.id,
+          operation: 'assign',
+          beforeState: null,
+          afterState: { userId, groupId },
+        },
+        manager,
+      );
+      return membership;
+    });
   }
 
   async removePermissionGroup(
     userId: string,
     groupId: string,
     schoolId: string,
+    actorUserId: string,
   ) {
     const user = await this.assertSchoolUser(userId, schoolId);
     if (user.role === UserRole.SCHOOL_ADMIN) {
@@ -360,7 +474,27 @@ export class AccessService implements OnModuleInit {
       );
     }
     await this.assertSchoolGroup(groupId, schoolId);
-    await this.userGroupRepo.delete({ userId, groupId, schoolId });
+    const membership = await this.userGroupRepo.findOne({
+      where: { userId, groupId, schoolId },
+    });
+    if (!membership) return true;
+    await this.userGroupRepo.manager.transaction(async (manager) => {
+      await manager
+        .getRepository(UserPermissionGroup)
+        .delete({ userId, groupId, schoolId });
+      await this.recordPermissionAudit(
+        {
+          schoolId,
+          actorUserId,
+          targetType: 'permission_group_membership',
+          targetId: membership.id,
+          operation: 'remove',
+          beforeState: { userId, groupId },
+          afterState: null,
+        },
+        manager,
+      );
+    });
     return true;
   }
 
@@ -372,6 +506,7 @@ export class AccessService implements OnModuleInit {
       effect?: PermissionEffect;
     },
     schoolId: string,
+    actorUserId: string,
   ) {
     const userId = input.userId?.trim();
     const resource = input.resource;
@@ -402,19 +537,29 @@ export class AccessService implements OnModuleInit {
         action,
       },
     });
-    if (existing) {
-      existing.effect = effect;
-      return this.userPermissionRepo.save(existing);
-    }
-    return this.userPermissionRepo.save(
-      this.userPermissionRepo.create({
-        userId,
-        schoolId,
-        resource,
-        action,
-        effect,
-      }),
-    );
+    const previousEffect = existing?.effect ?? null;
+    return this.userPermissionRepo.manager.transaction(async (manager) => {
+      const repository = manager.getRepository(UserPermission);
+      const override = existing
+        ? Object.assign(existing, { effect })
+        : repository.create({ userId, schoolId, resource, action, effect });
+      const saved = await repository.save(override);
+      await this.recordPermissionAudit(
+        {
+          schoolId,
+          actorUserId,
+          targetType: 'staff_permission_override',
+          targetId: userId,
+          operation: 'set',
+          beforeState: existing
+            ? { resource, action, effect: previousEffect }
+            : null,
+          afterState: { resource, action, effect },
+        },
+        manager,
+      );
+      return saved;
+    });
   }
 
   async removeUserPermission(
@@ -422,6 +567,7 @@ export class AccessService implements OnModuleInit {
     resource: AppResource,
     action: PermissionAction,
     schoolId: string,
+    actorUserId: string,
   ) {
     const user = await this.assertSchoolUser(userId, schoolId);
     if (user.role === UserRole.SCHOOL_ADMIN) {
@@ -429,11 +575,29 @@ export class AccessService implements OnModuleInit {
         'School Admin accounts cannot have permission overrides',
       );
     }
-    await this.userPermissionRepo.delete({
-      userId,
-      schoolId,
-      resource,
-      action,
+    const existing = await this.userPermissionRepo.findOne({
+      where: { userId, schoolId, resource, action },
+    });
+    if (!existing) return true;
+    await this.userPermissionRepo.manager.transaction(async (manager) => {
+      await manager.getRepository(UserPermission).delete({
+        userId,
+        schoolId,
+        resource,
+        action,
+      });
+      await this.recordPermissionAudit(
+        {
+          schoolId,
+          actorUserId,
+          targetType: 'staff_permission_override',
+          targetId: userId,
+          operation: 'reset_to_inherit',
+          beforeState: { resource, action, effect: existing.effect },
+          afterState: null,
+        },
+        manager,
+      );
     });
     return true;
   }
@@ -650,8 +814,11 @@ export class AccessService implements OnModuleInit {
     updates: Partial<RolePermission>,
     requesterRole?: UserRole,
     requesterSchoolId?: string | null,
+    actorUserId?: string,
   ) => {
-    return this.permissionRepo.findOne({ where: { id } }).then((existing) => {
+    return this.permissionRepo.manager.transaction(async (manager) => {
+      const repository = manager.getRepository(RolePermission);
+      const existing = await repository.findOne({ where: { id } });
       if (!existing) throw new Error('Permission not found');
 
       // SCHOOL_ADMIN can only edit their own school's permissions
@@ -699,21 +866,35 @@ export class AccessService implements OnModuleInit {
         normalized.canUpdate = false;
         normalized.canDelete = false;
       }
-      return this.permissionRepo
-        .update(
+      const previous = {
+        canCreate: existing.canCreate,
+        canRead: existing.canRead,
+        canUpdate: existing.canUpdate,
+        canDelete: existing.canDelete,
+      };
+      const updated = await repository.save(
+        Object.assign(existing, normalized),
+      );
+      if (actorUserId && updated.schoolId) {
+        await this.recordPermissionAudit(
           {
-            id,
-            schoolId: existing.schoolId ?? IsNull(),
-            role: existing.role,
-            resource: existing.resource,
+            schoolId: updated.schoolId,
+            actorUserId,
+            targetType: 'role_permission',
+            targetId: updated.id,
+            operation: 'update',
+            beforeState: previous,
+            afterState: {
+              canCreate: updated.canCreate,
+              canRead: updated.canRead,
+              canUpdate: updated.canUpdate,
+              canDelete: updated.canDelete,
+            },
           },
-          normalized,
-        )
-        .then(() =>
-          this.permissionRepo.findOne({
-            where: { id, schoolId: existing.schoolId ?? IsNull() },
-          }),
+          manager,
         );
+      }
+      return updated;
     });
   };
 

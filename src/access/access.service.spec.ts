@@ -50,6 +50,7 @@ describe('AccessService effective permissions', () => {
       repository(
         config.users || [{ id: 'user-a', schoolId: 'school-a' }],
       ) as any,
+      repository() as any,
     );
 
   it('allows School Admin without stored permission rows', async () => {
@@ -271,5 +272,64 @@ describe('AccessService effective permissions', () => {
         PermissionAction.UPDATE,
       ),
     ).resolves.toBe(false);
+  });
+
+  it('records tenant-scoped before and after state for staff permission changes', async () => {
+    const transactionalRepository: any = repository();
+    const auditManager = {
+      getRepository: jest.fn(() => transactionalRepository),
+    };
+    transactionalRepository.manager = {
+      transaction: jest.fn((work: (manager: any) => unknown) =>
+        work(auditManager),
+      ),
+    };
+    transactionalRepository.save
+      .mockResolvedValueOnce({
+        userId: 'staff-a',
+        schoolId: 'school-a',
+        resource: AppResource.RESULTS,
+        action: PermissionAction.UPDATE,
+        effect: PermissionEffect.DENY,
+      })
+      .mockResolvedValueOnce({ id: 'audit-a' });
+    const users = repository([
+      { id: 'staff-a', role: UserRole.CLASS_TEACHER, schoolId: 'school-a' },
+    ]);
+    const service = new AccessService(
+      repository() as any,
+      repository() as any,
+      repository() as any,
+      repository() as any,
+      transactionalRepository,
+      users as any,
+      transactionalRepository,
+    );
+
+    await service.setUserPermission(
+      {
+        userId: 'staff-a',
+        resource: AppResource.RESULTS,
+        action: PermissionAction.UPDATE,
+        effect: PermissionEffect.DENY,
+      },
+      'school-a',
+      'admin-a',
+    );
+
+    expect(transactionalRepository.save).toHaveBeenCalledTimes(2);
+    expect(transactionalRepository.save.mock.calls[1][0]).toMatchObject({
+      schoolId: 'school-a',
+      actorUserId: 'admin-a',
+      targetType: 'staff_permission_override',
+      targetId: 'staff-a',
+      operation: 'set',
+      beforeState: null,
+      afterState: {
+        resource: AppResource.RESULTS,
+        action: PermissionAction.UPDATE,
+        effect: PermissionEffect.DENY,
+      },
+    });
   });
 });

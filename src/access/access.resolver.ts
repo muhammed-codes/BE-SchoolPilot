@@ -94,7 +94,7 @@ export class AccessResolver {
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   updateRolePermission(
     @Args('input') input: UpdatePermissionInput,
-    @CurrentUser() user: { role: UserRole; schoolId?: string },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId?: string },
   ) {
     const updates: Partial<RolePermission> = {};
     if (input.canCreate !== undefined) updates.canCreate = input.canCreate;
@@ -106,6 +106,7 @@ export class AccessResolver {
       updates,
       user.role,
       user.schoolId,
+      user.sub,
     );
   }
 
@@ -178,11 +179,12 @@ export class AccessResolver {
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   createPermissionGroup(
     @Args('input') input: CreatePermissionGroupInput,
-    @CurrentUser() user: { role: UserRole; schoolId?: string },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId?: string },
   ) {
     return this.accessService.createPermissionGroup(
       input,
       this.schoolIdFor(user, input.schoolId),
+      user.sub,
     );
   }
 
@@ -190,12 +192,13 @@ export class AccessResolver {
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   updatePermissionGroup(
     @Args('input') input: UpdatePermissionGroupInput,
-    @CurrentUser() user: { role: UserRole; schoolId?: string },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
     return this.accessService.updatePermissionGroup(
       input,
       this.schoolIdFor(user, schoolId),
+      user.sub,
     );
   }
 
@@ -203,12 +206,13 @@ export class AccessResolver {
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   deletePermissionGroup(
     @Args('groupId') groupId: string,
-    @CurrentUser() user: { role: UserRole; schoolId?: string },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
     return this.accessService.deletePermissionGroup(
       groupId,
       this.schoolIdFor(user, schoolId),
+      user.sub,
     );
   }
 
@@ -216,13 +220,14 @@ export class AccessResolver {
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   setPermissionGroupPermissions(
     @Args('input') input: SetPermissionGroupPermissionsInput,
-    @CurrentUser() user: { role: UserRole; schoolId?: string },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
     return this.accessService.setPermissionGroupPermissions(
       input.groupId,
       input.permissions,
       this.schoolIdFor(user, schoolId),
+      user.sub,
     );
   }
 
@@ -230,7 +235,7 @@ export class AccessResolver {
   @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   assignPermissionGroup(
     @Args('input') input: AssignPermissionGroupInput,
-    @CurrentUser() user: { role: UserRole; schoolId?: string },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
     const scope = this.schoolIdFor(user, schoolId);
@@ -238,6 +243,7 @@ export class AccessResolver {
       input.userId,
       input.groupId,
       scope,
+      user.sub,
     );
   }
 
@@ -246,13 +252,14 @@ export class AccessResolver {
   removePermissionGroup(
     @Args('userId') userId: string,
     @Args('groupId') groupId: string,
-    @CurrentUser() user: { role: UserRole; schoolId?: string },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
     return this.accessService.removePermissionGroup(
       userId,
       groupId,
       this.schoolIdFor(user, schoolId),
+      user.sub,
     );
   }
 
@@ -269,7 +276,7 @@ export class AccessResolver {
     action: PermissionAction | undefined,
     @Args('effect', { type: () => PermissionEffect, nullable: true })
     effect: PermissionEffect | undefined,
-    @CurrentUser() user: { role: UserRole; schoolId?: string },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
     const targetUserId = userId?.trim() || input?.userId?.trim() || '';
@@ -281,6 +288,7 @@ export class AccessResolver {
         effect: effect ?? input?.effect,
       },
       this.schoolIdFor(user, schoolId),
+      user.sub,
     );
   }
 
@@ -290,7 +298,7 @@ export class AccessResolver {
     @Args('userId') userId: string,
     @Args('resource', { type: () => AppResource }) resource: AppResource,
     @Args('action', { type: () => PermissionAction }) action: PermissionAction,
-    @CurrentUser() user: { role: UserRole; schoolId?: string },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId?: string },
     @Args('schoolId', { type: () => String, nullable: true }) schoolId?: string,
   ) {
     return this.accessService.removeUserPermission(
@@ -298,6 +306,7 @@ export class AccessResolver {
       resource,
       action,
       this.schoolIdFor(user, schoolId),
+      user.sub,
     );
   }
 }
