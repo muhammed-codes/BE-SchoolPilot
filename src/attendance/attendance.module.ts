@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { StudentAttendance } from './entities/student-attendance.entity';
 import { StaffAttendance } from './entities/staff-attendance.entity';
 import { ClassEntity } from '../classes/entities/class.entity';
+import { ClassSubject } from '../classes/entities/class-subject.entity';
 import { School } from '../schools/entities/school.entity';
 import { User } from '../users/entities/user.entity';
 import { Term } from '../terms/entities/term.entity';
@@ -19,6 +20,7 @@ import { UploadModule } from '../upload/upload.module';
       StudentAttendance,
       StaffAttendance,
       ClassEntity,
+      ClassSubject,
       School,
       User,
       Term,

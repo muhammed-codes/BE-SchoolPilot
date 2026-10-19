@@ -237,6 +237,9 @@ export class PdfService {
             this.attendanceService.getStudentAttendanceSummary(
               studentResult.studentId,
               studentResult.resultSheet.termId,
+              undefined,
+              undefined,
+              studentResult.schoolId,
             ),
             this.subjectRepo.find({
               where: { schoolId: studentResult.schoolId },

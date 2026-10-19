@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, Not } from 'typeorm';
+import { Repository, Between, Not, In } from 'typeorm';
 import { StudentAttendance } from './entities/student-attendance.entity';
 import { StaffAttendance } from './entities/staff-attendance.entity';
 import { ClassEntity } from '../classes/entities/class.entity';
@@ -14,6 +14,7 @@ import { User } from '../users/entities/user.entity';
 import { Term } from '../terms/entities/term.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
 import { Student } from '../students/entities/student.entity';
+import { ClassSubject } from '../classes/entities/class-subject.entity';
 import {
   MarkAttendanceInput,
   ManualStaffAttendanceInput,
@@ -49,6 +50,8 @@ export class AttendanceService {
     private readonly studentParentRepo: Repository<StudentParent>,
     @InjectRepository(Student)
     private readonly studentRepo: Repository<Student>,
+    @InjectRepository(ClassSubject)
+    private readonly classSubjectRepo: Repository<ClassSubject>,
     private readonly uploadService: UploadService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -74,6 +77,7 @@ export class AttendanceService {
       if (
         marker.role !== UserRole.SUPER_ADMIN &&
         marker.role !== UserRole.SCHOOL_ADMIN &&
+        marker.role !== UserRole.SCHOOL_MANAGEMENT &&
         classEntity.classTeacherId !== markerId
       ) {
         throw new ForbiddenException(
@@ -81,37 +85,66 @@ export class AttendanceService {
         );
       }
 
-      return Promise.all(
-        input.records.map((record) =>
-          this.studentAttendanceRepo
-            .findOne({
-              where: {
-                studentId: record.studentId,
-                date: input.date,
-              },
-            })
-            .then((existing) => {
-              if (existing) {
-                existing.status = record.status;
-                existing.markedByUserId = markerId;
-                existing.markedAt = new Date();
-                return this.studentAttendanceRepo.save(existing);
-              } else {
-                const newRecord = this.studentAttendanceRepo.create({
-                  studentId: record.studentId,
-                  classId: input.classId,
-                  schoolId,
-                  termId: term.id,
-                  date: input.date,
-                  status: record.status,
-                  markedByUserId: markerId,
-                  markedAt: new Date(),
-                });
-                return this.studentAttendanceRepo.save(newRecord);
-              }
-            }),
-        ),
-      ).then(() => this.getClassAttendance(input.classId, input.date));
+      const studentIds = [
+        ...new Set(input.records.map((record) => record.studentId)),
+      ];
+      return this.studentRepo
+        .find({
+          where: {
+            id: In(studentIds),
+            currentClassId: input.classId,
+            schoolId,
+            isArchived: false,
+          },
+        })
+        .then((students) => {
+          if (students.length !== studentIds.length) {
+            throw new NotFoundException(
+              'One or more students were not found in this class',
+            );
+          }
+
+          return Promise.all(
+            input.records.map((record) =>
+              this.studentAttendanceRepo
+                .findOne({
+                  where: {
+                    studentId: record.studentId,
+                    date: input.date,
+                    schoolId,
+                  },
+                })
+                .then((existing) => {
+                  if (existing) {
+                    existing.status = record.status;
+                    existing.markedByUserId = markerId;
+                    existing.markedAt = new Date();
+                    return this.studentAttendanceRepo.save(existing);
+                  } else {
+                    const newRecord = this.studentAttendanceRepo.create({
+                      studentId: record.studentId,
+                      classId: input.classId,
+                      schoolId,
+                      termId: term.id,
+                      date: input.date,
+                      status: record.status,
+                      markedByUserId: markerId,
+                      markedAt: new Date(),
+                    });
+                    return this.studentAttendanceRepo.save(newRecord);
+                  }
+                }),
+            ),
+          ).then(() =>
+            this.getClassAttendance(
+              input.classId,
+              input.date,
+              markerId,
+              schoolId,
+              marker.role,
+            ),
+          );
+        });
     });
   };
 
@@ -120,13 +153,22 @@ export class AttendanceService {
     termId: string,
     userId?: string,
     userRole?: UserRole,
+    schoolId?: string,
   ) => {
     const check =
       userRole === UserRole.PARENT && userId
         ? this.studentParentRepo.findOne({
             where: { studentId, parentId: userId },
           })
-        : Promise.resolve(true);
+        : userRole === UserRole.CLASS_TEACHER ||
+            userRole === UserRole.SUBJECT_TEACHER
+          ? this.assertStudentTeachingScope(
+              studentId,
+              userId || '',
+              schoolId || '',
+              userRole,
+            )
+          : Promise.resolve(true);
 
     return check.then((link) => {
       if (!link) {
@@ -135,7 +177,7 @@ export class AttendanceService {
         );
       }
       return this.studentAttendanceRepo.find({
-        where: { studentId, termId },
+        where: { studentId, termId, ...(schoolId ? { schoolId } : {}) },
         order: { date: 'ASC' },
       });
     });
@@ -170,7 +212,7 @@ export class AttendanceService {
   ) => {
     if (!userId || !schoolId || !role) {
       return this.studentAttendanceRepo.find({
-        where: { classId, date },
+        where: { classId, date, schoolId },
         relations: ['student'],
         order: { student: { firstName: 'ASC' } },
       });
@@ -181,7 +223,7 @@ export class AttendanceService {
         ? this.classRepo.findOne({ where: { id: classId } })
         : this.classRepo.findOne({ where: { id: classId, schoolId } });
 
-    return classLookup.then((classEntity) => {
+    return classLookup.then(async (classEntity) => {
       if (!classEntity) {
         throw new NotFoundException('Class not found');
       }
@@ -191,14 +233,24 @@ export class AttendanceService {
         role === UserRole.SCHOOL_ADMIN ||
         role === UserRole.SCHOOL_MANAGEMENT;
 
-      if (!canViewAllClassAttendance && classEntity.classTeacherId !== userId) {
+      const subjectAssignment =
+        role === UserRole.SUBJECT_TEACHER
+          ? await this.classSubjectRepo.findOne({
+              where: { classId, subjectTeacherId: userId },
+            })
+          : null;
+      if (
+        !canViewAllClassAttendance &&
+        classEntity.classTeacherId !== userId &&
+        !subjectAssignment
+      ) {
         throw new ForbiddenException(
           'You can only view attendance for your assigned class',
         );
       }
 
       return this.studentAttendanceRepo.find({
-        where: { classId, date },
+        where: { classId, date, schoolId },
         relations: ['student'],
         order: { student: { firstName: 'ASC' } },
       });
@@ -210,13 +262,22 @@ export class AttendanceService {
     termId: string,
     userId?: string,
     userRole?: UserRole,
+    schoolId?: string,
   ): Promise<AttendanceSummary> => {
     const check =
       userRole === UserRole.PARENT && userId
         ? this.studentParentRepo.findOne({
             where: { studentId, parentId: userId },
           })
-        : Promise.resolve(true);
+        : userRole === UserRole.CLASS_TEACHER ||
+            userRole === UserRole.SUBJECT_TEACHER
+          ? this.assertStudentTeachingScope(
+              studentId,
+              userId || '',
+              schoolId || '',
+              userRole,
+            )
+          : Promise.resolve(true);
 
     return check.then((link) => {
       if (!link) {
@@ -225,7 +286,9 @@ export class AttendanceService {
         );
       }
       return this.studentAttendanceRepo
-        .find({ where: { studentId, termId } })
+        .find({
+          where: { studentId, termId, ...(schoolId ? { schoolId } : {}) },
+        })
         .then((records) => {
           let daysPresent = 0;
           let daysAbsent = 0;
@@ -245,6 +308,32 @@ export class AttendanceService {
           };
         });
     });
+  };
+
+  private assertStudentTeachingScope = async (
+    studentId: string,
+    userId: string,
+    schoolId: string,
+    role: UserRole,
+  ) => {
+    const student = await this.studentRepo.findOne({
+      where: { id: studentId, schoolId, isArchived: false },
+    });
+    if (!student?.currentClassId) {
+      throw new NotFoundException('Student not found');
+    }
+    if (role === UserRole.CLASS_TEACHER) {
+      const classEntity = await this.classRepo.findOne({
+        where: { id: student.currentClassId, schoolId, classTeacherId: userId },
+      });
+      if (classEntity) return true;
+    } else {
+      const assignment = await this.classSubjectRepo.findOne({
+        where: { classId: student.currentClassId, subjectTeacherId: userId },
+      });
+      if (assignment) return true;
+    }
+    throw new NotFoundException('Student not found');
   };
 
   clockAction = (photo: string, userId: string) => {

@@ -16,7 +16,7 @@ import {
   ClassAttendanceOverview,
 } from './dto/attendance-overview.type';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
-import { CurrentUser, RequirePermission } from '../common/decorators';
+import { CurrentUser, RequirePermission, Roles } from '../common/decorators';
 import { UserRole } from '../common/enums';
 import {
   LEADERSHIP_ROLES,
@@ -51,13 +51,14 @@ export class AttendanceResolver {
   studentAttendance(
     @Args('studentId') studentId: string,
     @Args('termId') termId: string,
-    @CurrentUser() user: { sub: string; role: UserRole },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
   ) {
     return this.attendanceService.getStudentAttendance(
       studentId,
       termId,
       user.sub,
       user.role,
+      user.schoolId,
     );
   }
 
@@ -67,18 +68,24 @@ export class AttendanceResolver {
   studentAttendanceSummary(
     @Args('studentId') studentId: string,
     @Args('termId') termId: string,
-    @CurrentUser() user: { sub: string; role: UserRole },
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
   ) {
     return this.attendanceService.getStudentAttendanceSummary(
       studentId,
       termId,
       user.sub,
       user.role,
+      user.schoolId,
     );
   }
 
   @Query(() => [StaffAttendance])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+  )
   @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
   staffAttendanceLog(
     @Args('date') date: string,
@@ -111,6 +118,11 @@ export class AttendanceResolver {
 
   @Query(() => [ClassEntity])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+  )
   @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
   unmarkedClasses(
     @Args('date') date: string,
@@ -121,6 +133,11 @@ export class AttendanceResolver {
 
   @Query(() => StaffAttendanceOverview)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+  )
   @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
   staffAttendanceOverview(
     @Args('date') date: string,
@@ -134,6 +151,11 @@ export class AttendanceResolver {
 
   @Query(() => ClassAttendanceOverview)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+  )
   @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
   classAttendanceOverview(
     @Args('date') date: string,
@@ -171,6 +193,11 @@ export class AttendanceResolver {
 
   @Mutation(() => StaffAttendance)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SCHOOL_MANAGEMENT,
+  )
   @RequirePermission(AppResource.ATTENDANCE, PermissionAction.UPDATE)
   manualStaffAttendance(
     @Args('input') input: ManualStaffAttendanceInput,
@@ -201,7 +228,7 @@ export class AttendanceResolver {
 
   @Mutation(() => StaffAttendance)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
-  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
+  @RequirePermission(AppResource.ATTENDANCE, PermissionAction.UPDATE)
   markAttendanceWithQr(
     @Args('token') token: string,
     @CurrentUser() user: { sub: string; schoolId: string },
