@@ -116,10 +116,13 @@ export class PdfService {
     if (role !== UserRole.CLASS_TEACHER) return Promise.resolve();
 
     return this.classRepo
-      .findOne({ where: { id: classId, schoolId } })
+      .findOne({ where: { id: classId, schoolId }, relations: ['classTeachers'] })
       .then((classEntity) => {
         if (!classEntity) throw new NotFoundException('Class not found');
-        if (classEntity.classTeacherId !== userId) {
+        if (
+          classEntity.classTeacherId !== userId &&
+          !classEntity.classTeachers?.some((teacher) => teacher.id === userId)
+        ) {
           throw new ForbiddenException(
             'You can only generate results for your assigned class',
           );

@@ -53,6 +53,9 @@ export class TeacherTimetableResult {
   @Field(() => ClassEntity, { nullable: true })
   assignedClass?: ClassEntity | null;
 
+  @Field(() => [ClassEntity])
+  assignedClasses!: ClassEntity[];
+
   @Field(() => [TimetableEntry])
   entries!: TimetableEntry[];
 }

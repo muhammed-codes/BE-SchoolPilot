@@ -1,5 +1,13 @@
 import { ObjectType, Field, Int } from '@nestjs/graphql';
-import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  ManyToMany,
+  OneToMany,
+  JoinColumn,
+  JoinTable,
+} from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { ClassSubject } from './class-subject.entity';
@@ -23,6 +31,15 @@ export class ClassEntity extends BaseEntity {
   @ManyToOne(() => User, { nullable: true, eager: false })
   @JoinColumn({ name: 'classTeacherId' })
   classTeacher!: User;
+
+  @Field(() => [User], { nullable: true })
+  @ManyToMany(() => User, { eager: false })
+  @JoinTable({
+    name: 'class_teachers',
+    joinColumn: { name: 'classId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'teacherId', referencedColumnName: 'id' },
+  })
+  classTeachers!: User[];
 
   @Field(() => [ClassSubject], { nullable: true })
   @OneToMany(() => ClassSubject, (cs) => cs.classEntity, { eager: false })

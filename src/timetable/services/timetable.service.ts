@@ -1122,6 +1122,9 @@ export class TimetableService implements OnModuleInit {
       if (e.classEntity?.classTeacherId) {
         allTeacherIds.add(e.classEntity.classTeacherId);
       }
+      (e.classEntity?.classTeachers || []).forEach((teacher) =>
+        allTeacherIds.add(teacher.id),
+      );
     });
 
     const teachersMap = new Map<string, User>();
@@ -1145,6 +1148,13 @@ export class TimetableService implements OnModuleInit {
         if (ct && !seen.has(ct.id)) {
           seen.add(ct.id);
           teacherList.push(ct);
+        }
+        for (const classTeacher of e.classEntity?.classTeachers || []) {
+          const teacher = teachersMap.get(classTeacher.id) || classTeacher;
+          if (!seen.has(teacher.id)) {
+            seen.add(teacher.id);
+            teacherList.push(teacher);
+          }
         }
       }
 
@@ -1176,6 +1186,7 @@ export class TimetableService implements OnModuleInit {
     schoolId: string;
     termId: string;
     classId?: string;
+    classIds?: string[];
     teacherId?: string;
     roomId?: string;
   }): Promise<TimetableEntry[]> {
@@ -1184,6 +1195,7 @@ export class TimetableService implements OnModuleInit {
       .leftJoinAndSelect('entry.term', 'term')
       .leftJoinAndSelect('entry.classEntity', 'classEntity')
       .leftJoinAndSelect('classEntity.classTeacher', 'classTeacher')
+      .leftJoinAndSelect('classEntity.classTeachers', 'classTeachers')
       .leftJoinAndSelect('entry.subject', 'subject')
       .leftJoinAndSelect('entry.teacher', 'teacher')
       .leftJoinAndSelect('entry.room', 'room')
@@ -1193,10 +1205,14 @@ export class TimetableService implements OnModuleInit {
 
     if (params.classId) {
       qb.andWhere('entry.classId = :classId', { classId: params.classId });
+    } else if (params.classIds?.length) {
+      qb.andWhere('entry.classId IN (:...classIds)', {
+        classIds: params.classIds,
+      });
     }
     if (params.teacherId) {
       qb.andWhere(
-        '(entry.teacherId = :teacherId OR :teacherId = ANY(entry.teacherIds) OR (entry.useClassTeacher = true AND classEntity.classTeacherId = :teacherId))',
+        '(entry.teacherId = :teacherId OR :teacherId = ANY(entry.teacherIds) OR (entry.useClassTeacher = true AND (classEntity.classTeacherId = :teacherId OR classTeachers.id = :teacherId)))',
         { teacherId: params.teacherId },
       );
     }
@@ -1587,9 +1603,17 @@ export class TimetableService implements OnModuleInit {
     termId?: string,
   ): Promise<TeacherTimetableResult> {
     // 1. Check if teacher is assigned as Class Teacher
-    const assignedClass = await this.classRepo.findOne({
-      where: { classTeacherId: userId, schoolId },
-    });
+    const assignedClasses = await this.classRepo
+      .createQueryBuilder('class')
+      .leftJoinAndSelect('class.classTeachers', 'classTeachers')
+      .where('class.schoolId = :schoolId', { schoolId })
+      .andWhere(
+        '(class.classTeacherId = :userId OR classTeachers.id = :userId)',
+        { userId },
+      )
+      .orderBy('class.name', 'ASC')
+      .getMany();
+    const assignedClass = assignedClasses[0] || null;
 
     let effectiveTermId = termId;
     if (!effectiveTermId) {
@@ -1604,21 +1628,23 @@ export class TimetableService implements OnModuleInit {
       return {
         isClassTeacher: !!assignedClass,
         assignedClass: assignedClass || null,
+        assignedClasses,
         entries: [],
       };
     }
 
-    if (assignedClass) {
-      // Return full timetable of their assigned class
+    if (assignedClasses.length > 0) {
+      // Return timetable entries for all assigned classes.
       const entries = await this.getTimetableEntries({
         schoolId,
         termId: effectiveTermId,
-        classId: assignedClass.id,
+        classIds: assignedClasses.map((schoolClass) => schoolClass.id),
       });
 
       return {
         isClassTeacher: true,
         assignedClass,
+        assignedClasses,
         entries,
       };
     } else {
@@ -1632,6 +1658,7 @@ export class TimetableService implements OnModuleInit {
       return {
         isClassTeacher: false,
         assignedClass: null,
+        assignedClasses: [],
         entries,
       };
     }

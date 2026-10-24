@@ -70,6 +70,17 @@ export class ResultsService {
     private readonly dataSource: DataSource,
   ) {}
 
+  private getClassesAssignedToTeacher = (teacherId: string, schoolId: string) =>
+    this.classRepo
+      .createQueryBuilder('class')
+      .leftJoin('class.classTeachers', 'classTeachers')
+      .where('class.schoolId = :schoolId', { schoolId })
+      .andWhere(
+        '(class.classTeacherId = :teacherId OR classTeachers.id = :teacherId)',
+        { teacherId },
+      )
+      .getMany();
+
   private computeStudentPercentage = (
     totalScore: number | null | undefined,
     subjectCount: number,
@@ -239,13 +250,15 @@ export class ResultsService {
   ) => {
     const sheet = await this.resultSheetRepo.findOne({
       where: { id: input.resultSheetId, schoolId },
-      relations: ['classEntity'],
+      relations: ['classEntity', 'classEntity.classTeachers'],
     });
 
     if (!sheet) throw new NotFoundException('Result sheet not found');
     this.assertSheetIsEditable(sheet);
 
-    const isClassTeacher = sheet.classEntity.classTeacherId === teacherId;
+    const isClassTeacher =
+      sheet.classEntity.classTeacherId === teacherId ||
+      sheet.classEntity.classTeachers?.some((teacher) => teacher.id === teacherId);
 
     if (!isClassTeacher) {
       const classSubject = await this.classSubjectRepo.findOne({
@@ -810,6 +823,7 @@ export class ResultsService {
       where: { id, schoolId },
       relations: [
         'classEntity',
+        'classEntity.classTeachers',
         'classEntity.classSubjects',
         'classEntity.classSubjects.subject',
         'createdByUser',
@@ -831,7 +845,9 @@ export class ResultsService {
     ].includes(role);
 
     if (!isLeadership) {
-      const isClassTeacher = sheet.classEntity.classTeacherId === userId;
+      const isClassTeacher =
+        sheet.classEntity.classTeacherId === userId ||
+        sheet.classEntity.classTeachers?.some((teacher) => teacher.id === userId);
 
       if (!isClassTeacher && role === UserRole.SUBJECT_TEACHER) {
         // Filter classSubjects
@@ -923,6 +939,7 @@ export class ResultsService {
   ) => {
     const classEntity = await this.classRepo.findOne({
       where: { id: classId, schoolId },
+      relations: ['classTeachers'],
     });
     if (!classEntity) throw new NotFoundException('Class not found');
     if (
@@ -936,7 +953,8 @@ export class ResultsService {
     }
     if (
       role === UserRole.CLASS_TEACHER &&
-      classEntity.classTeacherId === userId
+      (classEntity.classTeacherId === userId ||
+        classEntity.classTeachers?.some((teacher) => teacher.id === userId))
     ) {
       return;
     }
@@ -1005,9 +1023,7 @@ export class ResultsService {
       });
     }
 
-    const myClasses = await this.classRepo.find({
-      where: [{ classTeacherId: userId, schoolId }],
-    });
+    const myClasses = await this.getClassesAssignedToTeacher(userId, schoolId);
 
     const mySubjectClasses = await this.classSubjectRepo.find({
       where: { subjectTeacherId: userId },
@@ -1081,7 +1097,7 @@ export class ResultsService {
 
     const allClasses = await this.classRepo.find({
       where: { schoolId },
-      relations: ['classSubjects', 'classSubjects.subject'],
+      relations: ['classTeachers', 'classSubjects', 'classSubjects.subject'],
       order: { name: 'ASC' },
     });
 
@@ -1093,7 +1109,9 @@ export class ResultsService {
     const assignments: TeacherScoringAssignment[] = [];
 
     for (const cls of allClasses) {
-      const isClassTeacher = cls.classTeacherId === userId;
+      const isClassTeacher =
+        cls.classTeacherId === userId ||
+        cls.classTeachers?.some((teacher) => teacher.id === userId);
       let relevantSubjects = cls.classSubjects || [];
 
       if (!isLeadership && !isClassTeacher) {
@@ -1409,9 +1427,7 @@ export class ResultsService {
       });
     }
 
-    const myClasses = await this.classRepo.find({
-      where: [{ classTeacherId: userId, schoolId }],
-    });
+    const myClasses = await this.getClassesAssignedToTeacher(userId, schoolId);
 
     const mySubjectClasses = await this.classSubjectRepo.find({
       where: { subjectTeacherId: userId },

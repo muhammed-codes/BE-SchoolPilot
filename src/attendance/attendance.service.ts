@@ -63,7 +63,10 @@ export class AttendanceService {
     schoolId: string,
   ) => {
     return Promise.all([
-      this.classRepo.findOne({ where: { id: input.classId, schoolId } }),
+      this.classRepo.findOne({
+        where: { id: input.classId, schoolId },
+        relations: ['classTeachers'],
+      }),
       this.userRepo.findOne({ where: { id: markerId } }),
       this.termRepo.findOne({
         where: { schoolId },
@@ -78,7 +81,8 @@ export class AttendanceService {
         marker.role !== UserRole.SUPER_ADMIN &&
         marker.role !== UserRole.SCHOOL_ADMIN &&
         marker.role !== UserRole.SCHOOL_MANAGEMENT &&
-        classEntity.classTeacherId !== markerId
+        classEntity.classTeacherId !== markerId &&
+        !classEntity.classTeachers?.some((teacher) => teacher.id === markerId)
       ) {
         throw new ForbiddenException(
           'Only the class teacher or school admin can mark attendance',
@@ -220,8 +224,14 @@ export class AttendanceService {
 
     const classLookup =
       role === UserRole.SUPER_ADMIN
-        ? this.classRepo.findOne({ where: { id: classId } })
-        : this.classRepo.findOne({ where: { id: classId, schoolId } });
+        ? this.classRepo.findOne({
+            where: { id: classId },
+            relations: ['classTeachers'],
+          })
+        : this.classRepo.findOne({
+            where: { id: classId, schoolId },
+            relations: ['classTeachers'],
+          });
 
     return classLookup.then(async (classEntity) => {
       if (!classEntity) {
@@ -242,6 +252,7 @@ export class AttendanceService {
       if (
         !canViewAllClassAttendance &&
         classEntity.classTeacherId !== userId &&
+        !classEntity.classTeachers?.some((teacher) => teacher.id === userId) &&
         !subjectAssignment
       ) {
         throw new ForbiddenException(
@@ -324,9 +335,14 @@ export class AttendanceService {
     }
     if (role === UserRole.CLASS_TEACHER) {
       const classEntity = await this.classRepo.findOne({
-        where: { id: student.currentClassId, schoolId, classTeacherId: userId },
+        where: { id: student.currentClassId, schoolId },
+        relations: ['classTeachers'],
       });
-      if (classEntity) return true;
+      if (
+        classEntity &&
+        (classEntity.classTeacherId === userId ||
+          classEntity.classTeachers?.some((teacher) => teacher.id === userId))
+      ) return true;
     } else {
       const assignment = await this.classSubjectRepo.findOne({
         where: { classId: student.currentClassId, subjectTeacherId: userId },

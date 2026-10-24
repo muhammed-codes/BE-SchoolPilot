@@ -77,7 +77,7 @@ export class ConflictValidatorService {
     const [currentClass, period, room] = await Promise.all([
       this.classRepo.findOne({
         where: { id: classId, schoolId },
-        relations: ['classTeacher'],
+        relations: ['classTeacher', 'classTeachers'],
       }),
       this.periodRepo.findOne({ where: { id: periodId, schoolId } }),
       roomId
@@ -88,8 +88,11 @@ export class ConflictValidatorService {
     const targetTeacherIds = Array.from(
       new Set(
         [
-          ...(params.useClassTeacher && currentClass?.classTeacherId
-            ? [currentClass.classTeacherId]
+          ...(params.useClassTeacher
+            ? [
+                currentClass?.classTeacherId,
+                ...(currentClass?.classTeachers || []).map((teacher) => teacher.id),
+              ]
             : []),
           ...(params.teacherIds || []),
           ...(params.teacherId ? [params.teacherId] : []),
@@ -110,7 +113,10 @@ export class ConflictValidatorService {
       if (
         entry.useClassTeacher &&
         (entry.classEntity?.classTeacherId === tId ||
-          (entry.classId === classId && currentClass?.classTeacherId === tId))
+          entry.classEntity?.classTeachers?.some((teacher) => teacher.id === tId) ||
+          (entry.classId === classId &&
+            (currentClass?.classTeacherId === tId ||
+              currentClass?.classTeachers?.some((teacher) => teacher.id === tId))))
       ) {
         return true;
       }
@@ -120,7 +126,7 @@ export class ConflictValidatorService {
     // Load entries for this term/school
     const candidateEntries = await this.entryRepo.find({
       where: { schoolId, termId },
-      relations: ['period', 'classEntity', 'subject'],
+      relations: ['period', 'classEntity', 'classEntity.classTeachers', 'subject'],
     });
 
     // 1. Teacher Overload Check & Double-Booked Check (For each assigned teacher)

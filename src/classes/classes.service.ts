@@ -6,6 +6,7 @@ import { ClassSubject } from './entities/class-subject.entity';
 import { CreateClassInput } from './dto/create-class.input';
 import { PaginationArgs } from '../common/pagination';
 import { Student } from '../students/entities/student.entity';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class ClassesService {
@@ -16,26 +17,44 @@ export class ClassesService {
     private readonly classSubjectsRepository: Repository<ClassSubject>,
     @InjectRepository(Student)
     private readonly studentsRepository: Repository<Student>,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
   ) {}
 
-  createClass = (input: CreateClassInput, schoolId: string) => {
+  createClass = async (input: CreateClassInput, schoolId: string) => {
     const classEntity = this.classesRepository.create({
       name: input.name,
       classTeacherId: input.classTeacherId,
       schoolId,
     });
-    return this.classesRepository.save(classEntity);
+    const savedClass = await this.classesRepository.save(classEntity);
+    if (input.classTeacherId) {
+      await this.assignClassTeacher(savedClass.id, input.classTeacherId, schoolId);
+    }
+    return this.getClassById(savedClass.id, schoolId);
   };
 
   assignClassTeacher = (
     classId: string,
     teacherId: string,
     schoolId: string,
-  ) => {
-    return this.classesRepository
-      .update({ id: classId, schoolId }, { classTeacherId: teacherId })
-      .then(() => this.getClassById(classId, schoolId));
-  };
+  ) =>
+    this.getClassById(classId, schoolId).then(async (classEntity) => {
+      const teacher = await this.usersRepository.findOne({
+        where: { id: teacherId, schoolId },
+      });
+      if (!teacher) throw new NotFoundException('Teacher not found');
+
+      const assignedTeachers = classEntity.classTeachers || [];
+      if (assignedTeachers.some((assignedTeacher) => assignedTeacher.id === teacherId)) {
+        return classEntity;
+      }
+
+      classEntity.classTeachers = [...assignedTeachers, teacher];
+      if (!classEntity.classTeacherId) classEntity.classTeacherId = teacherId;
+      await this.classesRepository.save(classEntity);
+      return this.getClassById(classId, schoolId);
+    });
 
   assignSubjectsToClass = (
     classId: string,
@@ -160,6 +179,7 @@ export class ClassesService {
     const queryBuilder = this.classesRepository
       .createQueryBuilder('class')
       .leftJoinAndSelect('class.classTeacher', 'classTeacher')
+      .leftJoinAndSelect('class.classTeachers', 'classTeachers')
       .leftJoinAndSelect('class.classSubjects', 'classSubjects')
       .leftJoinAndSelect('classSubjects.subject', 'subject')
       .leftJoinAndSelect('classSubjects.subjectTeacher', 'subjectTeacher')
@@ -191,6 +211,7 @@ export class ClassesService {
         where: { id, schoolId },
         relations: [
           'classTeacher',
+          'classTeachers',
           'classSubjects',
           'classSubjects.subject',
           'classSubjects.subjectTeacher',
@@ -209,9 +230,10 @@ export class ClassesService {
       .createQueryBuilder('class')
       .select('class.id')
       .leftJoin('class_subjects', 'cs', 'cs."classId" = class.id')
+      .leftJoin('class.classTeachers', 'classTeachers')
       .where('class."schoolId" = :schoolId', { schoolId })
       .andWhere(
-        '(class."classTeacherId" = :teacherId OR cs."subjectTeacherId" = :teacherId)',
+        '(class."classTeacherId" = :teacherId OR classTeachers.id = :teacherId OR cs."subjectTeacherId" = :teacherId)',
         { teacherId },
       )
       .groupBy('class.id')
@@ -223,6 +245,7 @@ export class ClassesService {
           where: { id: In(ids) },
           relations: [
             'classTeacher',
+            'classTeachers',
             'classSubjects',
             'classSubjects.subject',
             'classSubjects.subjectTeacher',
@@ -232,7 +255,15 @@ export class ClassesService {
       });
 
   isClassTeacherAssigned = (teacherId: string, schoolId: string) =>
-    this.classesRepository.count({ where: { classTeacherId: teacherId, schoolId } })
+    this.classesRepository
+      .createQueryBuilder('class')
+      .leftJoin('class.classTeachers', 'classTeachers')
+      .where('class.schoolId = :schoolId', { schoolId })
+      .andWhere(
+        '(class.classTeacherId = :teacherId OR classTeachers.id = :teacherId)',
+        { teacherId },
+      )
+      .getCount()
       .then((assignmentCount) => assignmentCount > 0);
 
   getClassesForTeacherPaginated = (
@@ -276,10 +307,15 @@ export class ClassesService {
     schoolId: string,
   ): Promise<boolean> => {
     return this.classesRepository
-      .findOne({
-        where: { id: classId, schoolId, classTeacherId: userId },
-        select: { id: true },
-      })
-      .then((classEntity) => Boolean(classEntity));
+      .createQueryBuilder('class')
+      .leftJoin('class.classTeachers', 'classTeachers')
+      .where('class.id = :classId', { classId })
+      .andWhere('class.schoolId = :schoolId', { schoolId })
+      .andWhere(
+        '(class.classTeacherId = :userId OR classTeachers.id = :userId)',
+        { userId },
+      )
+      .getCount()
+      .then((assignmentCount) => assignmentCount > 0);
   };
 }
