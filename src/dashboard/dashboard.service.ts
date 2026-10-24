@@ -24,6 +24,7 @@ import {
   AttendancePeriodFilter,
 } from './dto/dashboard-analytics.input';
 import { createMetricStat } from '../common/dto/metric-stat.type';
+import { AppResource } from '../access/enums/resource.enum';
 
 import { TermAnalyticsService } from './analytics/term-analytics.service';
 import { KpiAnalyticsService } from './analytics/kpi-analytics.service';
@@ -61,6 +62,9 @@ export class DashboardService {
   async getDashboardAnalytics(
     schoolId: string,
     input: DashboardAnalyticsInput = {},
+    readableResources: ReadonlySet<AppResource> = new Set(
+      Object.values(AppResource),
+    ),
   ): Promise<DashboardAnalytics> {
     const {
       incomeTimeFilter = DashboardTimeFilter.MONTH,
@@ -69,9 +73,18 @@ export class DashboardService {
       termId,
     } = input;
 
+    const canRead = (resource: AppResource) => readableResources.has(resource);
+    const hasAnyKpiPermission = [
+      AppResource.STUDENTS,
+      AppResource.USERS,
+      AppResource.CLASSES,
+      AppResource.ATTENDANCE,
+      AppResource.FEES,
+    ].some(canRead);
+
     const [
       termProgress,
-      kpis,
+      rawKpis,
       incomeAnalytics,
       feeCollectionOverview,
       studentDemographics,
@@ -83,37 +96,90 @@ export class DashboardService {
       staffOverview,
       needsAttention,
     ] = await Promise.all([
-      this.termAnalyticsService.getTermProgress(schoolId, termId, sessionId),
-      this.kpiAnalyticsService.getOverviewKpis(schoolId),
-      this.financialAnalyticsService.getIncomeAnalytics(
-        schoolId,
-        incomeTimeFilter,
-        termId,
-      ),
-      this.financialAnalyticsService.getFeeCollectionOverview(
-        schoolId,
-        termId,
-        sessionId,
-      ),
-      this.kpiAnalyticsService.getStudentDemographics(schoolId),
-      this.kpiAnalyticsService.getClassDistribution(schoolId),
-      this.attendanceAnalyticsService.getAttendanceAnalytics(
-        schoolId,
-        attendanceTimeFilter,
-        termId,
-      ),
-      this.academicAnalyticsService.getAcademicPerformance(schoolId, termId),
-      this.resultSubmissionAnalyticsService.getResultSubmissionStatus(
-        schoolId,
-        termId,
-      ),
-      this.guardianAnalyticsService.getGuardianOverview(schoolId),
-      this.staffAnalyticsService.getStaffOverview(schoolId),
-      this.needsAttentionAnalyticsService.getNeedsAttentionItems(
-        schoolId,
-        termId,
-      ),
+      canRead(AppResource.SETTINGS)
+        ? this.termAnalyticsService.getTermProgress(schoolId, termId, sessionId)
+        : Promise.resolve(null),
+      hasAnyKpiPermission
+        ? this.kpiAnalyticsService.getOverviewKpis(schoolId)
+        : Promise.resolve(null),
+      canRead(AppResource.FEES)
+        ? this.financialAnalyticsService.getIncomeAnalytics(
+            schoolId,
+            incomeTimeFilter,
+            termId,
+          )
+        : Promise.resolve(null),
+      canRead(AppResource.FEES)
+        ? this.financialAnalyticsService.getFeeCollectionOverview(
+            schoolId,
+            termId,
+            sessionId,
+          )
+        : Promise.resolve(null),
+      canRead(AppResource.STUDENTS)
+        ? this.kpiAnalyticsService.getStudentDemographics(schoolId)
+        : Promise.resolve(null),
+      canRead(AppResource.CLASSES)
+        ? this.kpiAnalyticsService.getClassDistribution(schoolId)
+        : Promise.resolve(null),
+      canRead(AppResource.ATTENDANCE)
+        ? this.attendanceAnalyticsService.getAttendanceAnalytics(
+            schoolId,
+            attendanceTimeFilter,
+            termId,
+          )
+        : Promise.resolve(null),
+      canRead(AppResource.RESULTS)
+        ? this.academicAnalyticsService.getAcademicPerformance(schoolId, termId)
+        : Promise.resolve(null),
+      canRead(AppResource.RESULTS)
+        ? this.resultSubmissionAnalyticsService.getResultSubmissionStatus(
+            schoolId,
+            termId,
+          )
+        : Promise.resolve(null),
+      canRead(AppResource.STUDENTS)
+        ? this.guardianAnalyticsService.getGuardianOverview(schoolId)
+        : Promise.resolve(null),
+      canRead(AppResource.USERS)
+        ? this.staffAnalyticsService.getStaffOverview(schoolId)
+        : Promise.resolve(null),
+      [
+        AppResource.FEES,
+        AppResource.RESULTS,
+        AppResource.STUDENTS,
+        AppResource.USERS,
+        AppResource.CLASSES,
+      ].some(canRead)
+        ? this.needsAttentionAnalyticsService.getNeedsAttentionItems(
+            schoolId,
+            termId,
+          )
+        : Promise.resolve(null),
     ]);
+
+    const kpis = rawKpis
+      ? {
+          students: canRead(AppResource.STUDENTS) ? rawKpis.students : null,
+          staff: canRead(AppResource.USERS) ? rawKpis.staff : null,
+          classesCount: canRead(AppResource.CLASSES)
+            ? rawKpis.classesCount
+            : null,
+          guardians: canRead(AppResource.STUDENTS) ? rawKpis.guardians : null,
+          attendance: canRead(AppResource.ATTENDANCE)
+            ? rawKpis.attendance
+            : null,
+          fees: canRead(AppResource.FEES) ? rawKpis.fees : null,
+        }
+      : null;
+
+    const routeResource: Record<string, AppResource> = {
+      '/fees': AppResource.FEES,
+      '/results': AppResource.RESULTS,
+      '/guardians': AppResource.STUDENTS,
+      '/staff': AppResource.USERS,
+      '/classes': AppResource.CLASSES,
+    };
 
     return {
       termProgress,
@@ -127,7 +193,10 @@ export class DashboardService {
       resultSubmissionStatus,
       guardianOverview,
       staffOverview,
-      needsAttention,
+      needsAttention: (needsAttention || []).filter((item) => {
+        const resource = routeResource[item.actionRoute];
+        return resource ? canRead(resource) : false;
+      }),
     };
   }
 

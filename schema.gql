@@ -577,18 +577,18 @@ type DashboardAcademicPerformance {
 }
 
 type DashboardAnalytics {
-  academicPerformance: DashboardAcademicPerformance!
-  attendanceAnalytics: DashboardAttendanceAnalytics!
-  classDistribution: [DashboardClassDistributionItem!]!
-  feeCollectionOverview: DashboardFeeCollectionOverview!
-  guardianOverview: DashboardGuardianOverview!
-  incomeAnalytics: DashboardIncomeAnalytics!
-  kpis: DashboardOverviewKpis!
-  needsAttention: [DashboardNeedsAttentionItem!]!
-  resultSubmissionStatus: DashboardResultSubmissionStatus!
-  staffOverview: DashboardStaffOverview!
-  studentDemographics: DashboardStudentDemographics!
-  termProgress: DashboardTermProgress!
+  academicPerformance: DashboardAcademicPerformance
+  attendanceAnalytics: DashboardAttendanceAnalytics
+  classDistribution: [DashboardClassDistributionItem!]
+  feeCollectionOverview: DashboardFeeCollectionOverview
+  guardianOverview: DashboardGuardianOverview
+  incomeAnalytics: DashboardIncomeAnalytics
+  kpis: DashboardOverviewKpis
+  needsAttention: [DashboardNeedsAttentionItem!]
+  resultSubmissionStatus: DashboardResultSubmissionStatus
+  staffOverview: DashboardStaffOverview
+  studentDemographics: DashboardStudentDemographics
+  termProgress: DashboardTermProgress
 }
 
 input DashboardAnalyticsInput {
@@ -674,19 +674,19 @@ type DashboardNeedsAttentionItem {
 }
 
 type DashboardOverview {
-  classesCount: MetricStat!
-  recentStudents: [Student!]!
-  studentsCount: MetricStat!
-  teachersCount: MetricStat!
+  classesCount: MetricStat
+  recentStudents: [Student!]
+  studentsCount: MetricStat
+  teachersCount: MetricStat
 }
 
 type DashboardOverviewKpis {
-  attendance: DashboardAttendanceKpi!
-  classesCount: Int!
-  fees: DashboardFeeKpi!
-  guardians: DashboardGuardianKpi!
-  staff: DashboardStaffKpi!
-  students: DashboardStudentKpi!
+  attendance: DashboardAttendanceKpi
+  classesCount: Int
+  fees: DashboardFeeKpi
+  guardians: DashboardGuardianKpi
+  staff: DashboardStaffKpi
+  students: DashboardStudentKpi
 }
 
 type DashboardResultSubmissionStatus {
@@ -1927,8 +1927,8 @@ type Query {
   pendingApprovalQueue: [PaymentSubmissionStudentShare!]!
   pendingPrincipalApprovals: [ResultSheet!]!
   periods: [Period!]!
-  permissionGroupPermissions(groupId: String!, schoolId: String): [PermissionGroupPermission!]!
   permissionGroupMembers(groupId: String!, schoolId: String): [UserPermissionGroup!]!
+  permissionGroupPermissions(groupId: String!, schoolId: String): [PermissionGroupPermission!]!
   permissionGroups(schoolId: String): [PermissionGroup!]!
   pettyCashAccount: PettyCashAccount!
   pettyCashTransactions(limit: Int = 50): [PettyCashTransaction!]!

@@ -144,23 +144,23 @@ export class DashboardFeeKpi {
 
 @ObjectType()
 export class DashboardOverviewKpis {
-  @Field(() => DashboardStudentKpi)
-  students!: DashboardStudentKpi;
+  @Field(() => DashboardStudentKpi, { nullable: true })
+  students!: DashboardStudentKpi | null;
 
-  @Field(() => DashboardStaffKpi)
-  staff!: DashboardStaffKpi;
+  @Field(() => DashboardStaffKpi, { nullable: true })
+  staff!: DashboardStaffKpi | null;
 
-  @Field(() => Int)
-  classesCount!: number;
+  @Field(() => Int, { nullable: true })
+  classesCount!: number | null;
 
-  @Field(() => DashboardGuardianKpi)
-  guardians!: DashboardGuardianKpi;
+  @Field(() => DashboardGuardianKpi, { nullable: true })
+  guardians!: DashboardGuardianKpi | null;
 
-  @Field(() => DashboardAttendanceKpi)
-  attendance!: DashboardAttendanceKpi;
+  @Field(() => DashboardAttendanceKpi, { nullable: true })
+  attendance!: DashboardAttendanceKpi | null;
 
-  @Field(() => DashboardFeeKpi)
-  fees!: DashboardFeeKpi;
+  @Field(() => DashboardFeeKpi, { nullable: true })
+  fees!: DashboardFeeKpi | null;
 }
 
 // 3. Income Trend
@@ -518,39 +518,39 @@ export class DashboardNeedsAttentionItem {
 // Root Dashboard Analytics Type
 @ObjectType()
 export class DashboardAnalytics {
-  @Field(() => DashboardTermProgress)
-  termProgress!: DashboardTermProgress;
+  @Field(() => DashboardTermProgress, { nullable: true })
+  termProgress!: DashboardTermProgress | null;
 
-  @Field(() => DashboardOverviewKpis)
-  kpis!: DashboardOverviewKpis;
+  @Field(() => DashboardOverviewKpis, { nullable: true })
+  kpis!: DashboardOverviewKpis | null;
 
-  @Field(() => DashboardIncomeAnalytics)
-  incomeAnalytics!: DashboardIncomeAnalytics;
+  @Field(() => DashboardIncomeAnalytics, { nullable: true })
+  incomeAnalytics!: DashboardIncomeAnalytics | null;
 
-  @Field(() => DashboardFeeCollectionOverview)
-  feeCollectionOverview!: DashboardFeeCollectionOverview;
+  @Field(() => DashboardFeeCollectionOverview, { nullable: true })
+  feeCollectionOverview!: DashboardFeeCollectionOverview | null;
 
-  @Field(() => DashboardStudentDemographics)
-  studentDemographics!: DashboardStudentDemographics;
+  @Field(() => DashboardStudentDemographics, { nullable: true })
+  studentDemographics!: DashboardStudentDemographics | null;
 
-  @Field(() => [DashboardClassDistributionItem])
-  classDistribution!: DashboardClassDistributionItem[];
+  @Field(() => [DashboardClassDistributionItem], { nullable: true })
+  classDistribution!: DashboardClassDistributionItem[] | null;
 
-  @Field(() => DashboardAttendanceAnalytics)
-  attendanceAnalytics!: DashboardAttendanceAnalytics;
+  @Field(() => DashboardAttendanceAnalytics, { nullable: true })
+  attendanceAnalytics!: DashboardAttendanceAnalytics | null;
 
-  @Field(() => DashboardAcademicPerformance)
-  academicPerformance!: DashboardAcademicPerformance;
+  @Field(() => DashboardAcademicPerformance, { nullable: true })
+  academicPerformance!: DashboardAcademicPerformance | null;
 
-  @Field(() => DashboardResultSubmissionStatus)
-  resultSubmissionStatus!: DashboardResultSubmissionStatus;
+  @Field(() => DashboardResultSubmissionStatus, { nullable: true })
+  resultSubmissionStatus!: DashboardResultSubmissionStatus | null;
 
-  @Field(() => DashboardGuardianOverview)
-  guardianOverview!: DashboardGuardianOverview;
+  @Field(() => DashboardGuardianOverview, { nullable: true })
+  guardianOverview!: DashboardGuardianOverview | null;
 
-  @Field(() => DashboardStaffOverview)
-  staffOverview!: DashboardStaffOverview;
+  @Field(() => DashboardStaffOverview, { nullable: true })
+  staffOverview!: DashboardStaffOverview | null;
 
-  @Field(() => [DashboardNeedsAttentionItem])
-  needsAttention!: DashboardNeedsAttentionItem[];
+  @Field(() => [DashboardNeedsAttentionItem], { nullable: true })
+  needsAttention!: DashboardNeedsAttentionItem[] | null;
 }
