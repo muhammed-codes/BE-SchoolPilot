@@ -7,7 +7,7 @@ import { ClassEntity } from './entities/class.entity';
 import { ClassSubject } from './entities/class-subject.entity';
 import { CreateClassInput } from './dto/create-class.input';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
-import { CurrentUser, RequirePermission } from '../common/decorators';
+import { CurrentUser, RequirePermission, Roles } from '../common/decorators';
 import { UserRole } from '../common/enums';
 import { TEACHER_ROLES } from '../common/constants/roles.constant';
 import { PaginationArgs, createPaginatedType } from '../common/pagination';
@@ -91,6 +91,17 @@ export class ClassesResolver {
   @RequirePermission(AppResource.CLASSES, PermissionAction.READ)
   myClasses(@CurrentUser() user: { sub: string; schoolId: string }) {
     return this.classesService.getClassesForTeacher(user.sub, user.schoolId);
+  }
+
+  @Query(() => Boolean, { name: 'isClassTeacherAssigned' })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SCHOOL_MANAGEMENT)
+  @RequirePermission(AppResource.CLASSES, PermissionAction.READ)
+  isClassTeacherAssigned(
+    @Args('teacherId', { type: () => String }) teacherId: string,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.classesService.isClassTeacherAssigned(teacherId, user.schoolId);
   }
 
   @Query(() => ClassEntity, { name: 'class' })

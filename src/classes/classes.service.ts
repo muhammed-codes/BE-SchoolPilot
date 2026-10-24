@@ -231,6 +231,10 @@ export class ClassesService {
         });
       });
 
+  isClassTeacherAssigned = (teacherId: string, schoolId: string) =>
+    this.classesRepository.count({ where: { classTeacherId: teacherId, schoolId } })
+      .then((assignmentCount) => assignmentCount > 0);
+
   getClassesForTeacherPaginated = (
     teacherId: string,
     schoolId: string,
