@@ -239,12 +239,19 @@ export class AuthService {
               .findOne({ where: { id: user.schoolId } })
               .then((school) => {
                 if (school && !school.isActive) {
+                  const schoolStatus = school.verificationStatus?.toUpperCase();
+                  const statusMessage =
+                    schoolStatus === 'PENDING'
+                      ? 'Your school is pending review and verification. You will receive an email once it is approved.'
+                      : schoolStatus === 'SUSPENDED'
+                        ? 'Your school has been deactivated. Please contact platform support.'
+                        : schoolStatus === 'REJECTED'
+                          ? 'Your school application was rejected. Please contact platform support for more information.'
+                          : 'Your school account is inactive. Please contact platform support.';
                   this.logger.warn(
-                    `Login blocked: School ${school.name} (${school.id}) is pending verification / inactive`,
+                    `Login blocked: School ${school.name} (${school.id}) is ${schoolStatus || 'inactive'}`,
                   );
-                  throw new ForbiddenException(
-                    'Your school application is pending Super Admin review and verification. You will receive an email once approved.',
-                  );
+                  throw new ForbiddenException(statusMessage);
                 }
                 if (!user.isActive) {
                   this.logger.warn(
