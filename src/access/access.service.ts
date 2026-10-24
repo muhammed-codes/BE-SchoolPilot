@@ -75,7 +75,6 @@ export class AccessService implements OnModuleInit {
       return true;
     }
     if (!schoolId) return false;
-    if (role === UserRole.SCHOOL_ADMIN) return true;
     const normalizedAction = this.normalizeAction(action);
     const permissions = await this.getEffectivePermissions(
       userId,
@@ -118,12 +117,6 @@ export class AccessService implements OnModuleInit {
       );
     }
     if (!schoolId) return [];
-    if (role === UserRole.SCHOOL_ADMIN) {
-      return resources.flatMap((resource) =>
-        actions.map((action) => ({ resource, action, allowed: true })),
-      );
-    }
-
     const rolePermissions = await this.getPermissionsByRole(role, schoolId);
     const assignments = await this.userGroupRepo.find({
       where: { userId, schoolId },
@@ -236,10 +229,13 @@ export class AccessService implements OnModuleInit {
   }
 
   async createPermissionGroup(
-    input: { name: string; description?: string; schoolId?: string },
+    input: { name?: string; description?: string; schoolId?: string },
     schoolId: string,
     actorUserId: string,
   ) {
+    if (typeof input?.name !== 'string') {
+      throw new BadRequestException('A group name is required');
+    }
     const name = input.name.trim();
     if (!name) throw new BadRequestException('A group name is required');
     const group = this.groupRepo.create({
@@ -371,10 +367,15 @@ export class AccessService implements OnModuleInit {
 
   async setPermissionGroupPermissions(
     groupId: string,
-    permissions: { resource: AppResource; action: PermissionAction }[],
+    permissions:
+      | { resource: AppResource; action: PermissionAction }[]
+      | undefined,
     schoolId: string,
     actorUserId: string,
   ) {
+    if (!Array.isArray(permissions)) {
+      throw new BadRequestException('Permission assignments are required');
+    }
     await this.assertSchoolGroup(groupId, schoolId);
     const before = await this.groupPermissionRepo.find({
       where: { groupId, schoolId },
@@ -664,58 +665,66 @@ export class AccessService implements OnModuleInit {
     // are migrated using the intersection of existing configurations.
     if (role === UserRole.SCHOOL_MANAGEMENT) {
       const isSettings = resource === AppResource.SETTINGS;
+      const isAccessControl = resource === AppResource.ACCESS;
       const canDeleteRes = [
         AppResource.RESULTS,
         AppResource.ATTENDANCE,
         AppResource.STUDENTS,
       ].includes(resource);
       return {
-        canRead: true,
-        canCreate: !isSettings,
-        canUpdate: !isSettings,
+        canRead: !isAccessControl,
+        canCreate: !isSettings && !isAccessControl,
+        canUpdate: !isSettings && !isAccessControl,
         canDelete: canDeleteRes,
       };
     }
 
-    // 5. CLASS_TEACHER: Class management, students, attendance, results & users read, and expenses requests
+    // 5. CLASS_TEACHER: Academic modules only; student creation is an admin task.
     if (role === UserRole.CLASS_TEACHER) {
-      const isSettings = resource === AppResource.SETTINGS;
+      const canReadRes = [
+        AppResource.STUDENTS,
+        AppResource.RESULTS,
+        AppResource.ATTENDANCE,
+        AppResource.CLASSES,
+        AppResource.SUBJECTS,
+        AppResource.TIMETABLE,
+      ].includes(resource);
       const canCreateRes = [
         AppResource.RESULTS,
         AppResource.ATTENDANCE,
-        AppResource.STUDENTS,
-        AppResource.EXPENSES,
       ].includes(resource);
       const canUpdateRes = [
         AppResource.RESULTS,
         AppResource.ATTENDANCE,
         AppResource.STUDENTS,
         AppResource.CLASSES,
-        AppResource.EXPENSES,
       ].includes(resource);
       return {
-        canRead: !isSettings,
+        canRead: canReadRes,
         canCreate: canCreateRes,
         canUpdate: canUpdateRes,
         canDelete: false,
       };
     }
 
-    // 6. SUBJECT_TEACHER: Results, attendance, classes, subjects, students & users read, and expenses requests
+    // 6. SUBJECT_TEACHER: Academic modules only; administrative and finance
+    // resources require an explicit school-admin grant.
     if (role === UserRole.SUBJECT_TEACHER) {
-      const isSettings = resource === AppResource.SETTINGS;
+      const canReadRes = [
+        AppResource.STUDENTS,
+        AppResource.RESULTS,
+        AppResource.ATTENDANCE,
+        AppResource.CLASSES,
+        AppResource.SUBJECTS,
+        AppResource.TIMETABLE,
+      ].includes(resource);
       const canCreateRes = [
         AppResource.RESULTS,
         AppResource.ATTENDANCE,
-        AppResource.EXPENSES,
       ].includes(resource);
-      const canUpdateRes = [
-        AppResource.RESULTS,
-        AppResource.ATTENDANCE,
-        AppResource.EXPENSES,
-      ].includes(resource);
+      const canUpdateRes = canCreateRes;
       return {
-        canRead: !isSettings,
+        canRead: canReadRes,
         canCreate: canCreateRes,
         canUpdate: canUpdateRes,
         canDelete: false,
@@ -806,8 +815,8 @@ export class AccessService implements OnModuleInit {
   };
 
   /**
-   * Update a single permission row. SCHOOL_ADMIN can only update rows
-   * that belong to their school.
+   * Update a single permission row. SCHOOL_ADMIN can configure supported
+   * roles only within their own school.
    */
   updateRolePermission = (
     id: string,
@@ -842,11 +851,9 @@ export class AccessService implements OnModuleInit {
             'You can only update permissions for your own school',
           );
         }
-        if (existing.role === UserRole.SCHOOL_ADMIN) {
-          throw new ForbiddenException('School Admin permissions are fixed');
-        }
         if (
           ![
+            UserRole.SCHOOL_ADMIN,
             UserRole.SCHOOL_MANAGEMENT,
             UserRole.CLASS_TEACHER,
             UserRole.SUBJECT_TEACHER,
