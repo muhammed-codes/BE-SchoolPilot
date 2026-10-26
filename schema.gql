@@ -1838,6 +1838,8 @@ type PromotionResult {
 }
 
 type Query {
+  feeClassLookup: [FeeClassLookup!]!
+  feeStudentLookup(classId: String): [FeeStudentLookup!]!
   activeStaffQrCode: String!
   activeTerm: Term!
   adminAnnouncementsPage(limit: Int! = 50, page: Int! = 1): PaginatedAnnouncement!
@@ -3177,4 +3179,17 @@ enum UserRole {
 input VoidExpenseInput {
   id: ID!
   reason: String
+}
+type FeeClassLookup {
+ id: String!
+ name: String!
+}
+type FeeStudentLookup {
+ id: String!
+ firstName: String!
+ lastName: String!
+ fullName: String!
+ admissionNumber: String!
+ currentClassId: String!
+ currentClass: FeeClassLookup
 }

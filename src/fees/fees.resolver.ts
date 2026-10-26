@@ -1,3 +1,4 @@
+import { FeeClassLookup, FeeStudentLookup } from './dto/fee-directory.type';
 import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 
@@ -85,6 +86,30 @@ type AuthUser = { sub: string; schoolId: string; role: UserRole };
 @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
 export class FeesResolver {
   constructor(private readonly feesService: FeesService) {}
+
+  @Query(() => [FeeClassLookup])
+  @RequirePermission(AppResource.FEES, PermissionAction.READ)
+  feeClassLookup(@CurrentUser() user: AuthUser) {
+    return this.feesService.getFeeClassLookup(
+      user.schoolId,
+      user.sub,
+      user.role,
+    );
+  }
+
+  @Query(() => [FeeStudentLookup])
+  @RequirePermission(AppResource.FEES, PermissionAction.READ)
+  feeStudentLookup(
+    @CurrentUser() user: AuthUser,
+    @Args('classId', { nullable: true }) classId?: string,
+  ) {
+    return this.feesService.getFeeStudentLookup(
+      user.schoolId,
+      user.sub,
+      user.role,
+      classId,
+    );
+  }
 
   // ─── Fee Categories ───────────────────────────────────────────────────────
 

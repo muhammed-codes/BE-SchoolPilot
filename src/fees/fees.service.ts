@@ -689,6 +689,57 @@ export class FeesService {
       });
   }
 
+  async getFeeClassLookup(schoolId: string, userId: string, role: UserRole) {
+    const qb = this.studentRepo.manager
+      .getRepository(ClassEntity)
+      .createQueryBuilder('c')
+      .select(['c.id', 'c.name'])
+      .where('c.schoolId = :schoolId', { schoolId });
+    if (role === UserRole.PARENT)
+      throw new ForbiddenException('Use linked-child endpoints');
+    if (role === UserRole.CLASS_TEACHER)
+      qb.andWhere('c.classTeacherId = :userId', { userId });
+    if (role === UserRole.SUBJECT_TEACHER)
+      qb.andWhere(
+        'EXISTS (SELECT 1 FROM class_subjects a WHERE a."schoolId" = c."schoolId" AND a."classId" = c.id AND (a."subjectTeacherId" = :userId OR :userId = ANY(a."teacherIds")))',
+        { userId },
+      );
+    return qb.orderBy('c.name', 'ASC').getMany();
+  }
+
+  async getFeeStudentLookup(
+    schoolId: string,
+    userId: string,
+    role: UserRole,
+    classId?: string,
+  ) {
+    const classes = await this.getFeeClassLookup(schoolId, userId, role);
+    const ids = classes
+      .filter((c) => !classId || c.id === classId)
+      .map((c) => c.id);
+    if (!ids.length) return [];
+    const students = await this.studentRepo.find({
+      where: { schoolId, currentClassId: In(ids), isArchived: false },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        admissionNumber: true,
+        currentClassId: true,
+      },
+      order: { lastName: 'ASC', firstName: 'ASC' },
+    });
+    return students.map((student) => ({
+      id: student.id,
+      firstName: student.firstName,
+      lastName: student.lastName,
+      fullName: `${student.firstName} ${student.lastName}`,
+      admissionNumber: student.admissionNumber,
+      currentClassId: student.currentClassId,
+      currentClass: classes.find((c) => c.id === student.currentClassId),
+    }));
+  }
+
   async getInvoiceById(
     id: string,
     schoolId: string,
