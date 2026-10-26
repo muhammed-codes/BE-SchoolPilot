@@ -35,8 +35,8 @@ export class UsersResolver {
   ) {}
 
   @Query(() => User)
-  @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.USERS, PermissionAction.READ)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...Object.values(UserRole))
   me(@CurrentUser() user: { sub: string }) {
     return this.usersService.findById(user.sub);
   }
@@ -101,6 +101,7 @@ export class UsersResolver {
         UserRole.HEAD_TEACHER,
         UserRole.CLASS_TEACHER,
         UserRole.SUBJECT_TEACHER,
+        UserRole.BURSAR,
         UserRole.PARENT,
       ];
       if (!allowedRoles.includes(input.role)) {
@@ -117,6 +118,9 @@ export class UsersResolver {
         input.schoolId || user.schoolId,
       );
     }
+    throw new ForbiddenException(
+      'Only school leadership can provision accounts',
+    );
   }
 
   @Mutation(() => User)
@@ -152,15 +156,37 @@ export class UsersResolver {
     );
   }
 
+  @Mutation(() => User)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...Object.values(UserRole))
+  updateMyAdminThemePreference(
+    @Args('preference') preference: string,
+    @CurrentUser() user: { sub: string; role: UserRole; schoolId: string },
+  ) {
+    if (!['schoolright', 'classic'].includes(preference))
+      throw new ForbiddenException('Unknown theme');
+    return this.usersService.updateUser(
+      user.sub,
+      { adminThemePreference: preference },
+      user.sub,
+      user.role,
+      user.schoolId,
+    );
+  }
+
   @Mutation(() => Boolean)
-  @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.USERS, PermissionAction.UPDATE)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...Object.values(UserRole))
   changePassword(
     @Args('oldPassword') oldPassword: string,
     @Args('newPassword') newPassword: string,
     @CurrentUser() user: { sub: string },
   ) {
-    return this.userPasswordService.changePassword(user.sub, oldPassword, newPassword);
+    return this.userPasswordService.changePassword(
+      user.sub,
+      oldPassword,
+      newPassword,
+    );
   }
 
   @Mutation(() => Boolean)

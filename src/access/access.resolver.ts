@@ -40,11 +40,13 @@ export class AccessResolver {
   }
 
   @Query(() => [RolePermission], { name: 'myPermissions' })
+  @Roles(...Object.values(UserRole))
   getMyPermissions(@CurrentUser() user: { role: UserRole; schoolId?: string }) {
     return this.accessService.getPermissionsByRole(user.role, user.schoolId);
   }
 
   @Query(() => [EffectivePermission], { name: 'myEffectivePermissions' })
+  @Roles(...Object.values(UserRole))
   myEffectivePermissions(
     @CurrentUser() user: { sub: string; role: UserRole; schoolId?: string },
   ) {

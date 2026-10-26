@@ -1,3 +1,4 @@
+import { RecordScopeService } from './record-scope.service';
 import { Module, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccessService } from './access.service';
@@ -21,7 +22,7 @@ import { User } from '../users/entities/user.entity';
       User,
     ]),
   ],
-  providers: [AccessService, AccessResolver],
-  exports: [AccessService],
+  providers: [AccessService, AccessResolver, RecordScopeService],
+  exports: [AccessService, RecordScopeService],
 })
 export class AccessModule {}

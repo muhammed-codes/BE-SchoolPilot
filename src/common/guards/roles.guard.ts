@@ -7,6 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { Request } from 'express';
+import { PERMISSION_KEY } from '../decorators/require-permission.decorator';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { UserRole } from '../enums/role.enum';
 
@@ -20,13 +21,24 @@ export class RolesGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
 
-    if (!requiredRoles) return true;
+    if (!requiredRoles)
+      return Boolean(
+        this.reflector.getAllAndOverride(PERMISSION_KEY, [
+          context.getHandler(),
+          context.getClass(),
+        ]),
+      );
 
     const ctx = GqlExecutionContext.create(context);
     const requestContext = ctx.getContext<{
       req: Request & { user?: { role?: UserRole } };
     }>();
-    const user = requestContext.req.user;
+    const user =
+      context.getType() === 'http'
+        ? context
+            .switchToHttp()
+            .getRequest<Request & { user?: { role?: UserRole } }>().user
+        : requestContext?.req?.user;
 
     // Super admin always has access
     if (user?.role === UserRole.SUPER_ADMIN) {

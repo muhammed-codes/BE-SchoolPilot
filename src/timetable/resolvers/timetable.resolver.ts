@@ -530,6 +530,7 @@ export class TimetableResolver {
   // ══════════════════════════════════════════════════════════════════════════
   @Query(() => ChildTimetableResult)
   @UseGuards(JwtAuthGuard)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.READ)
   childTimetable(
     @Args('studentId') studentId: string,
     @Args('termId', { nullable: true }) termId?: string,
@@ -546,6 +547,7 @@ export class TimetableResolver {
 
   @Query(() => [ChildTimetableResult])
   @UseGuards(JwtAuthGuard)
+  @RequirePermission(AppResource.TIMETABLE, PermissionAction.READ)
   myChildrenTimetables(
     @Args('termId', { nullable: true }) termId?: string,
     @CurrentUser() user?: { sub: string; schoolId: string },
