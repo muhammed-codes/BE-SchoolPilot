@@ -440,41 +440,18 @@ export class AccessService implements OnModuleInit {
       };
     }
 
-    // 2. PRINCIPAL: Full access to all operational & academic modules
-    if (role === UserRole.PRINCIPAL) {
+    // School management is one permission profile, with three distinct staff roles.
+    if (
+      role === UserRole.PRINCIPAL ||
+      role === UserRole.VICE_PRINCIPAL ||
+      role === UserRole.HEAD_TEACHER
+    ) {
       const isSettings = resource === AppResource.SETTINGS;
       return {
         canRead: true,
         canCreate: !isSettings,
         canUpdate: !isSettings,
         canDelete: !isSettings,
-      };
-    }
-
-    // 3. VICE_PRINCIPAL: Full access to academic & user modules
-    if (role === UserRole.VICE_PRINCIPAL) {
-      const isSettings = resource === AppResource.SETTINGS;
-      return {
-        canRead: true,
-        canCreate: !isSettings,
-        canUpdate: !isSettings,
-        canDelete: !isSettings,
-      };
-    }
-
-    // 4. HEAD_TEACHER: Academic & staff management access
-    if (role === UserRole.HEAD_TEACHER) {
-      const isSettings = resource === AppResource.SETTINGS;
-      const canDeleteRes = [
-        AppResource.RESULTS,
-        AppResource.ATTENDANCE,
-        AppResource.STUDENTS,
-      ].includes(resource);
-      return {
-        canRead: true,
-        canCreate: !isSettings,
-        canUpdate: !isSettings,
-        canDelete: canDeleteRes,
       };
     }
 
