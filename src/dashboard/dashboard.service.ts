@@ -1,4 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
+import { AccessService } from '../access/access.service';
+import { AppResource } from '../access/enums/resource.enum';
+import { PermissionAction } from '../access/enums/permission-action.enum';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Student } from '../students/entities/student.entity';
@@ -38,6 +41,7 @@ import { NeedsAttentionAnalyticsService } from './analytics/needs-attention-anal
 @Injectable()
 export class DashboardService {
   constructor(
+    private readonly accessService: AccessService,
     @InjectRepository(Student)
     private readonly studentRepo: Repository<Student>,
     @InjectRepository(User)
@@ -61,6 +65,7 @@ export class DashboardService {
   async getDashboardAnalytics(
     schoolId: string,
     input: DashboardAnalyticsInput = {},
+    user?: { sub: string; role: UserRole },
   ): Promise<DashboardAnalytics> {
     const {
       incomeTimeFilter = DashboardTimeFilter.MONTH,
@@ -69,6 +74,43 @@ export class DashboardService {
       termId,
     } = input;
 
+    if (!schoolId || !user)
+      throw new ForbiddenException('Authenticated school scope required');
+    const teacher = TEACHER_ROLES.includes(user.role);
+    const parent = user.role === UserRole.PARENT;
+    const allowed = async (...resources: AppResource[]) => {
+      if (teacher || parent) return false; // These roles use assigned-record dashboards.
+      return (
+        await Promise.all(
+          resources.map((resource) =>
+            this.accessService.hasPermission(
+              user.sub,
+              user.role,
+              schoolId,
+              resource,
+              PermissionAction.READ,
+            ),
+          ),
+        )
+      ).every(Boolean);
+    };
+    const [students, classes, fees, attendance, results, users, all] =
+      await Promise.all([
+        allowed(AppResource.STUDENTS),
+        allowed(AppResource.CLASSES),
+        allowed(AppResource.FEES),
+        allowed(AppResource.ATTENDANCE),
+        allowed(AppResource.RESULTS),
+        allowed(AppResource.USERS),
+        allowed(
+          AppResource.STUDENTS,
+          AppResource.CLASSES,
+          AppResource.USERS,
+          AppResource.FEES,
+          AppResource.ATTENDANCE,
+          AppResource.RESULTS,
+        ),
+      ]);
     const [
       termProgress,
       kpis,
@@ -84,37 +126,56 @@ export class DashboardService {
       needsAttention,
     ] = await Promise.all([
       this.termAnalyticsService.getTermProgress(schoolId, termId, sessionId),
-      this.kpiAnalyticsService.getOverviewKpis(schoolId),
-      this.financialAnalyticsService.getIncomeAnalytics(
-        schoolId,
-        incomeTimeFilter,
-        termId,
-      ),
-      this.financialAnalyticsService.getFeeCollectionOverview(
-        schoolId,
-        termId,
-        sessionId,
-      ),
-      this.kpiAnalyticsService.getStudentDemographics(schoolId),
-      this.kpiAnalyticsService.getClassDistribution(schoolId),
-      this.attendanceAnalyticsService.getAttendanceAnalytics(
-        schoolId,
-        attendanceTimeFilter,
-        termId,
-      ),
-      this.academicAnalyticsService.getAcademicPerformance(schoolId, termId),
-      this.resultSubmissionAnalyticsService.getResultSubmissionStatus(
-        schoolId,
-        termId,
-      ),
-      this.guardianAnalyticsService.getGuardianOverview(schoolId),
-      this.staffAnalyticsService.getStaffOverview(schoolId),
-      this.needsAttentionAnalyticsService.getNeedsAttentionItems(
-        schoolId,
-        termId,
-      ),
+      all ? this.kpiAnalyticsService.getOverviewKpis(schoolId) : undefined,
+      fees
+        ? this.financialAnalyticsService.getIncomeAnalytics(
+            schoolId,
+            incomeTimeFilter,
+            termId,
+          )
+        : undefined,
+      fees
+        ? this.financialAnalyticsService.getFeeCollectionOverview(
+            schoolId,
+            termId,
+            sessionId,
+          )
+        : undefined,
+      students
+        ? this.kpiAnalyticsService.getStudentDemographics(schoolId)
+        : undefined,
+      classes && students
+        ? this.kpiAnalyticsService.getClassDistribution(schoolId)
+        : undefined,
+      attendance
+        ? this.attendanceAnalyticsService.getAttendanceAnalytics(
+            schoolId,
+            attendanceTimeFilter,
+            termId,
+          )
+        : undefined,
+      results
+        ? this.academicAnalyticsService.getAcademicPerformance(schoolId, termId)
+        : undefined,
+      results && users
+        ? this.resultSubmissionAnalyticsService.getResultSubmissionStatus(
+            schoolId,
+            termId,
+          )
+        : undefined,
+      students && users
+        ? this.guardianAnalyticsService.getGuardianOverview(schoolId)
+        : undefined,
+      users && attendance
+        ? this.staffAnalyticsService.getStaffOverview(schoolId)
+        : undefined,
+      all
+        ? this.needsAttentionAnalyticsService.getNeedsAttentionItems(
+            schoolId,
+            termId,
+          )
+        : undefined,
     ]);
-
     return {
       termProgress,
       kpis,
@@ -181,6 +242,19 @@ export class DashboardService {
       };
     }
 
+    const can = (resource: AppResource) =>
+      this.accessService.hasPermission(
+        userId,
+        role,
+        schoolId,
+        resource,
+        PermissionAction.READ,
+      );
+    const [canReadStudents, canReadUsers, canReadClasses] = await Promise.all([
+      can(AppResource.STUDENTS),
+      can(AppResource.USERS),
+      can(AppResource.CLASSES),
+    ]);
     try {
       const isTeacher = TEACHER_ROLES.includes(role);
       const activeTerm = await this.termRepo.findOne({
@@ -192,15 +266,14 @@ export class DashboardService {
         const myClasses = await this.classesService.getClassesForTeacher(
           userId,
           schoolId,
+          role,
         );
         const classIds = myClasses.map((c) => c.id);
 
-        const teachersCount = await this.userRepo.count({
-          where: { schoolId, role: In(SCHOOL_STAFF_ROLES) },
-        });
+        const teachersCount = 0; // Teacher dashboards never expose the staff directory count.
 
         const rawStudentsCount =
-          classIds.length > 0
+          canReadStudents && classIds.length > 0
             ? await this.studentRepo.count({
                 where: {
                   schoolId,
@@ -211,7 +284,7 @@ export class DashboardService {
             : 0;
 
         const recentStudents =
-          classIds.length > 0
+          canReadStudents && classIds.length > 0
             ? await this.studentRepo.find({
                 where: {
                   schoolId,
@@ -232,30 +305,43 @@ export class DashboardService {
             hasActiveTerm,
           ),
           teachersCount: createMetricStat(teachersCount, null, null, true),
-          classesCount: createMetricStat(myClasses.length, null, null, true),
+          classesCount: createMetricStat(
+            canReadClasses ? myClasses.length : 0,
+            null,
+            null,
+            true,
+          ),
           recentStudents,
         };
       }
 
       // Admin flow
-      const rawStudentsCount = await this.studentRepo.count({
-        where: { schoolId, isArchived: false },
-      });
+      const rawStudentsCount = canReadStudents
+        ? await this.studentRepo.count({
+            where: { schoolId, isArchived: false },
+          })
+        : 0;
 
-      const rawTeachersCount = await this.userRepo.count({
-        where: { schoolId, role: In(SCHOOL_STAFF_ROLES) },
-      });
+      const rawTeachersCount = canReadUsers
+        ? await this.userRepo.count({
+            where: { schoolId, role: In(SCHOOL_STAFF_ROLES) },
+          })
+        : 0;
 
-      const rawClassesCount = await this.classRepo.count({
-        where: { schoolId },
-      });
+      const rawClassesCount = canReadClasses
+        ? await this.classRepo.count({
+            where: { schoolId },
+          })
+        : 0;
 
-      const recentStudents = await this.studentRepo.find({
-        where: { schoolId, isArchived: false },
-        relations: ['currentClass', 'admissionClass'],
-        order: { createdAt: 'DESC' },
-        take: 10,
-      });
+      const recentStudents = canReadStudents
+        ? await this.studentRepo.find({
+            where: { schoolId, isArchived: false },
+            relations: ['currentClass', 'admissionClass'],
+            order: { createdAt: 'DESC' },
+            take: 10,
+          })
+        : [];
 
       return {
         studentsCount: createMetricStat(

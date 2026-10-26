@@ -518,39 +518,39 @@ export class DashboardNeedsAttentionItem {
 // Root Dashboard Analytics Type
 @ObjectType()
 export class DashboardAnalytics {
-  @Field(() => DashboardTermProgress)
-  termProgress!: DashboardTermProgress;
+  @Field(() => DashboardTermProgress, { nullable: true })
+  termProgress?: DashboardTermProgress;
 
-  @Field(() => DashboardOverviewKpis)
-  kpis!: DashboardOverviewKpis;
+  @Field(() => DashboardOverviewKpis, { nullable: true })
+  kpis?: DashboardOverviewKpis;
 
-  @Field(() => DashboardIncomeAnalytics)
-  incomeAnalytics!: DashboardIncomeAnalytics;
+  @Field(() => DashboardIncomeAnalytics, { nullable: true })
+  incomeAnalytics?: DashboardIncomeAnalytics;
 
-  @Field(() => DashboardFeeCollectionOverview)
-  feeCollectionOverview!: DashboardFeeCollectionOverview;
+  @Field(() => DashboardFeeCollectionOverview, { nullable: true })
+  feeCollectionOverview?: DashboardFeeCollectionOverview;
 
-  @Field(() => DashboardStudentDemographics)
-  studentDemographics!: DashboardStudentDemographics;
+  @Field(() => DashboardStudentDemographics, { nullable: true })
+  studentDemographics?: DashboardStudentDemographics;
 
-  @Field(() => [DashboardClassDistributionItem])
-  classDistribution!: DashboardClassDistributionItem[];
+  @Field(() => [DashboardClassDistributionItem], { nullable: true })
+  classDistribution?: DashboardClassDistributionItem[];
 
-  @Field(() => DashboardAttendanceAnalytics)
-  attendanceAnalytics!: DashboardAttendanceAnalytics;
+  @Field(() => DashboardAttendanceAnalytics, { nullable: true })
+  attendanceAnalytics?: DashboardAttendanceAnalytics;
 
-  @Field(() => DashboardAcademicPerformance)
-  academicPerformance!: DashboardAcademicPerformance;
+  @Field(() => DashboardAcademicPerformance, { nullable: true })
+  academicPerformance?: DashboardAcademicPerformance;
 
-  @Field(() => DashboardResultSubmissionStatus)
-  resultSubmissionStatus!: DashboardResultSubmissionStatus;
+  @Field(() => DashboardResultSubmissionStatus, { nullable: true })
+  resultSubmissionStatus?: DashboardResultSubmissionStatus;
 
-  @Field(() => DashboardGuardianOverview)
-  guardianOverview!: DashboardGuardianOverview;
+  @Field(() => DashboardGuardianOverview, { nullable: true })
+  guardianOverview?: DashboardGuardianOverview;
 
-  @Field(() => DashboardStaffOverview)
-  staffOverview!: DashboardStaffOverview;
+  @Field(() => DashboardStaffOverview, { nullable: true })
+  staffOverview?: DashboardStaffOverview;
 
-  @Field(() => [DashboardNeedsAttentionItem])
-  needsAttention!: DashboardNeedsAttentionItem[];
+  @Field(() => [DashboardNeedsAttentionItem], { nullable: true })
+  needsAttention?: DashboardNeedsAttentionItem[];
 }

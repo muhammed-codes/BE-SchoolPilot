@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/unbound-method -- Jest inspects mocked calls without invoking unbound methods. */
+import { AccessService } from '../access/access.service';
+import { UserRole } from '../common/enums/role.enum';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DashboardService } from './dashboard.service';
@@ -24,11 +27,8 @@ import { AttentionSeverity } from './dto/dashboard-analytics.type';
 
 describe('DashboardService & Analytics Services', () => {
   let dashboardService: DashboardService;
-  let termAnalyticsService: TermAnalyticsService;
   let financialAnalyticsService: FinancialAnalyticsService;
-  let attendanceAnalyticsService: AttendanceAnalyticsService;
   let academicAnalyticsService: AcademicAnalyticsService;
-  let needsAttentionAnalyticsService: NeedsAttentionAnalyticsService;
 
   const mockRepo = {
     find: jest.fn(),
@@ -45,6 +45,10 @@ describe('DashboardService & Analytics Services', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DashboardService,
+        {
+          provide: AccessService,
+          useValue: { hasPermission: jest.fn().mockResolvedValue(true) },
+        },
         {
           provide: TermAnalyticsService,
           useValue: {
@@ -278,40 +282,60 @@ describe('DashboardService & Analytics Services', () => {
     }).compile();
 
     dashboardService = module.get<DashboardService>(DashboardService);
-    termAnalyticsService =
-      module.get<TermAnalyticsService>(TermAnalyticsService);
     financialAnalyticsService = module.get<FinancialAnalyticsService>(
       FinancialAnalyticsService,
-    );
-    attendanceAnalyticsService = module.get<AttendanceAnalyticsService>(
-      AttendanceAnalyticsService,
     );
     academicAnalyticsService = module.get<AcademicAnalyticsService>(
       AcademicAnalyticsService,
     );
-    needsAttentionAnalyticsService = module.get<NeedsAttentionAnalyticsService>(
-      NeedsAttentionAnalyticsService,
-    );
   });
 
   it('should compile and return full dashboard analytics', async () => {
-    const result = await dashboardService.getDashboardAnalytics('school-123', {
-      incomeTimeFilter: DashboardTimeFilter.MONTH,
-      attendanceTimeFilter: AttendancePeriodFilter.WEEK,
-    });
+    const result = await dashboardService.getDashboardAnalytics(
+      'school-123',
+      {
+        incomeTimeFilter: DashboardTimeFilter.MONTH,
+        attendanceTimeFilter: AttendancePeriodFilter.WEEK,
+      },
+      { sub: 'admin', role: UserRole.SCHOOL_ADMIN },
+    );
 
     expect(result).toBeDefined();
-    expect(result.termProgress.termName).toBe('First Term');
-    expect(result.termProgress.termProgressPercentage).toBe(53.8);
-    expect(result.kpis.students.active).toBe(440);
-    expect(result.incomeAnalytics.total).toBe(3730000);
-    expect(result.feeCollectionOverview.collectionPercentage).toBe(79.2);
-    expect(result.attendanceAnalytics.overallPercentage).toBe(91.4);
-    expect(result.academicPerformance.overallAverageScore).toBe(74.2);
-    expect(result.resultSubmissionStatus.completionPercentage).toBe(77.1);
-    expect(result.guardianOverview.guardianCoveragePercentage).toBe(95.5);
-    expect(result.staffOverview.teachingStaff).toBe(28);
+    expect(result.termProgress!.termName).toBe('First Term');
+    expect(result.termProgress!.termProgressPercentage).toBe(53.8);
+    expect(result.kpis!.students.active).toBe(440);
+    expect(result.incomeAnalytics!.total).toBe(3730000);
+    expect(result.feeCollectionOverview!.collectionPercentage).toBe(79.2);
+    expect(result.attendanceAnalytics!.overallPercentage).toBe(91.4);
+    expect(result.academicPerformance!.overallAverageScore).toBe(74.2);
+    expect(result.resultSubmissionStatus!.completionPercentage).toBe(77.1);
+    expect(result.guardianOverview!.guardianCoveragePercentage).toBe(95.5);
+    expect(result.staffOverview!.teachingStaff).toBe(28);
     expect(result.needsAttention).toHaveLength(1);
-    expect(result.needsAttention[0].severity).toBe(AttentionSeverity.CRITICAL);
+    expect(result.needsAttention![0].severity).toBe(AttentionSeverity.CRITICAL);
+  });
+  it('does not query school-wide finance or academics for teachers', async () => {
+    const financeCalls = jest.mocked(
+      financialAnalyticsService.getIncomeAnalytics,
+    ).mock.calls.length;
+    const academicCalls = jest.mocked(
+      academicAnalyticsService.getAcademicPerformance,
+    ).mock.calls.length;
+    const result = await dashboardService.getDashboardAnalytics(
+      'school-123',
+      {},
+      { sub: 'teacher', role: UserRole.SUBJECT_TEACHER },
+    );
+    expect(result.incomeAnalytics).toBeUndefined();
+    expect(result.kpis).toBeUndefined();
+    expect(result.academicPerformance).toBeUndefined();
+    expect(
+      jest.mocked(financialAnalyticsService.getIncomeAnalytics).mock.calls
+        .length,
+    ).toBe(financeCalls);
+    expect(
+      jest.mocked(academicAnalyticsService.getAcademicPerformance).mock.calls
+        .length,
+    ).toBe(academicCalls);
   });
 });

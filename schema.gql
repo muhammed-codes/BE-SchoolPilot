@@ -577,18 +577,18 @@ type DashboardAcademicPerformance {
 }
 
 type DashboardAnalytics {
-  academicPerformance: DashboardAcademicPerformance!
-  attendanceAnalytics: DashboardAttendanceAnalytics!
-  classDistribution: [DashboardClassDistributionItem!]!
-  feeCollectionOverview: DashboardFeeCollectionOverview!
-  guardianOverview: DashboardGuardianOverview!
-  incomeAnalytics: DashboardIncomeAnalytics!
-  kpis: DashboardOverviewKpis!
-  needsAttention: [DashboardNeedsAttentionItem!]!
-  resultSubmissionStatus: DashboardResultSubmissionStatus!
-  staffOverview: DashboardStaffOverview!
-  studentDemographics: DashboardStudentDemographics!
-  termProgress: DashboardTermProgress!
+  academicPerformance: DashboardAcademicPerformance
+  attendanceAnalytics: DashboardAttendanceAnalytics
+  classDistribution: [DashboardClassDistributionItem!]
+  feeCollectionOverview: DashboardFeeCollectionOverview
+  guardianOverview: DashboardGuardianOverview
+  incomeAnalytics: DashboardIncomeAnalytics
+  kpis: DashboardOverviewKpis
+  needsAttention: [DashboardNeedsAttentionItem!]
+  resultSubmissionStatus: DashboardResultSubmissionStatus
+  staffOverview: DashboardStaffOverview
+  studentDemographics: DashboardStudentDemographics
+  termProgress: DashboardTermProgress
 }
 
 input DashboardAnalyticsInput {
@@ -770,6 +770,7 @@ type DuplicateExpenseWarning {
 }
 
 type EffectivePermission {
+  source: String!
   action: PermissionAction!
   allowed: Boolean!
   resource: AppResource!
@@ -1319,6 +1320,7 @@ type MetricStat {
 }
 
 type Mutation {
+  updateMyAdminThemePreference(preference: String!): User!
   activateSchool(id: String!): School!
   activateTerm(termId: String!): Term!
   activateUser(id: String!): User!

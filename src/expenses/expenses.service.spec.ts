@@ -329,7 +329,7 @@ describe('ExpensesModule Services', () => {
         { categoryId: mockCategory.id, budgetAmount: 100000 },
       ]);
 
-      mockExpenseRepo.createQueryBuilder.mockReturnValueOnce({
+      mockExpenseRepo.createQueryBuilder.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
@@ -340,7 +340,7 @@ describe('ExpensesModule Services', () => {
           .mockResolvedValue([{ categoryId: mockCategory.id, spent: '76000' }]),
       });
 
-      mockRequestRepo.createQueryBuilder.mockReturnValueOnce({
+      mockRequestRepo.createQueryBuilder.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),

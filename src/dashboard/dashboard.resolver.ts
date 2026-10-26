@@ -1,7 +1,7 @@
 import { Resolver, Query, Args } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
-import { JwtAuthGuard, PermissionGuard } from '../common/guards';
-import { CurrentUser, RequirePermission } from '../common/decorators';
+import { UseGuards, ForbiddenException } from '@nestjs/common';
+import { JwtAuthGuard, PermissionGuard, RolesGuard } from '../common/guards';
+import { CurrentUser, RequirePermission, Roles } from '../common/decorators';
 import { AppResource } from '../access/enums/resource.enum';
 import { PermissionAction } from '../access/enums/permission-action.enum';
 import { UserRole } from '../common/enums';
@@ -26,8 +26,8 @@ export class DashboardResolver {
     description:
       'Fetches comprehensive real-time dashboard analytics for school administrators',
   })
-  @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
+  @UseGuards(JwtAuthGuard, PermissionGuard, RolesGuard)
+  @Roles(...Object.values(UserRole).filter((role) => role !== UserRole.PARENT))
   dashboardAnalytics(
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
     @Args('input', { nullable: true }) input?: DashboardAnalyticsInput,
@@ -35,6 +35,7 @@ export class DashboardResolver {
     return this.dashboardService.getDashboardAnalytics(
       user.schoolId,
       input || {},
+      user,
     );
   }
 
@@ -42,7 +43,7 @@ export class DashboardResolver {
     description:
       'Fetches filtered income trend analytics for the specified time period',
   })
-  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard, RolesGuard)
   @RequirePermission(AppResource.FEES, PermissionAction.READ)
   dashboardIncomeAnalytics(
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
@@ -55,6 +56,8 @@ export class DashboardResolver {
     @Args('termId', { type: () => String, nullable: true })
     termId?: string,
   ): Promise<DashboardIncomeAnalytics> {
+    if (user.role === UserRole.PARENT)
+      throw new ForbiddenException('Use linked-child fees');
     return this.dashboardService.getDashboardIncomeAnalytics(
       user.schoolId,
       filter,
@@ -66,7 +69,7 @@ export class DashboardResolver {
     description:
       'Fetches filtered attendance analytics for the specified period',
   })
-  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard, RolesGuard)
   @RequirePermission(AppResource.ATTENDANCE, PermissionAction.READ)
   dashboardAttendanceAnalytics(
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
@@ -79,6 +82,14 @@ export class DashboardResolver {
     @Args('termId', { type: () => String, nullable: true })
     termId?: string,
   ): Promise<DashboardAttendanceAnalytics> {
+    if (
+      [
+        UserRole.CLASS_TEACHER,
+        UserRole.SUBJECT_TEACHER,
+        UserRole.PARENT,
+      ].includes(user.role)
+    )
+      throw new ForbiddenException('Use assigned-record attendance');
     return this.dashboardService.getDashboardAttendanceAnalytics(
       user.schoolId,
       filter,
@@ -87,7 +98,7 @@ export class DashboardResolver {
   }
 
   @Query(() => DashboardOverview)
-  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard, RolesGuard)
   @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
   dashboardOverview(
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
