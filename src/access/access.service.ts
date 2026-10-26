@@ -77,14 +77,12 @@ export class AccessService implements OnModuleInit {
       allowed = permission?.[legacyAction as keyof RolePermission] === true;
     }
 
-    const assignments = await this.userGroupRepo.find({
-      where: { userId, schoolId },
-    });
-    if (assignments.length > 0) {
+    const activeGroupIds = await this.getActiveGroupIds(userId, schoolId);
+    if (activeGroupIds.length > 0) {
       const groupPermissions = await this.groupPermissionRepo.find({
         where: {
           schoolId,
-          groupId: In(assignments.map((assignment) => assignment.groupId)),
+          groupId: In(activeGroupIds),
           resource,
           action: normalizedAction,
         },
@@ -98,6 +96,22 @@ export class AccessService implements OnModuleInit {
     if (individual?.effect === PermissionEffect.DENY) return false;
     if (individual?.effect === PermissionEffect.GRANT) return true;
     return allowed;
+  }
+
+  private async getActiveGroupIds(userId: string, schoolId: string): Promise<string[]> {
+    const assignments = await this.userGroupRepo.find({
+      where: { userId, schoolId },
+    });
+    if (assignments.length === 0) return [];
+
+    const groups = await this.groupRepo.find({
+      where: {
+        id: In(assignments.map((assignment) => assignment.groupId)),
+        schoolId,
+        isActive: true,
+      },
+    });
+    return groups.map((group) => group.id);
   }
 
   getPermissionGroups = (schoolId: string) =>
@@ -125,14 +139,12 @@ export class AccessService implements OnModuleInit {
     if (!schoolId) return [];
 
     const rolePermissions = await this.getPermissionsByRole(role, schoolId);
-    const assignments = await this.userGroupRepo.find({
-      where: { userId, schoolId },
-    });
-    const groupPermissions = assignments.length
+    const activeGroupIds = await this.getActiveGroupIds(userId, schoolId);
+    const groupPermissions = activeGroupIds.length
       ? await this.groupPermissionRepo.find({
           where: {
             schoolId,
-            groupId: In(assignments.map((assignment) => assignment.groupId)),
+            groupId: In(activeGroupIds),
           },
         })
       : [];
