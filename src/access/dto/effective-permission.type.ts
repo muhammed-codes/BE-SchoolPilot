@@ -10,6 +10,9 @@ export class EffectivePermission {
   @Field(() => PermissionAction)
   action!: PermissionAction;
 
+  @Field(() => String)
+  source!: string;
+
   @Field()
   allowed!: boolean;
 }

@@ -56,6 +56,7 @@ export class ClassesResolver {
         user.schoolId,
         pagination,
         search,
+        user.role,
       );
     }
     return this.classesService.getClassesBySchool(
@@ -79,6 +80,7 @@ export class ClassesResolver {
         user.schoolId,
         pagination,
         search,
+        user.role,
       );
     }
     return this.classesService.getClassesBySchool(

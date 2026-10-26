@@ -138,7 +138,12 @@ export class AccessService implements OnModuleInit {
       (role === UserRole.SCHOOL_ADMIN && schoolId)
     ) {
       return resources.flatMap((resource) =>
-        actions.map((action) => ({ resource, action, allowed: true })),
+        actions.map((action) => ({
+          resource,
+          action,
+          allowed: true,
+          source: 'administrator',
+        })),
       );
     }
     if (!schoolId) return [];
@@ -182,6 +187,13 @@ export class AccessService implements OnModuleInit {
         return {
           resource,
           action,
+          source: override
+            ? `individual_${override.effect.toLowerCase()}`
+            : groupAllowed
+              ? 'group'
+              : roleAllowed
+                ? 'default'
+                : 'none',
           allowed:
             override?.effect === PermissionEffect.DENY
               ? false
@@ -222,6 +234,8 @@ export class AccessService implements OnModuleInit {
     input: { name: string; description?: string; schoolId?: string },
     schoolId: string,
   ) {
+    if (!input.name.trim())
+      throw new BadRequestException('Group name cannot be empty');
     const group = this.groupRepo.create({
       schoolId,
       name: input.name.trim(),
@@ -239,6 +253,8 @@ export class AccessService implements OnModuleInit {
     },
     schoolId: string,
   ) {
+    if (input.name !== undefined && !input.name.trim())
+      throw new BadRequestException('Group name cannot be empty');
     await this.assertSchoolGroup(input.id, schoolId);
     await this.groupRepo.update(input.id, {
       ...(input.name === undefined ? {} : { name: input.name.trim() }),
@@ -251,18 +267,27 @@ export class AccessService implements OnModuleInit {
   }
 
   async deletePermissionGroup(groupId: string, schoolId: string) {
-    await this.assertSchoolGroup(groupId, schoolId);
-    const assignments = await this.userGroupRepo.count({
-      where: { groupId, schoolId },
+    return this.groupRepo.manager.transaction(async (manager) => {
+      const group = await manager.findOne(PermissionGroup, {
+        where: { id: groupId, schoolId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!group)
+        throw new ForbiddenException(
+          'Permission group does not belong to this school',
+        );
+      if (
+        await manager.count(UserPermissionGroup, {
+          where: { groupId, schoolId },
+        })
+      )
+        throw new ForbiddenException(
+          'Remove staff assignments before deleting this group',
+        );
+      await manager.delete(PermissionGroupPermission, { groupId, schoolId });
+      await manager.delete(PermissionGroup, { id: groupId, schoolId });
+      return true;
     });
-    if (assignments > 0) {
-      throw new ForbiddenException(
-        'Remove staff assignments before deleting this group',
-      );
-    }
-    await this.groupPermissionRepo.delete({ groupId, schoolId });
-    await this.groupRepo.delete({ id: groupId, schoolId });
-    return true;
   }
 
   async setPermissionGroupPermissions(
@@ -314,14 +339,24 @@ export class AccessService implements OnModuleInit {
     schoolId: string,
   ) {
     await this.assertSchoolUser(userId, schoolId);
-    await this.assertSchoolGroup(groupId, schoolId);
-    const existing = await this.userGroupRepo.findOne({
-      where: { userId, groupId },
+    return this.groupRepo.manager.transaction(async (manager) => {
+      const group = await manager.findOne(PermissionGroup, {
+        where: { id: groupId, schoolId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!group)
+        throw new ForbiddenException(
+          'Permission group does not belong to this school',
+        );
+      const existing = await manager.findOne(UserPermissionGroup, {
+        where: { userId, groupId, schoolId },
+      });
+      if (existing) return existing;
+      return manager.save(
+        UserPermissionGroup,
+        manager.create(UserPermissionGroup, { userId, groupId, schoolId }),
+      );
     });
-    if (existing) return existing;
-    return this.userGroupRepo.save(
-      this.userGroupRepo.create({ userId, groupId, schoolId }),
-    );
   }
 
   async removePermissionGroup(
@@ -498,14 +533,12 @@ export class AccessService implements OnModuleInit {
         AppResource.RESULTS,
         AppResource.ATTENDANCE,
         AppResource.STUDENTS,
-        AppResource.EXPENSES,
       ].includes(resource);
       const canUpdateRes = [
         AppResource.RESULTS,
         AppResource.ATTENDANCE,
         AppResource.STUDENTS,
         AppResource.CLASSES,
-        AppResource.EXPENSES,
       ].includes(resource);
       return {
         canRead: readable.includes(resource),
@@ -529,12 +562,10 @@ export class AccessService implements OnModuleInit {
       const canCreateRes = [
         AppResource.RESULTS,
         AppResource.ATTENDANCE,
-        AppResource.EXPENSES,
       ].includes(resource);
       const canUpdateRes = [
         AppResource.RESULTS,
         AppResource.ATTENDANCE,
-        AppResource.EXPENSES,
       ].includes(resource);
       return {
         canRead: readable.includes(resource),
@@ -717,11 +748,17 @@ export class AccessService implements OnModuleInit {
 
         if (toCreate.length > 0) {
           const entities = this.permissionRepo.create(toCreate);
-          return this.permissionRepo.save(entities).then(() => {
-            console.log(
-              `Seeded ${toCreate.length} global default permissions.`,
-            );
-          });
+          return this.permissionRepo
+            .createQueryBuilder()
+            .insert()
+            .values(entities)
+            .orIgnore()
+            .execute()
+            .then(() => {
+              console.log(
+                `Seeded ${toCreate.length} global default permissions.`,
+              );
+            });
         }
         return Promise.resolve();
       });
@@ -762,11 +799,17 @@ export class AccessService implements OnModuleInit {
 
         if (toCreate.length > 0) {
           const entities = this.permissionRepo.create(toCreate);
-          return this.permissionRepo.save(entities).then(() => {
-            console.log(
-              `Seeded ${toCreate.length} default permissions for school ${schoolId}.`,
-            );
-          });
+          return this.permissionRepo
+            .createQueryBuilder()
+            .insert()
+            .values(entities)
+            .orIgnore()
+            .execute()
+            .then(() => {
+              console.log(
+                `Seeded ${toCreate.length} default permissions for school ${schoolId}.`,
+              );
+            });
         }
         return Promise.resolve();
       });

@@ -10,6 +10,8 @@ import { ClassSubject } from '../classes/entities/class-subject.entity';
 import { Subject } from '../subjects/entities/subject.entity';
 import { ResultSheet } from '../results/entities/result-sheet.entity';
 import { StudentResult } from '../results/entities/student-result.entity';
+import { SubjectScore } from '../results/entities/subject-score.entity';
+import { Session } from '../terms/entities/session.entity';
 import { Term } from '../terms/entities/term.entity';
 
 export interface ScopeUser {
@@ -140,6 +142,11 @@ export class RecordScopeService {
         'myAnnouncements',
         'unreadAnnouncementCount',
         'myChildInvoices',
+        'myStudentInvoices',
+        'invoice',
+        'paymentSubmission',
+        'paymentReceipt',
+        'bankAccounts',
         'studentInvoices',
         'studentFeeSummary',
       ].includes(operation)
@@ -173,6 +180,39 @@ export class RecordScopeService {
       if (!value || typeof value !== 'object') return;
       for (const [key, item] of Object.entries(value)) {
         if (typeof item === 'string' && item) {
+          if (
+            key === 'sessionId' &&
+            !(await this.db
+              .getRepository(Session)
+              .findOneBy({ id: item, schoolId: user.schoolId! }))
+          )
+            throw new ForbiddenException('Session is outside your school');
+          if (key === 'subjectScoreId') {
+            const score = await this.db
+              .getRepository(SubjectScore)
+              .findOneBy({ id: item });
+            if (!score) throw new ForbiddenException('Score not found');
+            await visit({
+              resultSheetId: score.resultSheetId,
+              subjectId: score.subjectId,
+              studentResultId: score.studentResultId,
+            });
+          }
+
+          if (
+            [
+              'teacherId',
+              'classTeacherId',
+              'subjectTeacherId',
+              'parentUserId',
+            ].includes(key) &&
+            !(await this.db
+              .getRepository(User)
+              .findOneBy({ id: item, schoolId: user.schoolId! }))
+          )
+            throw new ForbiddenException(
+              'Assigned user is outside your school',
+            );
           if (
             key === 'resultSheetId' ||
             (key === 'id' && operation === 'resultSheet')

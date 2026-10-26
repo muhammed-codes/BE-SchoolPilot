@@ -38,15 +38,25 @@ export class ResultsResolver {
   @Query(() => [ResultSheet])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
-  resultSheetsByClass(
+  async resultSheetsByClass(
     @Args('classId') classId: string,
     @Args('termId') termId: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { schoolId: string; sub: string; role: UserRole },
   ) {
-    return this.resultsService.getResultSheetsByClass(
+    const sheets = await this.resultsService.getResultSheetsByClass(
       classId,
       termId,
       user.schoolId,
+    );
+    return Promise.all(
+      sheets.map((sheet) =>
+        this.resultsService.getResultSheet(
+          sheet.id,
+          user.schoolId,
+          user.sub,
+          user.role,
+        ),
+      ),
     );
   }
 

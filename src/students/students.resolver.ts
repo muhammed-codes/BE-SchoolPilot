@@ -75,6 +75,7 @@ export class StudentsResolver {
         user.sub,
         user.schoolId,
         take,
+        user.role,
       );
     }
     return this.studentsService.searchStudents(
@@ -107,7 +108,11 @@ export class StudentsResolver {
         ? Math.max(1, pagination.page)
         : Math.floor(Math.max(0, skip) / limit) + 1;
     const classIdsPromise = TEACHER_ROLES.includes(user.role)
-      ? this.studentsService.getTeacherClassIds(user.sub, user.schoolId)
+      ? this.studentsService.getTeacherClassIds(
+          user.sub,
+          user.schoolId,
+          user.role,
+        )
       : Promise.resolve(undefined);
     return classIdsPromise.then((classIds) =>
       this.studentsService.getPaginatedStudents(user.schoolId, {
@@ -134,7 +139,11 @@ export class StudentsResolver {
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
   ) {
     const classIdsPromise = TEACHER_ROLES.includes(user.role)
-      ? this.studentsService.getTeacherClassIds(user.sub, user.schoolId)
+      ? this.studentsService.getTeacherClassIds(
+          user.sub,
+          user.schoolId,
+          user.role,
+        )
       : Promise.resolve(undefined);
     return classIdsPromise.then((classIds) =>
       this.studentsService.getStudentStatistics(user.schoolId, {

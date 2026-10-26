@@ -1,3 +1,4 @@
+import { UserRole } from '../common/enums/role.enum';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -204,14 +205,22 @@ export class ClassesService {
       });
   };
 
-  getClassesForTeacher = (teacherId: string, schoolId: string) =>
+  getClassesForTeacher = (
+    teacherId: string,
+    schoolId: string,
+    role?: UserRole,
+  ) =>
     this.classesRepository
       .createQueryBuilder('class')
       .select('class.id')
       .leftJoin('class_subjects', 'cs', 'cs."classId" = class.id')
       .where('class."schoolId" = :schoolId', { schoolId })
       .andWhere(
-        '(class."classTeacherId" = :teacherId OR cs."subjectTeacherId" = :teacherId)',
+        role === UserRole.CLASS_TEACHER
+          ? 'class."classTeacherId" = :teacherId'
+          : role === UserRole.SUBJECT_TEACHER
+            ? '(cs."subjectTeacherId" = :teacherId OR :teacherId = ANY(cs."teacherIds"))'
+            : '(class."classTeacherId" = :teacherId OR cs."subjectTeacherId" = :teacherId OR :teacherId = ANY(cs."teacherIds"))',
         { teacherId },
       )
       .groupBy('class.id')
@@ -236,12 +245,13 @@ export class ClassesService {
     schoolId: string,
     pagination?: PaginationArgs,
     search?: string,
+    role?: UserRole,
   ) => {
     const page = pagination?.page || 1;
     const limit = pagination?.limit || 50;
     const skip = (page - 1) * limit;
 
-    return this.getClassesForTeacher(teacherId, schoolId).then((all) => {
+    return this.getClassesForTeacher(teacherId, schoolId, role).then((all) => {
       const filtered = search?.trim()
         ? all.filter((c) =>
             c.name.toLowerCase().includes(search.trim().toLowerCase()),
@@ -261,8 +271,9 @@ export class ClassesService {
   getTeacherClassIds = (
     teacherId: string,
     schoolId: string,
+    role?: UserRole,
   ): Promise<string[]> =>
-    this.getClassesForTeacher(teacherId, schoolId).then((classes) =>
+    this.getClassesForTeacher(teacherId, schoolId, role).then((classes) =>
       classes.map((c) => c.id),
     );
 

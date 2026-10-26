@@ -6,6 +6,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Subject } from './entities/subject.entity';
+import { UserRole } from '../common/enums/role.enum';
+import { ScopeUser } from '../access/record-scope.service';
 import { PaginationArgs } from '../common/pagination';
 
 @Injectable()
@@ -138,12 +140,26 @@ export class SubjectsService {
     schoolId: string,
     pagination?: PaginationArgs,
     search?: string,
+    user?: ScopeUser,
   ) => {
     const page = pagination?.page || 1;
     const limit = pagination?.limit || 50;
     const queryBuilder = this.subjectsRepository
       .createQueryBuilder('subject')
       .where('subject.schoolId = :schoolId', { schoolId });
+    if (user?.role === UserRole.SUBJECT_TEACHER) {
+      queryBuilder.andWhere(
+        'EXISTS (SELECT 1 FROM class_subjects cs WHERE cs."subjectId" = subject.id AND cs."schoolId" = :schoolId AND (cs."subjectTeacherId" = :userId OR :userId = ANY(cs."teacherIds")))',
+        { userId: user.sub },
+      );
+    } else if (user?.role === UserRole.CLASS_TEACHER) {
+      queryBuilder.andWhere(
+        'EXISTS (SELECT 1 FROM class_subjects cs JOIN classes c ON c.id = cs."classId" WHERE cs."subjectId" = subject.id AND c."schoolId" = :schoolId AND c."classTeacherId" = :userId)',
+        { userId: user.sub },
+      );
+    } else if (user?.role === UserRole.PARENT) {
+      queryBuilder.andWhere('1 = 0');
+    }
     if (search?.trim()) {
       queryBuilder.andWhere(
         '(subject.name ILIKE :search OR subject.code ILIKE :search)',

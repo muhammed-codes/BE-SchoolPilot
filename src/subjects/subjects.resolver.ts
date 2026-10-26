@@ -1,3 +1,4 @@
+import { ScopeUser } from '../access/record-scope.service';
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
 import { PermissionAction } from '../access/enums/permission-action.enum';
@@ -20,7 +21,7 @@ export class SubjectsResolver {
   @RequirePermission(AppResource.SUBJECTS, PermissionAction.CREATE)
   createSubject(
     @Args('name') name: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: ScopeUser & { schoolId: string },
     @Args('code', { nullable: true }) code?: string,
   ) {
     return this.subjectsService.createSubject(name, user.schoolId, code);
@@ -30,7 +31,7 @@ export class SubjectsResolver {
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.SUBJECTS, PermissionAction.UPDATE)
   updateSubject(
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: ScopeUser & { schoolId: string },
     @Args('id', { nullable: true }) id?: string,
     @Args('name', { nullable: true }) name?: string,
     @Args('code', { nullable: true }) code?: string,
@@ -53,7 +54,10 @@ export class SubjectsResolver {
   @Query(() => Subject, { nullable: true })
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission(AppResource.SUBJECTS, PermissionAction.READ)
-  subject(@Args('id') id: string, @CurrentUser() user: { schoolId: string }) {
+  subject(
+    @Args('id') id: string,
+    @CurrentUser() user: ScopeUser & { schoolId: string },
+  ) {
     return this.subjectsService.getSubjectById(id, user.schoolId);
   }
 
@@ -63,12 +67,13 @@ export class SubjectsResolver {
   subjects(
     @Args() pagination: PaginationArgs,
     @Args('search', { type: () => String, nullable: true }) search: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: ScopeUser & { schoolId: string },
   ) {
     return this.subjectsService.getSubjectsBySchool(
       user.schoolId,
       pagination,
       search,
+      user,
     );
   }
 
@@ -78,12 +83,13 @@ export class SubjectsResolver {
   schoolSubjects(
     @Args() pagination: PaginationArgs,
     @Args('search', { type: () => String, nullable: true }) search: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: ScopeUser & { schoolId: string },
   ) {
     return this.subjectsService.getSubjectsBySchool(
       user.schoolId,
       pagination,
       search,
+      user,
     );
   }
 
@@ -92,7 +98,7 @@ export class SubjectsResolver {
   @RequirePermission(AppResource.SUBJECTS, PermissionAction.DELETE)
   deleteSubject(
     @Args('id') id: string,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: ScopeUser & { schoolId: string },
   ) {
     return this.subjectsService.deleteSubject(id, user.schoolId);
   }

@@ -590,7 +590,9 @@ export class ResultsService {
       .then((sheet) => {
         if (!sheet) throw new NotFoundException('Result sheet not found');
         if (sheet.status === ResultStatus.PUBLISHED) {
-          throw new BadRequestException('Result sheet has already been approved');
+          throw new BadRequestException(
+            'Result sheet has already been approved',
+          );
         }
 
         return this.resultSheetRepo
@@ -810,12 +812,12 @@ export class ResultsService {
         'classEntity',
         'classEntity.classSubjects',
         'classEntity.classSubjects.subject',
-      'createdByUser',
-      'approvedByUser',
+        'createdByUser',
+        'approvedByUser',
         'studentResults',
         'studentResults.subjectScores',
         'studentResults.subjectScores.subject',
-      'studentResults.subjectScores.enteredByUser',
+        'studentResults.subjectScores.enteredByUser',
         'studentResults.student',
       ],
     });
@@ -831,13 +833,12 @@ export class ResultsService {
     ].includes(role);
 
     if (!isLeadership) {
-      const isClassTeacher = sheet.classEntity.classTeacherId === userId;
-
-      if (!isClassTeacher && role === UserRole.SUBJECT_TEACHER) {
+      if (role === UserRole.SUBJECT_TEACHER) {
         // Filter classSubjects
         sheet.classEntity.classSubjects =
           sheet.classEntity.classSubjects.filter(
-            (cs) => cs.subjectTeacherId === userId,
+            (cs) =>
+              cs.subjectTeacherId === userId || cs.teacherIds?.includes(userId),
           );
 
         // Filter subjectScores
@@ -849,6 +850,11 @@ export class ResultsService {
           sr.subjectScores = sr.subjectScores.filter((ss) =>
             allowedSubjectIds.includes(ss.subjectId),
           );
+          sr.totalScore = sr.subjectScores.reduce(
+            (sum, score) => sum + (score.totalScore || 0),
+            0,
+          );
+          sr.position = null as unknown as number;
         });
       }
     }
@@ -959,17 +965,25 @@ export class ResultsService {
     if (termId) where.termId = termId;
     where.classId = classId ? classId : In(Array.from(classIds));
 
-    return this.resultSheetRepo.find({
-      where,
-      relations: [
-        'classEntity',
-        'term',
-        'studentResults',
-        'studentResults.student',
-        'studentResults.subjectScores',
-      ],
-      order: { createdAt: 'DESC' },
-    });
+    return this.resultSheetRepo
+      .find({
+        where,
+        relations: [
+          'classEntity',
+          'term',
+          'studentResults',
+          'studentResults.student',
+          'studentResults.subjectScores',
+        ],
+        order: { createdAt: 'DESC' },
+      })
+      .then((sheets) =>
+        Promise.all(
+          sheets.map((sheet) =>
+            this.getResultSheet(sheet.id, schoolId, userId, role),
+          ),
+        ),
+      );
   };
 
   getMyScoringAssignments = async (
@@ -1025,7 +1039,8 @@ export class ResultsService {
 
       if (!isLeadership && !isClassTeacher) {
         relevantSubjects = relevantSubjects.filter(
-          (cs) => cs.subjectTeacherId === userId,
+          (cs) =>
+            cs.subjectTeacherId === userId || cs.teacherIds?.includes(userId),
         );
         if (relevantSubjects.length === 0) {
           continue;

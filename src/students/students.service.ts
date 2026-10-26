@@ -589,15 +589,16 @@ export class StudentsService {
     teacherId: string,
     schoolId: string,
     limit: number = 5,
+    role?: UserRole,
   ) =>
     this.classesService
-      .getTeacherClassIds(teacherId, schoolId)
+      .getTeacherClassIds(teacherId, schoolId, role)
       .then((classIds) =>
         this.searchStudents(query, schoolId, classIds, limit),
       );
 
-  getTeacherClassIds = (teacherId: string, schoolId: string) =>
-    this.classesService.getTeacherClassIds(teacherId, schoolId);
+  getTeacherClassIds = (teacherId: string, schoolId: string, role?: UserRole) =>
+    this.classesService.getTeacherClassIds(teacherId, schoolId, role);
 
   getPaginatedStudents = async (
     schoolId: string,
