@@ -1174,6 +1174,7 @@ export class TimetableService implements OnModuleInit {
 
   async getTimetableEntries(params: {
     schoolId: string;
+    viewer?: { sub: string; role: UserRole };
     termId: string;
     classId?: string;
     teacherId?: string;
@@ -1190,6 +1191,17 @@ export class TimetableService implements OnModuleInit {
       .leftJoinAndSelect('entry.period', 'period')
       .where('entry.schoolId = :schoolId', { schoolId: params.schoolId })
       .andWhere('entry.termId = :termId', { termId: params.termId });
+
+    if (params.viewer?.role === UserRole.CLASS_TEACHER) {
+      qb.andWhere('classEntity.classTeacherId = :viewerId', {
+        viewerId: params.viewer.sub,
+      });
+    } else if (params.viewer?.role === UserRole.SUBJECT_TEACHER) {
+      qb.andWhere(
+        'EXISTS (SELECT 1 FROM class_subjects assignment WHERE assignment."schoolId" = entry."schoolId" AND assignment."classId" = entry."classId" AND assignment."subjectId" = entry."subjectId" AND (assignment."subjectTeacherId" = :viewerId OR :viewerId = ANY(assignment."teacherIds")))',
+        { viewerId: params.viewer.sub },
+      );
+    }
 
     if (params.classId) {
       qb.andWhere('entry.classId = :classId', { classId: params.classId });
@@ -1585,11 +1597,15 @@ export class TimetableService implements OnModuleInit {
     userId: string,
     schoolId: string,
     termId?: string,
+    role?: UserRole,
   ): Promise<TeacherTimetableResult> {
     // 1. Check if teacher is assigned as Class Teacher
-    const assignedClass = await this.classRepo.findOne({
-      where: { classTeacherId: userId, schoolId },
-    });
+    const assignedClass =
+      role === UserRole.SUBJECT_TEACHER
+        ? null
+        : await this.classRepo.findOne({
+            where: { classTeacherId: userId, schoolId },
+          });
 
     let effectiveTermId = termId;
     if (!effectiveTermId) {
@@ -1721,6 +1737,7 @@ export class TimetableService implements OnModuleInit {
   async exportTimetablePdf(
     input: ExportTimetablePdfInput,
     schoolId: string,
+    viewer?: { sub: string; role: UserRole },
   ): Promise<TimetablePdfResult> {
     const [school, term, days, periods] = await Promise.all([
       this.schoolRepo.findOne({ where: { id: schoolId } }),
@@ -1739,7 +1756,7 @@ export class TimetableService implements OnModuleInit {
 
     if (input.viewType === TimetableExportView.CLASS && input.targetId) {
       const targetClass = await this.classRepo.findOne({
-        where: { id: input.targetId },
+        where: { id: input.targetId, schoolId },
       });
       title = `Class Timetable: ${targetClass?.name || 'Class'}`;
     } else if (
@@ -1747,18 +1764,19 @@ export class TimetableService implements OnModuleInit {
       input.targetId
     ) {
       const targetTeacher = await this.userRepo.findOne({
-        where: { id: input.targetId },
+        where: { id: input.targetId, schoolId },
       });
       title = `Teacher Schedule: ${targetTeacher?.fullName || 'Teacher'}`;
     } else if (input.viewType === TimetableExportView.ROOM && input.targetId) {
       const targetRoom = await this.roomRepo.findOne({
-        where: { id: input.targetId },
+        where: { id: input.targetId, schoolId },
       });
       title = `Room Allocation: ${targetRoom?.name || 'Room'}`;
     }
 
     const entries = await this.getTimetableEntries({
       schoolId,
+      viewer,
       termId: input.termId,
       classId:
         input.viewType === TimetableExportView.CLASS

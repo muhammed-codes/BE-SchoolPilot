@@ -52,6 +52,45 @@ describe('AccessService effective permissions', () => {
       ) as any,
     );
 
+  it.each(Object.values(UserRole))(
+    'seeds predictable defaults for %s',
+    (role) => {
+      const service = makeService();
+      const defaults = (resource: AppResource) =>
+        service['getDefaultRolePermissions'](role, resource);
+      if ([UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN].includes(role)) {
+        for (const resource of Object.values(AppResource))
+          expect(Object.values(defaults(resource)).every(Boolean)).toBe(true);
+      } else if (
+        [
+          UserRole.PRINCIPAL,
+          UserRole.VICE_PRINCIPAL,
+          UserRole.HEAD_TEACHER,
+        ].includes(role)
+      ) {
+        expect(defaults(AppResource.RESULTS).canUpdate).toBe(true);
+        expect(defaults(AppResource.ACCESS).canUpdate).toBe(false);
+      } else if (
+        [UserRole.CLASS_TEACHER, UserRole.SUBJECT_TEACHER].includes(role)
+      ) {
+        expect(defaults(AppResource.RESULTS).canUpdate).toBe(true);
+        for (const resource of [
+          AppResource.FEES,
+          AppResource.EXPENSES,
+          AppResource.USERS,
+          AppResource.ACCESS,
+        ])
+          expect(Object.values(defaults(resource)).some(Boolean)).toBe(false);
+      } else if (role === UserRole.BURSAR) {
+        expect(defaults(AppResource.FEES).canCreate).toBe(true);
+        expect(defaults(AppResource.RESULTS).canRead).toBe(false);
+      } else {
+        expect(defaults(AppResource.RESULTS).canRead).toBe(true);
+        expect(defaults(AppResource.RESULTS).canUpdate).toBe(false);
+      }
+    },
+  );
+
   it('allows School Admin without stored permission rows', async () => {
     const service = makeService();
 

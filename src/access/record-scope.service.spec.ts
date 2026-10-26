@@ -91,3 +91,49 @@ describe('mandatory record scope', () => {
     ).rejects.toThrow('linked-child');
   });
 });
+
+describe('timetable export scope', () => {
+  const service = new RecordScopeService({
+    getRepository: jest.fn(() => ({
+      findOneBy: jest.fn().mockResolvedValue({ classTeacherId: 'teacher-a' }),
+    })),
+  } as unknown as DataSource);
+  const teacher = {
+    sub: 'teacher-a',
+    schoolId: 'school-a',
+    role: UserRole.CLASS_TEACHER,
+  };
+  it.each(['SCHOOL', 'ROOM'])(
+    'rejects teacher %s exports',
+    async (viewType) => {
+      await expect(
+        service.assertArguments(
+          teacher,
+          AppResource.TIMETABLE,
+          { input: { viewType, targetId: 'other' } },
+          'exportTimetablePdf',
+        ),
+      ).rejects.toThrow('Export only');
+    },
+  );
+  it('rejects another teacher export', async () => {
+    await expect(
+      service.assertArguments(
+        teacher,
+        AppResource.TIMETABLE,
+        { input: { viewType: 'TEACHER', targetId: 'other' } },
+        'exportTimetablePdf',
+      ),
+    ).rejects.toThrow('Export only');
+  });
+  it('allows a personal timetable export', async () => {
+    await expect(
+      service.assertArguments(
+        teacher,
+        AppResource.TIMETABLE,
+        { input: { viewType: 'TEACHER', targetId: teacher.sub } },
+        'exportTimetablePdf',
+      ),
+    ).resolves.toBeUndefined();
+  });
+});

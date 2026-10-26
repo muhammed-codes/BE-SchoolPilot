@@ -518,7 +518,7 @@ export class AccessService implements OnModuleInit {
       };
     }
 
-    // 5. CLASS_TEACHER: Class management, students, attendance, results & users read, and expenses requests
+    // Class teachers receive academic permissions; record scope is mandatory.
     if (role === UserRole.CLASS_TEACHER) {
       const readable = [
         AppResource.STUDENTS,
@@ -548,7 +548,7 @@ export class AccessService implements OnModuleInit {
       };
     }
 
-    // 6. SUBJECT_TEACHER: Results, attendance, classes, subjects, students & users read, and expenses requests
+    // Subject teachers receive academic permissions within their assignments.
     if (role === UserRole.SUBJECT_TEACHER) {
       const readable = [
         AppResource.STUDENTS,
@@ -617,7 +617,7 @@ export class AccessService implements OnModuleInit {
 
   /**
    * Get permissions for a role scoped to a specific school.
-   * Falls back to global rows (schoolId IS NULL) if no school-specific rows exist.
+   * Missing school rows deny access; global rows are seed templates only.
    * Auto-seeds school default permissions in background if missing.
    */
   private permissionProfile(role: UserRole): UserRole {

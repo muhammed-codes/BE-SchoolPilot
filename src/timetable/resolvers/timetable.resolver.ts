@@ -439,10 +439,11 @@ export class TimetableResolver {
     @Args('classId', { nullable: true }) classId?: string,
     @Args('teacherId', { nullable: true }) teacherId?: string,
     @Args('roomId', { nullable: true }) roomId?: string,
-    @CurrentUser() user?: { schoolId: string },
+    @CurrentUser() user?: { schoolId: string; sub: string; role: UserRole },
   ) {
     return this.timetableService.getTimetableEntries({
       schoolId: user!.schoolId,
+      viewer: user,
       termId,
       classId,
       teacherId,
@@ -516,12 +517,13 @@ export class TimetableResolver {
   @RequirePermission(AppResource.TIMETABLE, PermissionAction.READ)
   myTimetable(
     @Args('termId', { nullable: true }) termId?: string,
-    @CurrentUser() user?: { sub: string; schoolId: string },
+    @CurrentUser() user?: { sub: string; schoolId: string; role: UserRole },
   ) {
     return this.timetableService.getMyTimetable(
       user!.sub,
       user!.schoolId,
       termId,
+      user!.role,
     );
   }
 
@@ -568,8 +570,8 @@ export class TimetableResolver {
   @RequirePermission(AppResource.TIMETABLE, PermissionAction.READ)
   exportTimetablePdf(
     @Args('input') input: ExportTimetablePdfInput,
-    @CurrentUser() user: { schoolId: string },
+    @CurrentUser() user: { schoolId: string; sub: string; role: UserRole },
   ) {
-    return this.timetableService.exportTimetablePdf(input, user.schoolId);
+    return this.timetableService.exportTimetablePdf(input, user.schoolId, user);
   }
 }

@@ -172,6 +172,23 @@ export class RecordScopeService {
       ].includes(operation)
     )
       throw new ForbiddenException('Use assigned-subject scores');
+    // PDF exports use targetId rather than classId; validate before generating.
+    if (operation === 'exportTimetablePdf') {
+      const input = args.input as
+        | { viewType?: string; targetId?: string }
+        | undefined;
+      if (input?.viewType === 'CLASS' && input.targetId)
+        await this.assertClass(user, input.targetId);
+      if (
+        restricted &&
+        !(input?.viewType === 'CLASS' && input.targetId) &&
+        !(input?.viewType === 'TEACHER' && input.targetId === user.sub)
+      ) {
+        throw new ForbiddenException(
+          'Export only your assigned class or personal timetable',
+        );
+      }
+    }
     const visit = async (value: unknown): Promise<void> => {
       if (Array.isArray(value)) {
         for (const item of value) await visit(item);

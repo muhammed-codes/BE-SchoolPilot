@@ -1,3 +1,4 @@
+import { ArrayContains } from 'typeorm';
 import {
   Injectable,
   NotFoundException,
@@ -936,13 +937,22 @@ export class ResultsService {
       });
     }
 
-    const myClasses = await this.classRepo.find({
-      where: [{ classTeacherId: userId, schoolId }],
-    });
+    const myClasses =
+      role === UserRole.CLASS_TEACHER
+        ? await this.classRepo.find({
+            where: [{ classTeacherId: userId, schoolId }],
+          })
+        : [];
 
-    const mySubjectClasses = await this.classSubjectRepo.find({
-      where: { subjectTeacherId: userId },
-    });
+    const mySubjectClasses =
+      role === UserRole.SUBJECT_TEACHER
+        ? await this.classSubjectRepo.find({
+            where: [
+              { schoolId, subjectTeacherId: userId },
+              { schoolId, teacherIds: ArrayContains([userId]) },
+            ],
+          })
+        : [];
 
     const classIds = new Set([
       ...myClasses.map((c) => c.id),
@@ -1034,7 +1044,9 @@ export class ResultsService {
     const assignments: TeacherScoringAssignment[] = [];
 
     for (const cls of allClasses) {
-      const isClassTeacher = cls.classTeacherId === userId;
+      const isClassTeacher =
+        role === UserRole.CLASS_TEACHER && cls.classTeacherId === userId;
+      if (role === UserRole.CLASS_TEACHER && !isClassTeacher) continue;
       let relevantSubjects = cls.classSubjects || [];
 
       if (!isLeadership && !isClassTeacher) {
@@ -1328,13 +1340,22 @@ export class ResultsService {
       });
     }
 
-    const myClasses = await this.classRepo.find({
-      where: [{ classTeacherId: userId, schoolId }],
-    });
+    const myClasses =
+      role === UserRole.CLASS_TEACHER
+        ? await this.classRepo.find({
+            where: [{ classTeacherId: userId, schoolId }],
+          })
+        : [];
 
-    const mySubjectClasses = await this.classSubjectRepo.find({
-      where: { subjectTeacherId: userId },
-    });
+    const mySubjectClasses =
+      role === UserRole.SUBJECT_TEACHER
+        ? await this.classSubjectRepo.find({
+            where: [
+              { schoolId, subjectTeacherId: userId },
+              { schoolId, teacherIds: ArrayContains([userId]) },
+            ],
+          })
+        : [];
 
     const classIds = new Set([
       ...myClasses.map((c) => c.id),
