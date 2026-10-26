@@ -57,9 +57,8 @@ export class AccessService implements OnModuleInit {
     resource: AppResource,
     action: ActionType,
   ): Promise<boolean> {
-    if (role === UserRole.SUPER_ADMIN || role === UserRole.SCHOOL_ADMIN) {
-      return true;
-    }
+    if (role === UserRole.SUPER_ADMIN) return true;
+    if (role === UserRole.SCHOOL_ADMIN) return Boolean(schoolId);
     if (!schoolId) return false;
 
     const normalizedAction = this.normalizeAction(action);
@@ -98,7 +97,10 @@ export class AccessService implements OnModuleInit {
     return allowed;
   }
 
-  private async getActiveGroupIds(userId: string, schoolId: string): Promise<string[]> {
+  private async getActiveGroupIds(
+    userId: string,
+    schoolId: string,
+  ): Promise<string[]> {
     const assignments = await this.userGroupRepo.find({
       where: { userId, schoolId },
     });
@@ -131,7 +133,10 @@ export class AccessService implements OnModuleInit {
     const resources = Object.values(AppResource);
     const actions = Object.values(PermissionAction);
 
-    if (role === UserRole.SUPER_ADMIN || role === UserRole.SCHOOL_ADMIN) {
+    if (
+      role === UserRole.SUPER_ADMIN ||
+      (role === UserRole.SCHOOL_ADMIN && schoolId)
+    ) {
       return resources.flatMap((resource) =>
         actions.map((action) => ({ resource, action, allowed: true })),
       );
@@ -265,16 +270,37 @@ export class AccessService implements OnModuleInit {
     permissions: { resource: AppResource; action: PermissionAction }[],
     schoolId: string,
   ) {
-    await this.assertSchoolGroup(groupId, schoolId);
-    await this.groupPermissionRepo.delete({ groupId, schoolId });
-    if (permissions.length > 0) {
-      await this.groupPermissionRepo.save(
-        permissions.map((permission) =>
-          this.groupPermissionRepo.create({ groupId, schoolId, ...permission }),
-        ),
-      );
-    }
-    return this.groupPermissionRepo.find({ where: { groupId, schoolId } });
+    return this.groupRepo.manager.transaction(async (manager) => {
+      const group = await manager.findOne(PermissionGroup, {
+        where: { id: groupId, schoolId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!group)
+        throw new ForbiddenException(
+          'Permission group does not belong to this school',
+        );
+      const unique = [
+        ...new Map(
+          permissions.map((p) => [`${p.resource}:${p.action}`, p]),
+        ).values(),
+      ];
+      await manager.delete(PermissionGroupPermission, { groupId, schoolId });
+      if (unique.length)
+        await manager.save(
+          PermissionGroupPermission,
+          unique.map(({ resource, action }) =>
+            manager.create(PermissionGroupPermission, {
+              groupId,
+              schoolId,
+              resource,
+              action,
+            }),
+          ),
+        );
+      return manager.find(PermissionGroupPermission, {
+        where: { groupId, schoolId },
+      });
+    });
   }
 
   getPermissionGroupPermissions = (groupId: string, schoolId: string) =>
@@ -412,7 +438,7 @@ export class AccessService implements OnModuleInit {
 
     try {
       await this.seedGlobalDefaultPermissions();
-      await this.repairExistingPermissions();
+      // Existing school decisions must never be overwritten on restart.
     } catch (err) {
       console.error('Error initializing permissions in AccessService:', err);
     }
@@ -446,9 +472,11 @@ export class AccessService implements OnModuleInit {
       role === UserRole.VICE_PRINCIPAL ||
       role === UserRole.HEAD_TEACHER
     ) {
-      const isSettings = resource === AppResource.SETTINGS;
+      const isSettings = [AppResource.SETTINGS, AppResource.ACCESS].includes(
+        resource,
+      );
       return {
-        canRead: true,
+        canRead: !isSettings,
         canCreate: !isSettings,
         canUpdate: !isSettings,
         canDelete: !isSettings,
@@ -457,7 +485,15 @@ export class AccessService implements OnModuleInit {
 
     // 5. CLASS_TEACHER: Class management, students, attendance, results & users read, and expenses requests
     if (role === UserRole.CLASS_TEACHER) {
-      const isSettings = resource === AppResource.SETTINGS;
+      const readable = [
+        AppResource.STUDENTS,
+        AppResource.RESULTS,
+        AppResource.ATTENDANCE,
+        AppResource.CLASSES,
+        AppResource.SUBJECTS,
+        AppResource.TIMETABLE,
+        AppResource.COMMUNICATION,
+      ];
       const canCreateRes = [
         AppResource.RESULTS,
         AppResource.ATTENDANCE,
@@ -472,7 +508,7 @@ export class AccessService implements OnModuleInit {
         AppResource.EXPENSES,
       ].includes(resource);
       return {
-        canRead: !isSettings,
+        canRead: readable.includes(resource),
         canCreate: canCreateRes,
         canUpdate: canUpdateRes,
         canDelete: false,
@@ -481,7 +517,15 @@ export class AccessService implements OnModuleInit {
 
     // 6. SUBJECT_TEACHER: Results, attendance, classes, subjects, students & users read, and expenses requests
     if (role === UserRole.SUBJECT_TEACHER) {
-      const isSettings = resource === AppResource.SETTINGS;
+      const readable = [
+        AppResource.STUDENTS,
+        AppResource.RESULTS,
+        AppResource.ATTENDANCE,
+        AppResource.CLASSES,
+        AppResource.SUBJECTS,
+        AppResource.TIMETABLE,
+        AppResource.COMMUNICATION,
+      ];
       const canCreateRes = [
         AppResource.RESULTS,
         AppResource.ATTENDANCE,
@@ -493,7 +537,7 @@ export class AccessService implements OnModuleInit {
         AppResource.EXPENSES,
       ].includes(resource);
       return {
-        canRead: !isSettings,
+        canRead: readable.includes(resource),
         canCreate: canCreateRes,
         canUpdate: canUpdateRes,
         canDelete: false,
@@ -545,26 +589,26 @@ export class AccessService implements OnModuleInit {
    * Falls back to global rows (schoolId IS NULL) if no school-specific rows exist.
    * Auto-seeds school default permissions in background if missing.
    */
-  getPermissionsByRole = (role: UserRole, schoolId?: string | null) => {
-    if (role === UserRole.SUPER_ADMIN || !schoolId) {
+  private permissionProfile(role: UserRole): UserRole {
+    return [
+      UserRole.PRINCIPAL,
+      UserRole.VICE_PRINCIPAL,
+      UserRole.HEAD_TEACHER,
+    ].includes(role)
+      ? UserRole.PRINCIPAL
+      : role;
+  }
+
+  getPermissionsByRole = async (role: UserRole, schoolId?: string | null) => {
+    const profile = this.permissionProfile(role);
+    if (role === UserRole.SUPER_ADMIN) {
       return this.permissionRepo.find({
-        where: { role, schoolId: IsNull() },
+        where: { role: profile, schoolId: IsNull() },
       });
     }
-
-    return this.permissionRepo
-      .find({ where: { role, schoolId } })
-      .then((schoolPerms) => {
-        if (schoolPerms.length > 0) return schoolPerms;
-
-        // Trigger school permission seeding in background for missing schools
-        void this.seedDefaultPermissions(schoolId);
-
-        // Fallback to global rows (schoolId IS NULL)
-        return this.permissionRepo.find({
-          where: { role, schoolId: IsNull() },
-        });
-      });
+    if (!schoolId) return [];
+    // Missing rows are denied until explicitly seeded; never inherit global grants.
+    return this.permissionRepo.find({ where: { role: profile, schoolId } });
   };
 
   /**
@@ -591,6 +635,21 @@ export class AccessService implements OnModuleInit {
     return this.permissionRepo.findOne({ where: { id } }).then((existing) => {
       if (!existing) throw new Error('Permission not found');
 
+      if (
+        ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN].includes(requesterRole!)
+      ) {
+        throw new ForbiddenException(
+          'Only administrators may configure defaults',
+        );
+      }
+      if (
+        existing.role === UserRole.SUPER_ADMIN ||
+        existing.role === UserRole.SCHOOL_ADMIN
+      ) {
+        throw new ForbiddenException(
+          'Administrator permissions are not configurable',
+        );
+      }
       // SCHOOL_ADMIN can only edit their own school's permissions
       if (
         requesterRole === UserRole.SCHOOL_ADMIN &&
@@ -601,8 +660,26 @@ export class AccessService implements OnModuleInit {
         );
       }
 
+      const safeUpdates = Object.fromEntries(
+        ['canCreate', 'canRead', 'canUpdate', 'canDelete']
+          .filter(
+            (key) => typeof updates[key as keyof RolePermission] === 'boolean',
+          )
+          .map((key) => [key, updates[key as keyof RolePermission]]),
+      );
+      const roles =
+        this.permissionProfile(existing.role) === UserRole.PRINCIPAL
+          ? [UserRole.PRINCIPAL, UserRole.VICE_PRINCIPAL, UserRole.HEAD_TEACHER]
+          : [existing.role];
       return this.permissionRepo
-        .update(id, updates)
+        .update(
+          {
+            role: In(roles),
+            resource: existing.resource,
+            schoolId: existing.schoolId ?? IsNull(),
+          },
+          safeUpdates,
+        )
         .then(() => this.permissionRepo.findOne({ where: { id } }));
     });
   };
@@ -693,67 +770,5 @@ export class AccessService implements OnModuleInit {
         }
         return Promise.resolve();
       });
-  };
-
-  /**
-   * Auto-repairs existing permission rows in the DB to ensure Leadership
-   * and Teachers have proper read & create access according to the latest RBAC matrix.
-   */
-  private repairExistingPermissions = () => {
-    return this.permissionRepo.find().then((allPermissions) => {
-      const updates: Promise<unknown>[] = [];
-
-      allPermissions.forEach((p) => {
-        const expected = this.getDefaultRolePermissions(p.role, p.resource);
-        let needsUpdate = false;
-
-        // If leadership or teacher should have read access but it's currently false
-        if (expected.canRead && !p.canRead) {
-          p.canRead = true;
-          needsUpdate = true;
-        }
-
-        // If leadership should have create or update access but it's currently false
-        if (
-          [
-            UserRole.PRINCIPAL,
-            UserRole.VICE_PRINCIPAL,
-            UserRole.HEAD_TEACHER,
-          ].includes(p.role)
-        ) {
-          if (expected.canCreate && !p.canCreate) {
-            p.canCreate = true;
-            needsUpdate = true;
-          }
-          if (expected.canUpdate && !p.canUpdate) {
-            p.canUpdate = true;
-            needsUpdate = true;
-          }
-        }
-
-        if (needsUpdate) {
-          updates.push(this.permissionRepo.save(p));
-        }
-      });
-
-      const schoolIds = Array.from(
-        new Set(
-          allPermissions
-            .map((p) => p.schoolId)
-            .filter((id): id is string => Boolean(id)),
-        ),
-      );
-      const seedPromises = schoolIds.map((sId) =>
-        this.seedDefaultPermissions(sId),
-      );
-
-      return Promise.all([...updates, ...seedPromises]).then(() => {
-        if (updates.length > 0) {
-          console.log(
-            `Repaired ${updates.length} existing permission records.`,
-          );
-        }
-      });
-    });
   };
 }

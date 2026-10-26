@@ -34,6 +34,7 @@ describe('AccessService effective permissions', () => {
   const makeService = (
     config: {
       rolePermissions?: any[];
+      groups?: any[];
       groupAssignments?: any[];
       groupPermissions?: any[];
       userPermissions?: any[];
@@ -42,7 +43,7 @@ describe('AccessService effective permissions', () => {
   ) =>
     new AccessService(
       repository(config.rolePermissions) as any,
-      repository() as any,
+      repository(config.groups) as any,
       repository(config.groupPermissions) as any,
       repository(config.groupAssignments) as any,
       repository(config.userPermissions) as any,
@@ -118,6 +119,7 @@ describe('AccessService effective permissions', () => {
 
   it('allows a permission inherited from an assigned group', async () => {
     const service = makeService({
+      groups: [{ id: 'group-a', schoolId: 'school-a', isActive: true }],
       groupAssignments: [
         { userId: 'user-a', groupId: 'group-a', schoolId: 'school-a' },
       ],
@@ -222,5 +224,113 @@ describe('AccessService effective permissions', () => {
           permission.action === PermissionAction.READ,
       )?.allowed,
     ).toBe(true);
+  });
+  it.each([UserRole.PRINCIPAL, UserRole.VICE_PRINCIPAL, UserRole.HEAD_TEACHER])(
+    'uses School Management defaults for %s',
+    async (role) => {
+      const service = makeService({
+        rolePermissions: [
+          {
+            role: UserRole.PRINCIPAL,
+            schoolId: 'school-a',
+            resource: AppResource.RESULTS,
+            canRead: true,
+          },
+        ],
+      });
+      expect(
+        await service.hasPermission(
+          'user-a',
+          role,
+          'school-a',
+          AppResource.RESULTS,
+          PermissionAction.READ,
+        ),
+      ).toBe(true);
+      expect(
+        await service.hasPermission(
+          'user-a',
+          role,
+          'school-b',
+          AppResource.RESULTS,
+          PermissionAction.READ,
+        ),
+      ).toBe(false);
+    },
+  );
+
+  it.each([false, true])(
+    'respects group active state %s and explicit DENY',
+    async (isActive) => {
+      const config = {
+        groups: [{ id: 'group-a', schoolId: 'school-a', isActive }],
+        groupAssignments: [
+          { userId: 'user-a', groupId: 'group-a', schoolId: 'school-a' },
+        ],
+        groupPermissions: [
+          {
+            groupId: 'group-a',
+            schoolId: 'school-a',
+            resource: AppResource.FEES,
+            action: PermissionAction.READ,
+          },
+        ],
+      };
+      const service = makeService(config);
+      expect(
+        await service.hasPermission(
+          'user-a',
+          UserRole.CLASS_TEACHER,
+          'school-a',
+          AppResource.FEES,
+          PermissionAction.READ,
+        ),
+      ).toBe(isActive);
+      const denied = makeService({
+        ...config,
+        userPermissions: [
+          {
+            userId: 'user-a',
+            schoolId: 'school-a',
+            resource: AppResource.FEES,
+            action: PermissionAction.READ,
+            effect: PermissionEffect.DENY,
+          },
+        ],
+      });
+      expect(
+        await denied.hasPermission(
+          'user-a',
+          UserRole.CLASS_TEACHER,
+          'school-a',
+          AppResource.FEES,
+          PermissionAction.READ,
+        ),
+      ).toBe(false);
+      const effective = await denied.getEffectivePermissions(
+        'user-a',
+        UserRole.CLASS_TEACHER,
+        'school-a',
+      );
+      expect(
+        effective.find(
+          (p) =>
+            p.resource === AppResource.FEES &&
+            p.action === PermissionAction.READ,
+        )?.allowed,
+      ).toBe(false);
+    },
+  );
+
+  it('does not grant school admin access without a school', async () => {
+    expect(
+      await makeService().hasPermission(
+        'user-a',
+        UserRole.SCHOOL_ADMIN,
+        null,
+        AppResource.FEES,
+        PermissionAction.READ,
+      ),
+    ).toBe(false);
   });
 });
