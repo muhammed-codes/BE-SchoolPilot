@@ -224,30 +224,12 @@ type ClassAttendanceStatus {
   totalStudents: Int!
 }
 
-type ClassEntity {
-  classSubjects: [ClassSubject!]
-  classTeacher: User
-  classTeacherId: String
-  createdAt: DateTime!
-  id: ID!
-  name: String!
-  schoolId: String!
-  totalNoOfStudents: Int
-  updatedAt: DateTime!
-}
-
 type ClassBroadsheetPage {
   items: [ClassBroadsheetStudent!]!
   limit: Int!
   page: Int!
   subjects: [ClassBroadsheetSubject!]!
   total: Int!
-}
-
-type ClassBroadsheetSubject {
-  scoreComponents: [ScoreComponentConfig!]!
-  subjectId: String!
-  subjectName: String!
 }
 
 type ClassBroadsheetStudent {
@@ -260,12 +242,30 @@ type ClassBroadsheetStudent {
   totalScore: Float
 }
 
+type ClassBroadsheetSubject {
+  scoreComponents: [ScoreComponentConfig!]!
+  subjectId: String!
+  subjectName: String!
+}
+
 type ClassBroadsheetSubjectScore {
   grade: String
   scores: [ComponentScore!]
   subjectId: String!
   subjectName: String!
   totalScore: Float
+}
+
+type ClassEntity {
+  classSubjects: [ClassSubject!]
+  classTeacher: User
+  classTeacherId: String
+  createdAt: DateTime!
+  id: ID!
+  name: String!
+  schoolId: String!
+  totalNoOfStudents: Int
+  updatedAt: DateTime!
 }
 
 type ClassFeeLedger {
@@ -524,11 +524,6 @@ input CreateResultSheetInput {
   scoreComponents: [ScoreComponentConfigInput!]!
   subjectScoreComponents: [SubjectScoreComponentConfigInput!]
   termId: String!
-}
-
-input SubjectScoreComponentConfigInput {
-  scoreComponents: [ScoreComponentConfigInput!]!
-  subjectId: String!
 }
 
 input CreateRoomInput {
@@ -2036,12 +2031,12 @@ type Query {
   staffAttendanceOverview(date: String!): StaffAttendanceOverview!
   staffFeeVisibilityConfigs: [StaffFeeVisibilityConfig!]!
   student(id: String!): Student
+  studentAcademicHistory(studentId: String!): [StudentResult!]!
   studentAttendance(studentId: String!, termId: String!): [StudentAttendance!]!
   studentAttendanceSummary(studentId: String!, termId: String!): AttendanceSummary!
   studentParents(studentId: String!): [StudentParent!]!
   studentResult(studentId: String!, termId: String!): StudentResult
   studentResultBySheet(resultSheetId: String!, studentId: String!): StudentResult
-  studentAcademicHistory(studentId: String!): [StudentResult!]!
   studentStatistics(archived: Boolean! = false, classId: String, query: String! = ""): StudentStatistics!
   studentsByClass(classId: String!): [Student!]!
   studentsPage(archived: Boolean! = false, classId: String, gender: Gender, limit: Int! = 50, page: Int! = 1, query: String! = "", skip: Int, status: StudentStatus, take: Int): PaginatedStudent!
@@ -2789,8 +2784,8 @@ type SubjectScore {
   id: ID!
   isSubmitted: Boolean!
   resultSheetId: String!
-  scores: [ComponentScore!]
   scoreComponents: [ScoreComponentConfig!]
+  scores: [ComponentScore!]
   studentResult: StudentResult!
   studentResultId: String!
   subject: Subject
@@ -2799,6 +2794,11 @@ type SubjectScore {
   teacherRemark: String
   totalScore: Float
   updatedAt: DateTime!
+}
+
+input SubjectScoreComponentConfigInput {
+  scoreComponents: [ScoreComponentConfigInput!]!
+  subjectId: String!
 }
 
 input SubmitPaymentBatchInput {

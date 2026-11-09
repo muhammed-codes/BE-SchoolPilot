@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { pathToFileURL } from 'url';
+import * as fs from 'fs';
 
 import { StudentResult } from '../results/entities/student-result.entity';
 import { ResultSheet } from '../results/entities/result-sheet.entity';
@@ -28,12 +29,14 @@ import {
   SubjectScoreData,
 } from './templates/report-card-data.interface';
 
+/* eslint-disable @typescript-eslint/no-implied-eval */
 const importEsmModule = <TModule>(specifier: string): Promise<TModule> =>
   (
     new Function('specifier', 'return import(specifier)') as (
       specifier: string,
     ) => Promise<TModule>
   )(specifier);
+/* eslint-enable @typescript-eslint/no-implied-eval */
 
 const loadPuppeteer = (): Promise<PuppeteerModule> =>
   importEsmModule(pathToFileURL(require.resolve('puppeteer-core')).href);
@@ -147,11 +150,23 @@ export class PdfService {
         );
       }
 
-      const localPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+      const candidatePaths = [
+        process.env.PUPPETEER_EXECUTABLE_PATH,
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/google-chrome',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/chromium',
+        '/snap/bin/chromium',
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      ].filter(Boolean) as string[];
+
+      const localPath = candidatePaths.find((candidate) =>
+        fs.existsSync(candidate),
+      );
       if (!localPath) {
         return Promise.reject(
           new Error(
-            'PUPPETEER_EXECUTABLE_PATH is not set in .env. Run `which google-chrome-stable` and add the result.',
+            'PUPPETEER_EXECUTABLE_PATH is not set in .env and no Chrome/Chromium executable was found. Run `which google-chrome-stable` and add the result to .env.',
           ),
         );
       }
@@ -313,9 +328,7 @@ export class PdfService {
             );
 
             const computedGrade =
-              score.totalScore != null &&
-              subjectMaximum > 0 &&
-              gradingSystem
+              score.totalScore != null && subjectMaximum > 0 && gradingSystem
                 ? calculateGrade(
                     score.totalScore,
                     subjectMaximum,
@@ -336,15 +349,23 @@ export class PdfService {
           });
 
         const overallMaximum = (studentResult.subjectScores || []).reduce(
-          (sum, score) => sum + (score.scoreComponents?.length
-            ? score.scoreComponents
-            : fallbackComponents
-          ).reduce((subjectSum, component) => subjectSum + component.maxScore, 0),
+          (sum, score) =>
+            sum +
+            (score.scoreComponents?.length
+              ? score.scoreComponents
+              : fallbackComponents
+            ).reduce(
+              (subjectSum, component) => subjectSum + component.maxScore,
+              0,
+            ),
           0,
         );
-        const percentage = studentResult.totalScore != null && overallMaximum > 0
-          ? Number(((studentResult.totalScore / overallMaximum) * 100).toFixed(2))
-          : null;
+        const percentage =
+          studentResult.totalScore != null && overallMaximum > 0
+            ? Number(
+                ((studentResult.totalScore / overallMaximum) * 100).toFixed(2),
+              )
+            : null;
         const historicalClass = studentResult.resultSheet?.classEntity;
         const prefix = this.formatNamePrefix(
           historicalClass?.classTeacher?.namePrefix,
@@ -407,10 +428,29 @@ export class PdfService {
     userId: string,
     schoolId: string,
     role: UserRole,
-  ) =>
+  ): Promise<string> =>
     this.generateReportCard(studentResultId, userId, schoolId, role)
       .then((html) => this.generatePdfFromHtml(html))
-      .then((pdfBuffer) => pdfBuffer.toString('base64'));
+      .then((pdfBuffer) => {
+        const filename = `report_card_${studentResultId}_${Date.now()}`;
+        return this.uploadService
+          .uploadBuffer(
+            pdfBuffer,
+            `schools/${schoolId}/report-cards`,
+            filename,
+            { format: 'pdf', resourceType: 'raw' },
+          )
+          .then(
+            (uploadResult) =>
+              uploadResult.url || uploadResult.pdfPrivateUrl || '',
+          )
+          .catch((err) => {
+            this.logger.warn(
+              `Cloudinary upload failed for report card PDF, returning base64 Data URI: ${err}`,
+            );
+            return `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
+          });
+      });
 
   generateBulkReportCards = (
     resultSheetId: string,
@@ -463,9 +503,29 @@ export class PdfService {
             Promise.resolve(),
           )
           .then(() => {
-            return reportCardsHtml.join(
+            const combinedHtml = reportCardsHtml.join(
               '<div style="page-break-before: always;"></div>',
             );
+            return this.generatePdfFromHtml(combinedHtml).then((pdfBuffer) => {
+              const filename = `bulk_report_cards_${resultSheetId}_${Date.now()}`;
+              return this.uploadService
+                .uploadBuffer(
+                  pdfBuffer,
+                  `schools/${schoolId}/report-cards`,
+                  filename,
+                  { format: 'pdf', resourceType: 'raw' },
+                )
+                .then(
+                  (uploadResult) =>
+                    uploadResult.url || uploadResult.pdfPrivateUrl || '',
+                )
+                .catch((err) => {
+                  this.logger.warn(
+                    `Cloudinary upload failed for bulk report card PDF, returning base64 Data URI: ${err}`,
+                  );
+                  return `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
+                });
+            });
           });
       });
   };
