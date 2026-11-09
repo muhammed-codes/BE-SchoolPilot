@@ -45,6 +45,7 @@ import {
 import { calculateGrade } from './utils/grading.util';
 import { createMetricStat } from '../common/dto/metric-stat.type';
 import { ResultStats } from './dto/result-stats.type';
+import { TEACHER_ROLES } from '../common/constants/roles.constant';
 
 @Injectable()
 export class ResultsService {
@@ -81,6 +82,31 @@ export class ResultsService {
     const obtainable = totalMaxPerSubject * subjectCount;
     if (obtainable <= 0) return undefined;
     return Number(((obtained / obtainable) * 100).toFixed(2));
+  };
+
+  private getTeacherResultClassIds = async (
+    userId: string,
+    role: UserRole,
+    schoolId: string,
+  ) => {
+    if (role === UserRole.CLASS_TEACHER) {
+      const classes = await this.classRepo.find({
+        where: { classTeacherId: userId, schoolId },
+        select: ['id'],
+      });
+      return classes.map((classEntity) => classEntity.id);
+    }
+    if (role === UserRole.SUBJECT_TEACHER) {
+      const assignments = await this.classSubjectRepo.find({
+        where: [
+          { subjectTeacherId: userId, schoolId },
+          { teacherIds: ArrayContains([userId]), schoolId },
+        ],
+        select: ['classId'],
+      });
+      return [...new Set(assignments.map((assignment) => assignment.classId))];
+    }
+    return undefined;
   };
 
   private applyComputedMetrics = (
@@ -1211,6 +1237,16 @@ export class ResultsService {
       .andWhere('sr.schoolId = :schoolId', { schoolId })
       .andWhere('rs.schoolId = :schoolId', { schoolId });
 
+    if (TEACHER_ROLES.includes(userRole)) {
+      const classIds = await this.getTeacherResultClassIds(
+        userId,
+        userRole,
+        schoolId,
+      );
+      if (!classIds?.length) return [];
+      query.andWhere('rs.classId IN (:...classIds)', { classIds });
+    }
+
     if (userRole === UserRole.PARENT) {
       query.andWhere('rs.status = :publishedStatus', {
         publishedStatus: ResultStatus.PUBLISHED,
@@ -1218,8 +1254,7 @@ export class ResultsService {
     }
 
     const results = await query
-      .orderBy('session.startDate', 'DESC')
-      .addOrderBy('term.startDate', 'DESC')
+      .orderBy('term.startDate', 'DESC')
       .addOrderBy('classEntity.name', 'ASC')
       .getMany();
 
@@ -1267,6 +1302,18 @@ export class ResultsService {
       .andWhere('sr.resultSheetId = :resultSheetId', { resultSheetId })
       .andWhere('sr.schoolId = :schoolId', { schoolId })
       .andWhere('rs.schoolId = :schoolId', { schoolId });
+
+    if (TEACHER_ROLES.includes(userRole)) {
+      const classIds = await this.getTeacherResultClassIds(
+        userId,
+        userRole,
+        schoolId,
+      );
+      if (!classIds?.length) {
+        throw new ForbiddenException('You do not have access to this result');
+      }
+      query.andWhere('rs.classId IN (:...classIds)', { classIds });
+    }
 
     if (userRole === UserRole.PARENT) {
       query.andWhere('rs.status = :publishedStatus', {
