@@ -646,10 +646,11 @@ export class AccessService implements OnModuleInit {
    * Returns all permissions for a given school (for settings page).
    * SUPER_ADMIN requesting with no schoolId gets global rows.
    */
-  getAllPermissions = (schoolId?: string | null) => {
+  getAllPermissions = async (schoolId?: string | null) => {
     if (!schoolId) {
       return this.permissionRepo.find({ where: { schoolId: IsNull() } });
     }
+    await this.seedDefaultPermissions(schoolId);
     return this.permissionRepo.find({ where: { schoolId } });
   };
 
@@ -657,62 +658,85 @@ export class AccessService implements OnModuleInit {
    * Update a single permission row. SCHOOL_ADMIN can only update rows
    * that belong to their school.
    */
-  updateRolePermission = (
+  updateRolePermission = async (
     id: string,
     updates: Partial<RolePermission>,
     requesterRole?: UserRole,
     requesterSchoolId?: string | null,
   ) => {
-    return this.permissionRepo.findOne({ where: { id } }).then((existing) => {
-      if (!existing) throw new Error('Permission not found');
+    let permission = await this.permissionRepo.findOne({ where: { id } });
+    if (!permission) throw new BadRequestException('Permission not found');
 
-      if (
-        ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN].includes(requesterRole!)
-      ) {
-        throw new ForbiddenException(
-          'Only administrators may configure defaults',
-        );
-      }
-      if (
-        existing.role === UserRole.SUPER_ADMIN ||
-        existing.role === UserRole.SCHOOL_ADMIN
-      ) {
-        throw new ForbiddenException(
-          'Administrator permissions are not configurable',
-        );
-      }
-      // SCHOOL_ADMIN can only edit their own school's permissions
-      if (
-        requesterRole === UserRole.SCHOOL_ADMIN &&
-        existing.schoolId !== requesterSchoolId
-      ) {
-        throw new ForbiddenException(
-          'You can only update permissions for your own school',
-        );
-      }
-
-      const safeUpdates = Object.fromEntries(
-        ['canCreate', 'canRead', 'canUpdate', 'canDelete']
-          .filter(
-            (key) => typeof updates[key as keyof RolePermission] === 'boolean',
-          )
-          .map((key) => [key, updates[key as keyof RolePermission]]),
+    if (
+      ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN].includes(requesterRole!)
+    ) {
+      throw new ForbiddenException(
+        'Only administrators may configure defaults',
       );
-      const roles =
-        this.permissionProfile(existing.role) === UserRole.PRINCIPAL
-          ? [UserRole.PRINCIPAL, UserRole.VICE_PRINCIPAL, UserRole.HEAD_TEACHER]
-          : [existing.role];
-      return this.permissionRepo
-        .update(
-          {
-            role: In(roles),
-            resource: existing.resource,
-            schoolId: existing.schoolId ?? IsNull(),
+    }
+    if (
+      permission.role === UserRole.SUPER_ADMIN ||
+      permission.role === UserRole.SCHOOL_ADMIN
+    ) {
+      throw new ForbiddenException(
+        'Administrator permissions are not configurable',
+      );
+    }
+
+    if (requesterRole === UserRole.SCHOOL_ADMIN) {
+      if (!requesterSchoolId) {
+        throw new ForbiddenException(
+          'A school account is required to update school permissions',
+        );
+      }
+
+      if (permission.schoolId !== requesterSchoolId) {
+        let schoolPermission = await this.permissionRepo.findOne({
+          where: {
+            role: permission.role,
+            resource: permission.resource,
+            schoolId: requesterSchoolId,
           },
-          safeUpdates,
+        });
+        if (!schoolPermission) {
+          await this.seedDefaultPermissions(requesterSchoolId);
+          schoolPermission = await this.permissionRepo.findOne({
+            where: {
+              role: permission.role,
+              resource: permission.resource,
+              schoolId: requesterSchoolId,
+            },
+          });
+        }
+        if (!schoolPermission) {
+          throw new ForbiddenException(
+            'This permission is not configured for your school',
+          );
+        }
+        permission = schoolPermission;
+      }
+    }
+
+    const safeUpdates = Object.fromEntries(
+      ['canCreate', 'canRead', 'canUpdate', 'canDelete']
+        .filter(
+          (key) => typeof updates[key as keyof RolePermission] === 'boolean',
         )
-        .then(() => this.permissionRepo.findOne({ where: { id } }));
-    });
+        .map((key) => [key, updates[key as keyof RolePermission]]),
+    );
+    const roles =
+      this.permissionProfile(permission.role) === UserRole.PRINCIPAL
+        ? [UserRole.PRINCIPAL, UserRole.VICE_PRINCIPAL, UserRole.HEAD_TEACHER]
+        : [permission.role];
+    await this.permissionRepo.update(
+      {
+        role: In(roles),
+        resource: permission.resource,
+        schoolId: permission.schoolId ?? IsNull(),
+      },
+      safeUpdates,
+    );
+    return this.permissionRepo.findOne({ where: { id: permission.id } });
   };
 
   /**

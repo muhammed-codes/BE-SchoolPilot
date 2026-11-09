@@ -28,6 +28,20 @@ const repository = (rows: any[] = []) => ({
   ),
   create: jest.fn((input: any) => input),
   save: jest.fn(async (input: any) => input),
+  update: jest.fn(async (criteria: any, updates: any) => {
+    rows
+      .filter((row) =>
+        Object.entries(criteria || {}).every(([key, value]: [string, any]) =>
+          value && value._type === 'in'
+            ? value._value.includes(row[key])
+            : value && value._type === 'isNull'
+              ? row[key] === null
+              : row[key] === value,
+        ),
+      )
+      .forEach((row) => Object.assign(row, updates));
+    return { affected: 1 };
+  }),
 });
 
 describe('AccessService effective permissions', () => {
@@ -131,6 +145,36 @@ describe('AccessService effective permissions', () => {
         PermissionAction.APPROVE,
       ),
     ).resolves.toBe(false);
+  });
+
+  it('updates the school-scoped permission when given a legacy global row id', async () => {
+    const rolePermissions = [
+      {
+        id: 'global-row',
+        role: UserRole.CLASS_TEACHER,
+        resource: AppResource.STUDENTS,
+        schoolId: null,
+        canRead: true,
+      },
+      {
+        id: 'school-row',
+        role: UserRole.CLASS_TEACHER,
+        resource: AppResource.STUDENTS,
+        schoolId: 'school-a',
+        canRead: true,
+      },
+    ];
+    const service = makeService({ rolePermissions });
+
+    await expect(
+      service.updateRolePermission(
+        'global-row',
+        { canRead: false },
+        UserRole.SCHOOL_ADMIN,
+        'school-a',
+      ),
+    ).resolves.toMatchObject({ id: 'school-row', schoolId: 'school-a', canRead: false });
+    expect(rolePermissions[0].canRead).toBe(true);
   });
 
   it('preserves legacy role read permissions during migration', async () => {

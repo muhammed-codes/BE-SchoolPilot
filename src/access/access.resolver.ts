@@ -1,5 +1,5 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
+import { ForbiddenException, UseGuards } from '@nestjs/common';
 import { AccessService } from './access.service';
 import { RolePermission } from './entities/role-permission.entity';
 import { UpdatePermissionInput } from './dto/update-permission.input';
@@ -35,7 +35,8 @@ export class AccessResolver {
   ) {
     const schoolId =
       user.role === UserRole.SUPER_ADMIN ? requestedSchoolId : user.schoolId;
-    if (!schoolId) throw new Error('A school scope is required');
+    if (!schoolId)
+      throw new ForbiddenException('A school scope is required');
     return schoolId;
   }
 
@@ -76,7 +77,8 @@ export class AccessResolver {
     @CurrentUser() user: { role: UserRole; schoolId?: string },
   ) {
     // SUPER_ADMIN sees global permissions; SCHOOL_ADMIN sees their school's permissions
-    const schoolId = user.role === UserRole.SUPER_ADMIN ? null : user.schoolId;
+    const schoolId =
+      user.role === UserRole.SUPER_ADMIN ? null : this.schoolIdFor(user);
     return this.accessService.getAllPermissions(schoolId);
   }
 
