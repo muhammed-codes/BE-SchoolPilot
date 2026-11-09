@@ -1387,7 +1387,16 @@ export class ResultsService {
       .leftJoinAndSelect('rs.classEntity', 'classEntity')
       .leftJoinAndSelect('rs.term', 'term')
       .leftJoinAndSelect('term.session', 'session')
-      .leftJoinAndSelect('sr.subjectScores', 'subjectScore')
+      .leftJoin('sr.subjectScores', 'subjectScore')
+      .addSelect([
+        'subjectScore.id',
+        'subjectScore.studentResultId',
+        'subjectScore.subjectId',
+        'subjectScore.totalScore',
+        'subjectScore.grade',
+        'subjectScore.teacherRemark',
+        'subjectScore.scores',
+      ])
       .leftJoinAndSelect('subjectScore.subject', 'subject')
       .where('sr.studentId = :studentId', { studentId })
       .andWhere('sr.schoolId = :schoolId', { schoolId })
@@ -1468,7 +1477,16 @@ export class ResultsService {
       .leftJoinAndSelect('rs.term', 'term')
       .leftJoinAndSelect('term.session', 'session')
       .leftJoinAndSelect('sr.student', 'student')
-      .leftJoinAndSelect('sr.subjectScores', 'subjectScore')
+      .leftJoin('sr.subjectScores', 'subjectScore')
+      .addSelect([
+        'subjectScore.id',
+        'subjectScore.studentResultId',
+        'subjectScore.subjectId',
+        'subjectScore.totalScore',
+        'subjectScore.grade',
+        'subjectScore.teacherRemark',
+        'subjectScore.scores',
+      ])
       .leftJoinAndSelect('subjectScore.subject', 'subject')
       .where('sr.studentId = :studentId', { studentId })
       .andWhere('sr.resultSheetId = :resultSheetId', { resultSheetId })
