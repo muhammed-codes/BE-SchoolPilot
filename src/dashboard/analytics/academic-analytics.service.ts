@@ -77,7 +77,13 @@ export class AcademicAnalyticsService {
       .createQueryBuilder('sr')
       .leftJoinAndSelect('sr.resultSheet', 'sheet')
       .leftJoinAndSelect('sheet.classEntity', 'classEntity')
-      .leftJoinAndSelect('sr.subjectScores', 'ss')
+      .leftJoin('sr.subjectScores', 'ss')
+      .addSelect([
+        'ss.id',
+        'ss.studentResultId',
+        'ss.subjectId',
+        'ss.totalScore',
+      ])
       .leftJoinAndSelect('ss.subject', 'subject')
       .where('sr.resultSheetId IN (:...sheetIds)', { sheetIds })
       .getMany();
