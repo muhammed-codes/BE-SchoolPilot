@@ -28,6 +28,7 @@ export interface ReportCardData {
     admissionNumber: string;
     passportPhotoUrl: string | null;
     currentClass: string;
+    totalStudentsInClass?: number | null;
   };
   term: {
     name: string;

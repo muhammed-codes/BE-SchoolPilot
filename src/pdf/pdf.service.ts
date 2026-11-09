@@ -172,7 +172,14 @@ export class PdfService {
       }
       return Promise.resolve({
         executablePath: localPath,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--single-process',
+          '--no-zygote',
+        ],
       });
     };
 
@@ -276,10 +283,22 @@ export class PdfService {
             this.subjectRepo.find({
               where: { schoolId: studentResult.schoolId },
             }),
+            this.studentResultRepo.count({
+              where: { resultSheetId: studentResult.resultSheetId },
+            }),
           ]),
         );
       })
-      .then(([studentResult, student, school, term, attendance, subjects]) => {
+      .then(
+        ([
+          studentResult,
+          student,
+          school,
+          term,
+          attendance,
+          subjects,
+          totalStudentsInClass,
+        ]) => {
         if (!student) throw new NotFoundException('Student not found');
         if (!school) throw new NotFoundException('School not found');
         if (!term || !term.session)
@@ -390,6 +409,7 @@ export class PdfService {
             admissionNumber: student.admissionNumber,
             passportPhotoUrl: student.passportPhotoUrl || null,
             currentClass: historicalClass?.name || 'Unknown Class',
+            totalStudentsInClass,
           },
           term: {
             name: term.name,

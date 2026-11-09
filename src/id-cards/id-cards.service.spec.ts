@@ -1,4 +1,3 @@
-jest.mock('uuid', () => ({ v4: () => 'mock-uuid-v4' }));
 jest.mock('puppeteer-core', () => ({ launch: jest.fn() }));
 jest.mock('@sparticuz/chromium', () => ({
   executablePath: jest.fn().mockResolvedValue('/mock/path'),
