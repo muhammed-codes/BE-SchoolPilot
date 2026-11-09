@@ -232,12 +232,7 @@ const classicTemplate = (data: ReportCardData): string => `
         <thead>
             <tr>
                 <th style="text-align: left;">Subject</th>
-                ${data.scoreComponents
-                  .map(
-                    (component) =>
-                      `<th>${formatComponentLabel(component.component, component.maxScore)}</th>`,
-                  )
-                  .join('')}
+                <th>Assessment components</th>
                 <th>Total Score</th>
                 <th>Grade</th>
             </tr>
@@ -248,12 +243,9 @@ const classicTemplate = (data: ReportCardData): string => `
                 (score) => `
                 <tr>
                     <td class="subject-name">${score.name}</td>
-                    ${score.componentScores
-                      .map(
-                        (componentScore) =>
-                          `<td>${componentScore.score !== null ? componentScore.score : '-'}</td>`,
-                      )
-                      .join('')}
+                    <td>${score.componentScores
+                      .map((componentScore) => `${formatComponentLabel(componentScore.component, componentScore.maxScore)}: ${componentScore.score !== null ? componentScore.score : '-'}`)
+                      .join(' · ')}</td>
                     <td style="font-weight: bold;">${score.totalScore !== null ? score.totalScore : '-'}</td>
                     <td style="font-weight: bold; color: #1A56A8;">${score.grade || '-'}</td>
                 </tr>
@@ -594,7 +586,7 @@ const modernTemplate = (data: ReportCardData): string => `
                             <div class="subject-breakdown">
                                 ${score.componentScores
                                   .map((componentScore) => {
-                                    const label = data.scoreComponents.find(
+                                    const label = score.scoreComponents.find(
                                       (component) =>
                                         component.component ===
                                         componentScore.component,

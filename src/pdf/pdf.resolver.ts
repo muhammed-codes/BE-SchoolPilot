@@ -29,6 +29,21 @@ export class PdfResolver {
   @Mutation(() => String)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
+  generateReportCardPdf(
+    @Args('studentResultId') studentResultId: string,
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+  ) {
+    return this.pdfService.generateReportCardPdf(
+      studentResultId,
+      user.sub,
+      user.schoolId,
+      user.role,
+    );
+  }
+
+  @Mutation(() => String)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
   generateBulkReportCards(
     @Args('resultSheetId') resultSheetId: string,
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },

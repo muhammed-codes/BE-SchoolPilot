@@ -1,7 +1,9 @@
 export interface SubjectScoreData {
   name: string;
+  scoreComponents: ScoreComponentData[];
   componentScores: {
     component: string;
+    maxScore: number;
     score: number | null;
   }[];
   totalScore: number | null;

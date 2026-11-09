@@ -211,7 +211,13 @@ export class PdfService {
     return this.studentResultRepo
       .findOne({
         where: { id: studentResultId, schoolId },
-        relations: ['resultSheet', 'subjectScores', 'subjectScores.subject'],
+        relations: [
+          'resultSheet',
+          'resultSheet.classEntity',
+          'resultSheet.classEntity.classTeacher',
+          'subjectScores',
+          'subjectScores.subject',
+        ],
       })
       .then((studentResult) => {
         if (!studentResult)
@@ -251,17 +257,12 @@ export class PdfService {
           throw new NotFoundException('Term or Session not found');
 
         const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
-        const scoreComponents: ScoreComponentData[] = (
+        const fallbackComponents: ScoreComponentData[] = (
           studentResult.resultSheet?.scoreComponents || []
         ).map((component) => ({
           component: component.component,
           maxScore: component.maxScore,
         }));
-
-        const totalMaxPerSubject = scoreComponents.reduce(
-          (sum, sc) => sum + sc.maxScore,
-          0,
-        );
         const gradingSystem = studentResult.resultSheet?.gradingSystem;
 
         const subjectScoresData: SubjectScoreData[] = (
@@ -269,28 +270,41 @@ export class PdfService {
         )
           .filter((score) => score.isSubmitted)
           .map((score) => {
-            const componentScores = scoreComponents.map((componentDef) => {
+            const configuredComponents: ScoreComponentData[] = (
+              score.scoreComponents?.length
+                ? score.scoreComponents
+                : fallbackComponents
+            ).map((component) => ({
+              component: component.component,
+              maxScore: component.maxScore,
+            }));
+            const componentScores = configuredComponents.map((componentDef) => {
               const matchingScore = (score.scores || []).find(
                 (componentScore) =>
                   String(componentScore.component) ===
                   String(componentDef.component),
               );
               if (!matchingScore) {
-                return { component: componentDef.component, score: null };
+                return { ...componentDef, score: null };
               }
               return {
                 component: componentDef.component,
+                maxScore: componentDef.maxScore,
                 score: this.toSafeNumber(matchingScore.score),
               };
             });
+            const subjectMaximum = configuredComponents.reduce(
+              (sum, component) => sum + component.maxScore,
+              0,
+            );
 
             const computedGrade =
               score.totalScore != null &&
-              totalMaxPerSubject > 0 &&
+              subjectMaximum > 0 &&
               gradingSystem
                 ? calculateGrade(
                     score.totalScore,
-                    totalMaxPerSubject,
+                    subjectMaximum,
                     gradingSystem,
                   )
                 : score.grade;
@@ -301,23 +315,28 @@ export class PdfService {
                 subjectMap.get(score.subjectId) ||
                 'Unknown Subject',
               componentScores,
+              scoreComponents: configuredComponents,
               totalScore: score.totalScore,
               grade: computedGrade,
             };
           });
 
-        const sheetScoreComponents =
-          studentResult.resultSheet?.scoreComponents || [];
-        const percentage = this.computePercentage(
-          studentResult.totalScore,
-          (studentResult.subjectScores || []).length,
-          sheetScoreComponents,
+        const overallMaximum = (studentResult.subjectScores || []).reduce(
+          (sum, score) => sum + (score.scoreComponents?.length
+            ? score.scoreComponents
+            : fallbackComponents
+          ).reduce((subjectSum, component) => subjectSum + component.maxScore, 0),
+          0,
         );
+        const percentage = studentResult.totalScore != null && overallMaximum > 0
+          ? Number(((studentResult.totalScore / overallMaximum) * 100).toFixed(2))
+          : null;
+        const historicalClass = studentResult.resultSheet?.classEntity;
         const prefix = this.formatNamePrefix(
-          student.currentClass?.classTeacher?.namePrefix,
+          historicalClass?.classTeacher?.namePrefix,
         );
         const rawClassTeacherName =
-          student.currentClass?.classTeacher?.fullName || null;
+          historicalClass?.classTeacher?.fullName || null;
         const classTeacherName =
           rawClassTeacherName && prefix
             ? `${prefix} ${rawClassTeacherName}`
@@ -335,7 +354,7 @@ export class PdfService {
             fullName: student.fullName,
             admissionNumber: student.admissionNumber,
             passportPhotoUrl: student.passportPhotoUrl || null,
-            currentClass: student.currentClass?.name || 'Unknown Class',
+            currentClass: historicalClass?.name || 'Unknown Class',
           },
           term: {
             name: term.name,
@@ -349,7 +368,7 @@ export class PdfService {
             classTeacherRemark: studentResult.classTeacherRemark,
             principalRemark: studentResult.principalRemark,
           },
-          scoreComponents,
+          scoreComponents: fallbackComponents,
           subjectScores: subjectScoresData,
           attendance: {
             daysPresent: attendance.daysPresent,
@@ -368,6 +387,16 @@ export class PdfService {
         return htmlContent;
       });
   };
+
+  generateReportCardPdf = (
+    studentResultId: string,
+    userId: string,
+    schoolId: string,
+    role: UserRole,
+  ) =>
+    this.generateReportCard(studentResultId, userId, schoolId, role)
+      .then((html) => this.generatePdfFromHtml(html))
+      .then((pdfBuffer) => pdfBuffer.toString('base64'));
 
   generateBulkReportCards = (
     resultSheetId: string,
