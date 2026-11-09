@@ -1,7 +1,7 @@
 import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { AppResource } from '../access/enums/resource.enum';
 import { PermissionAction } from '../access/enums/permission-action.enum';
-import { UseGuards } from '@nestjs/common';
+import { ForbiddenException, UseGuards } from '@nestjs/common';
 
 import { StudentsService } from './students.service';
 import { Student } from './entities/student.entity';
@@ -37,8 +37,23 @@ export class StudentsResolver {
   @Query(() => Student, { nullable: true })
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermission(AppResource.STUDENTS, PermissionAction.READ)
-  student(@Args('id') id: string, @CurrentUser() user: { schoolId: string }) {
-    return this.studentsService.getStudentById(id, user.schoolId);
+  student(
+    @Args('id') id: string,
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+  ) {
+    if (!TEACHER_ROLES.includes(user.role)) {
+      return this.studentsService.getStudentById(id, user.schoolId);
+    }
+    return this.studentsService
+      .getTeacherClassIds(user.sub, user.schoolId, user.role)
+      .then((classIds) =>
+        this.studentsService.getStudentById(id, user.schoolId).then((student) => {
+          if (!student || !classIds.includes(student.currentClassId || '')) {
+            throw new ForbiddenException('You do not have access to this student');
+          }
+          return student;
+        }),
+      );
   }
 
   @Query(() => [Student])

@@ -40,13 +40,13 @@ import {
   ResultStatus,
   TermStatus,
   GradingSystem,
-  ScoreComponent,
 } from '../common/enums';
 import { calculateGrade } from './utils/grading.util';
 import { createMetricStat } from '../common/dto/metric-stat.type';
 import { ResultStats } from './dto/result-stats.type';
 import {
   ClassBroadsheetPage,
+  ClassBroadsheetSubject,
   ClassBroadsheetStudent,
 } from './dto/class-broadsheet.type';
 import { TEACHER_ROLES } from '../common/constants/roles.constant';
@@ -113,28 +113,54 @@ export class ResultsService {
     return undefined;
   };
 
+  private getTeacherSubjectAssignments = async (
+    userId: string,
+    schoolId: string,
+    classIds?: string[],
+  ) => {
+    const assignments = await this.classSubjectRepo.find({
+      where: [
+        {
+          schoolId,
+          subjectTeacherId: userId,
+          ...(classIds ? { classId: In(classIds) } : {}),
+        },
+        {
+          schoolId,
+          teacherIds: ArrayContains([userId]),
+          ...(classIds ? { classId: In(classIds) } : {}),
+        },
+      ],
+      select: ['subjectId', 'classId'],
+    });
+    return assignments;
+  };
+
   private applyComputedMetrics = (
     scoreComponents: { maxScore: number }[],
     studentResults: StudentResult[],
     gradingSystem?: GradingSystem,
   ) => {
-    const totalMaxPerSubject = (scoreComponents || []).reduce(
-      (sum, sc) => sum + sc.maxScore,
-      0,
-    );
+    const fallbackComponents = scoreComponents || [];
     studentResults.forEach((sr) => {
       let subjectTotalSum = 0;
+      let overallMaximum = 0;
       if (sr.subjectScores) {
         sr.subjectScores.forEach((ss) => {
+          const subjectMaximum = (ss.scoreComponents?.length
+            ? ss.scoreComponents
+            : fallbackComponents
+          ).reduce((sum, component) => sum + component.maxScore, 0);
+          overallMaximum += subjectMaximum;
           if (
             ss.totalScore !== null &&
             ss.totalScore !== undefined &&
-            totalMaxPerSubject > 0 &&
+            subjectMaximum > 0 &&
             gradingSystem
           ) {
             ss.grade = calculateGrade(
               ss.totalScore,
-              totalMaxPerSubject,
+              subjectMaximum,
               gradingSystem,
             );
           }
@@ -148,19 +174,19 @@ export class ResultsService {
           : subjectTotalSum;
       sr.percentage = this.computeStudentPercentage(
         effectiveTotal,
-        subjectCount,
-        totalMaxPerSubject,
+        1,
+        overallMaximum,
       );
       if (
         gradingSystem &&
-        totalMaxPerSubject > 0 &&
+        overallMaximum > 0 &&
         subjectCount > 0 &&
         effectiveTotal !== null &&
         effectiveTotal !== undefined
       ) {
         sr.grade = calculateGrade(
           effectiveTotal,
-          totalMaxPerSubject * subjectCount,
+          overallMaximum,
           gradingSystem,
         );
       }
@@ -173,6 +199,38 @@ export class ResultsService {
     userId: string,
     schoolId: string,
   ) => {
+    const componentNames = (input.scoreComponents || []).map((component) =>
+      component.component.trim().toLocaleLowerCase(),
+    );
+    if (
+      componentNames.some((name) => !name) ||
+      new Set(componentNames).size !== componentNames.length ||
+      input.scoreComponents.some(
+        (component) =>
+          !Number.isFinite(component.maxScore) || component.maxScore < 1,
+      )
+    ) {
+      throw new BadRequestException(
+        'Assessment components must have unique names and positive maximum marks',
+      );
+    }
+    for (const subjectConfig of input.subjectScoreComponents || []) {
+      const names = subjectConfig.scoreComponents.map((component) =>
+        component.component.trim().toLocaleLowerCase(),
+      );
+      if (
+        names.some((name) => !name) ||
+        new Set(names).size !== names.length ||
+        subjectConfig.scoreComponents.some(
+          (component) =>
+            !Number.isFinite(component.maxScore) || component.maxScore < 1,
+        )
+      ) {
+        throw new BadRequestException(
+          'Each subject needs unique assessment names and positive maximum marks',
+        );
+      }
+    }
     return Promise.all([
       this.classRepo.findOne({
         where: { id: input.classId, schoolId },
@@ -192,7 +250,10 @@ export class ResultsService {
           schoolId,
           createdByUserId: userId,
           gradingSystem: input.gradingSystem,
-          scoreComponents: input.scoreComponents,
+          scoreComponents: input.scoreComponents.map((component) => ({
+            ...component,
+            component: component.component.trim(),
+          })),
           status: ResultStatus.DRAFT,
         });
 
@@ -220,6 +281,27 @@ export class ResultsService {
                   this.classSubjectRepo
                     .find({ where: { classId: input.classId } })
                     .then((classSubjects) => {
+                      const subjectComponentConfigs = new Map(
+                        (input.subjectScoreComponents || []).map((entry) => [
+                          entry.subjectId,
+                          entry.scoreComponents.map((component) => ({
+                            ...component,
+                            component: component.component.trim(),
+                          })),
+                        ]),
+                      );
+                      const classSubjectIds = new Set(
+                        classSubjects.map((classSubject) => classSubject.subjectId),
+                      );
+                      if (
+                        [...subjectComponentConfigs.keys()].some(
+                          (subjectId) => !classSubjectIds.has(subjectId),
+                        )
+                      ) {
+                        throw new BadRequestException(
+                          'Assessment configuration includes a subject outside this class',
+                        );
+                      }
                       const subjectScores: Partial<SubjectScore>[] = [];
                       savedResults.forEach((sr) => {
                         classSubjects.forEach((cs) => {
@@ -230,6 +312,12 @@ export class ResultsService {
                               resultSheetId: savedSheet.id,
                               enteredByUserId: userId,
                               isSubmitted: false,
+                              scoreComponents:
+                                subjectComponentConfigs.get(cs.subjectId) ||
+                                input.scoreComponents.map((component) => ({
+                                  ...component,
+                                  component: component.component.trim(),
+                                })),
                             }),
                           );
                         });
@@ -345,8 +433,18 @@ export class ResultsService {
     );
     await this.validateSubmitPayload(input, sheet);
 
+    const configuredSubjectScore = await this.subjectScoreRepo.findOne({
+      where: { resultSheetId: sheet.id, subjectId: effectiveSubjectId },
+    });
+    const subjectScoreComponents =
+      configuredSubjectScore?.scoreComponents?.length
+        ? configuredSubjectScore.scoreComponents
+        : sheet.scoreComponents;
     const maxScoreMap = new Map(
-      sheet.scoreComponents.map((sc) => [sc.component, sc.maxScore]),
+      subjectScoreComponents.map((component) => [
+        component.component,
+        component.maxScore,
+      ]),
     );
 
     input.scores.forEach((studentScore) => {
@@ -360,10 +458,14 @@ export class ResultsService {
           throw new BadRequestException(
             `Score ${cs.score} exceeds max ${maxScore} for component ${cs.component}`,
           );
+        if (!Number.isFinite(cs.score) || cs.score < 0)
+          throw new BadRequestException(
+            `Score for ${cs.component} must be a valid non-negative number`,
+          );
       });
     });
 
-    const totalMaxScore = sheet.scoreComponents.reduce(
+    const totalMaxScore = subjectScoreComponents.reduce(
       (sum, sc) => sum + sc.maxScore,
       0,
     );
@@ -424,6 +526,7 @@ export class ResultsService {
             );
 
             subjectScore.scores = studentScore.componentScores;
+            subjectScore.scoreComponents = subjectScoreComponents;
             subjectScore.totalScore = totalScore;
             subjectScore.grade = calculateGrade(
               totalScore,
@@ -495,24 +598,29 @@ export class ResultsService {
     ]).then(([sheet, studentResults]) => {
       if (!sheet) throw new NotFoundException('Result sheet not found');
 
-      const totalMaxScore = sheet.scoreComponents.reduce(
-        (sum, sc) => sum + sc.maxScore,
-        0,
-      );
-
       const subjectScoreUpdates: SubjectScore[] = [];
 
       const updates = studentResults.map((sr) => {
+        const subjectMaximums = new Map(
+          sr.subjectScores.map((ss) => [
+            ss.id,
+            (ss.scoreComponents?.length
+              ? ss.scoreComponents
+              : sheet.scoreComponents
+            ).reduce((sum, component) => sum + component.maxScore, 0),
+          ]),
+        );
         const subjectTotal = sr.subjectScores.reduce((sum, ss) => {
+          const subjectMaximum = subjectMaximums.get(ss.id) || 0;
           if (
             ss.totalScore !== null &&
             ss.totalScore !== undefined &&
-            totalMaxScore > 0 &&
+            subjectMaximum > 0 &&
             sheet.gradingSystem
           ) {
             const newGrade = calculateGrade(
               ss.totalScore,
-              totalMaxScore,
+              subjectMaximum,
               sheet.gradingSystem,
             );
             if (ss.grade !== newGrade) {
@@ -524,9 +632,11 @@ export class ResultsService {
         }, 0);
         sr.totalScore = subjectTotal;
 
-        const subjectCount = sr.subjectScores.length || 1;
-        const overallMaxScore = totalMaxScore * subjectCount;
-        if (totalMaxScore > 0 && sheet.gradingSystem) {
+        const overallMaxScore = [...subjectMaximums.values()].reduce(
+          (sum, maximum) => sum + maximum,
+          0,
+        );
+        if (overallMaxScore > 0 && sheet.gradingSystem) {
           sr.grade = calculateGrade(
             subjectTotal,
             overallMaxScore,
@@ -698,11 +808,6 @@ export class ResultsService {
       .then((sheet) => {
         if (!sheet) throw new NotFoundException('Result sheet not found');
 
-        const totalMaxPerSubject = sheet.scoreComponents.reduce(
-          (sum, sc) => sum + sc.maxScore,
-          0,
-        );
-
         return this.studentResultRepo
           .find({
             where: { resultSheetId },
@@ -711,16 +816,26 @@ export class ResultsService {
           .then((studentResults) => {
             const subjectScoreUpdates: SubjectScore[] = [];
             studentResults.forEach((sr) => {
+              const subjectMaximums = new Map(
+                sr.subjectScores.map((ss) => [
+                  ss.id,
+                  (ss.scoreComponents?.length
+                    ? ss.scoreComponents
+                    : sheet.scoreComponents
+                  ).reduce((sum, component) => sum + component.maxScore, 0),
+                ]),
+              );
               const subjectTotal = sr.subjectScores.reduce((sum, ss) => {
+                const subjectMaximum = subjectMaximums.get(ss.id) || 0;
                 if (
                   ss.totalScore !== null &&
                   ss.totalScore !== undefined &&
-                  totalMaxPerSubject > 0 &&
+                  subjectMaximum > 0 &&
                   sheet.gradingSystem
                 ) {
                   const newGrade = calculateGrade(
                     ss.totalScore,
-                    totalMaxPerSubject,
+                    subjectMaximum,
                     sheet.gradingSystem,
                   );
                   if (ss.grade !== newGrade) {
@@ -732,9 +847,11 @@ export class ResultsService {
               }, 0);
               sr.totalScore = subjectTotal;
 
-              const subjectCount = sr.subjectScores.length || 1;
-              const overallMaxScore = totalMaxPerSubject * subjectCount;
-              if (totalMaxPerSubject > 0 && sheet.gradingSystem) {
+              const overallMaxScore = [...subjectMaximums.values()].reduce(
+                (sum, maximum) => sum + maximum,
+                0,
+              );
+              if (overallMaxScore > 0 && sheet.gradingSystem) {
                 sr.grade = calculateGrade(
                   subjectTotal,
                   overallMaxScore,
@@ -743,8 +860,8 @@ export class ResultsService {
               }
               sr.percentage = this.computeStudentPercentage(
                 subjectTotal,
-                subjectCount,
-                totalMaxPerSubject,
+                1,
+                overallMaxScore,
               );
             });
 
@@ -864,6 +981,13 @@ export class ResultsService {
     ].includes(role);
 
     if (!isLeadership) {
+      if (
+        role === UserRole.CLASS_TEACHER &&
+        sheet.classEntity.classTeacherId !== userId
+      ) {
+        throw new ForbiddenException('You do not have access to this result sheet');
+      }
+
       if (role === UserRole.SUBJECT_TEACHER) {
         // Filter classSubjects
         sheet.classEntity.classSubjects =
@@ -876,6 +1000,9 @@ export class ResultsService {
         const allowedSubjectIds = sheet.classEntity.classSubjects.map(
           (cs) => cs.subjectId,
         );
+        if (allowedSubjectIds.length === 0) {
+          throw new ForbiddenException('You do not have access to this result sheet');
+        }
 
         sheet.studentResults.forEach((sr) => {
           sr.subjectScores = sr.subjectScores.filter((ss) =>
@@ -1167,7 +1294,7 @@ export class ResultsService {
           })
         : Promise.resolve(true);
 
-    return parentCheck.then((link) => {
+    return parentCheck.then(async (link) => {
       if (!link) {
         throw new ForbiddenException(
           'You do not have access to this student result',
@@ -1185,6 +1312,16 @@ export class ResultsService {
         .andWhere('rs.termId = :termId', { termId })
         .andWhere('sr.schoolId = :schoolId', { schoolId });
 
+      if (userId && userRole && TEACHER_ROLES.includes(userRole)) {
+        const classIds = await this.getTeacherResultClassIds(
+          userId,
+          userRole,
+          schoolId,
+        );
+        if (!classIds?.length) return null;
+        qb.andWhere('rs.classId IN (:...classIds)', { classIds });
+      }
+
       if (userRole === UserRole.PARENT) {
         qb.andWhere('rs.status = :publishedStatus', {
           publishedStatus: ResultStatus.PUBLISHED,
@@ -1193,6 +1330,21 @@ export class ResultsService {
 
       return qb.getOne().then((result) => {
         if (!result) return null;
+        if (userId && userRole === UserRole.SUBJECT_TEACHER) {
+          return this.getTeacherSubjectAssignments(userId, schoolId, [result.resultSheet.classId])
+            .then((assignments) => {
+              const subjectIds = assignments.map((assignment) => assignment.subjectId);
+              result.subjectScores = (result.subjectScores || []).filter((score) =>
+                subjectIds.includes(score.subjectId),
+              );
+              return this.resultSheetRepo
+                .findOne({ where: { id: result.resultSheetId, schoolId } })
+                .then((sheet) => {
+                  if (sheet) this.applyComputedMetrics(sheet.scoreComponents || [], [result], sheet.gradingSystem);
+                  return result;
+                });
+            });
+        }
         return this.resultSheetRepo
           .findOne({ where: { id: result.resultSheetId, schoolId } })
           .then((sheet) => {
@@ -1262,6 +1414,22 @@ export class ResultsService {
       .addOrderBy('classEntity.name', 'ASC')
       .getMany();
 
+    if (userRole === UserRole.SUBJECT_TEACHER) {
+      const assignments = await this.getTeacherSubjectAssignments(
+        userId,
+        schoolId,
+        [...new Set(results.map((result) => result.resultSheet.classId))],
+      );
+      for (const result of results) {
+        result.subjectScores = (result.subjectScores || []).filter((score) =>
+          assignments.some((assignment) =>
+            assignment.classId === result.resultSheet.classId &&
+            assignment.subjectId === score.subjectId,
+          ),
+        );
+      }
+    }
+
     for (const result of results) {
       this.applyComputedMetrics(
         result.resultSheet.scoreComponents || [],
@@ -1327,6 +1495,18 @@ export class ResultsService {
 
     const result = await query.getOne();
     if (result) {
+      if (userRole === UserRole.SUBJECT_TEACHER) {
+        const assignments = await this.getTeacherSubjectAssignments(
+          userId,
+          schoolId,
+          [result.resultSheet.classId],
+        );
+        result.subjectScores = (result.subjectScores || []).filter((score) =>
+          assignments.some((assignment) =>
+            assignment.subjectId === score.subjectId,
+          ),
+        );
+      }
       this.applyComputedMetrics(
         result.resultSheet.scoreComponents || [],
         [result],
@@ -1571,10 +1751,6 @@ export class ResultsService {
         where: { resultSheetId: sheet.id, subjectId },
       });
 
-      const maxScore =
-        (sheet.scoreComponents || []).reduce((s, c) => s + c.maxScore, 0) ||
-        100;
-
       const validScores = scores.filter(
         (s) => typeof s.totalScore === 'number' && s.totalScore !== null,
       );
@@ -1591,6 +1767,10 @@ export class ResultsService {
       const classAverage = Number((sum / assessedCount).toFixed(1));
 
       const passedCount = validScores.filter((s) => {
+        const maxScore = (s.scoreComponents?.length
+          ? s.scoreComponents
+          : sheet.scoreComponents || []
+        ).reduce((sum, component) => sum + component.maxScore, 0);
         const pct = (s.totalScore / maxScore) * 100;
         return pct >= 40 && s.grade !== 'F9' && s.grade !== 'F';
       }).length;
@@ -1665,11 +1845,6 @@ export class ResultsService {
         relations: ['subjectScores'],
       });
 
-      const totalMaxPerSubject = (sheet.scoreComponents || []).reduce(
-        (sum, sc) => sum + sc.maxScore,
-        0,
-      );
-
       const validResults = studentResults.filter(
         (sr) => typeof sr.totalScore === 'number' && sr.totalScore > 0,
       );
@@ -1683,8 +1858,13 @@ export class ResultsService {
         if (typeof sr.percentage === 'number' && sr.percentage > 0) {
           return sr.percentage;
         }
-        const subjectCount = sr.subjectScores?.length || 1;
-        const overallMax = totalMaxPerSubject * subjectCount;
+        const overallMax = (sr.subjectScores || []).reduce(
+          (maxTotal, subjectScore) => maxTotal + (subjectScore.scoreComponents?.length
+            ? subjectScore.scoreComponents
+            : sheet.scoreComponents || []
+          ).reduce((max, component) => max + component.maxScore, 0),
+          0,
+        );
         return overallMax > 0
           ? (sr.totalScore / overallMax) * 100
           : sr.totalScore;
@@ -1843,9 +2023,16 @@ export class ResultsService {
         });
 
         const totalScore = ss.totalScore ?? 0;
+        const subjectComponents = ss.scoreComponents?.length
+          ? ss.scoreComponents
+          : sheet.scoreComponents || [];
+        const subjectMaximum = subjectComponents.reduce(
+          (sum, component) => sum + component.maxScore,
+          0,
+        ) || singleSubjectMax;
         const pct =
-          singleSubjectMax > 0
-            ? Math.round((totalScore / singleSubjectMax) * 100 * 10) / 10
+          subjectMaximum > 0
+            ? Math.round((totalScore / subjectMaximum) * 100 * 10) / 10
             : 0;
 
         let status = 'Fail';
@@ -1882,7 +2069,7 @@ export class ResultsService {
           ca2,
           exam,
           totalScore,
-          maxScore: singleSubjectMax,
+          maxScore: subjectMaximum,
           percentage: pct,
           subjectCount: 1,
           grade: ss.grade,
@@ -1935,8 +2122,13 @@ export class ResultsService {
 
       const items: StudentScoreRecord[] = results.map((sr) => {
         const totalScore = sr.totalScore ?? 0;
-        const subjectCount = sr.subjectScores?.length || 1;
-        const maxScore = subjectCount * singleSubjectMax;
+        const maxScore = (sr.subjectScores || []).reduce(
+          (maximum, subjectScore) => maximum + (subjectScore.scoreComponents?.length
+            ? subjectScore.scoreComponents
+            : sheet.scoreComponents || []
+          ).reduce((componentMaximum, component) => componentMaximum + component.maxScore, 0),
+          0,
+        );
         const pct =
           sr.percentage !== undefined && sr.percentage !== null
             ? Math.round(sr.percentage * 10) / 10
@@ -1950,7 +2142,7 @@ export class ResultsService {
         let hasCa1 = false;
         let hasCa2 = false;
         let hasExam = false;
-        const componentTotalsMap = new Map<ScoreComponent, number>();
+        const componentTotalsMap = new Map<string, number>();
 
         (sr.subjectScores || []).forEach((ss) => {
           (ss.scores || []).forEach((cs) => {
@@ -2026,7 +2218,7 @@ export class ResultsService {
           totalScore,
           maxScore,
           percentage: pct,
-          subjectCount,
+          subjectCount: sr.subjectScores?.length || 0,
           grade: sr.grade,
           status,
           position: sr.position,
@@ -2074,7 +2266,7 @@ export class ResultsService {
     if (!sheet) {
       return {
         items: [], total: 0, page: safePage, limit: safeLimit,
-        subjectIds: [], subjectNames: [], scoreComponents: [],
+        subjects: [],
       };
     }
 
@@ -2099,32 +2291,58 @@ export class ResultsService {
       .skip((safePage - 1) * safeLimit)
       .take(safeLimit)
       .getMany();
-    const classSubjects = await this.classSubjectRepo.find({
-      where: { classId, schoolId },
-      relations: ['subject'],
-      order: { createdAt: 'ASC' },
-    });
-    const subjectList = classSubjects
-      .filter((assignment) => assignment.subject)
-      .map((assignment) => ({ id: assignment.subjectId, name: assignment.subject.name }));
-    const subjectMaximum = (sheet.scoreComponents || []).reduce(
-      (sum, component) => sum + Number(component.maxScore || 0),
+    const assignedSubjects =
+      userRole === UserRole.SUBJECT_TEACHER && userId
+        ? await this.getTeacherSubjectAssignments(userId, schoolId, [classId])
+        : undefined;
+    const assignedSubjectIds = assignedSubjects
+      ? new Set(assignedSubjects.map((assignment) => assignment.subjectId))
+      : undefined;
+    const configuredSubjectScores = await this.subjectScoreRepo
+      .createQueryBuilder('configuredScore')
+      .leftJoinAndSelect('configuredScore.subject', 'configuredSubject')
+      .where('configuredScore.resultSheetId = :resultSheetId', {
+        resultSheetId: sheet.id,
+      })
+      .distinctOn(['configuredScore.subjectId'])
+      .orderBy('configuredScore.subjectId', 'ASC')
+      .getMany();
+    const subjectConfigs: ClassBroadsheetSubject[] = configuredSubjectScores
+      .filter((subjectScore) => !assignedSubjectIds || assignedSubjectIds.has(subjectScore.subjectId))
+      .filter((subjectScore) => subjectScore.subject)
+      .map((subjectScore) => ({
+        subjectId: subjectScore.subjectId,
+        subjectName: subjectScore.subject.name,
+        scoreComponents: subjectScore.scoreComponents?.length
+          ? subjectScore.scoreComponents
+          : sheet.scoreComponents || [],
+      }));
+    const overallMaximum = subjectConfigs.reduce(
+      (sum, subject) => sum + subject.scoreComponents.reduce(
+        (componentSum, component) => componentSum + Number(component.maxScore || 0),
+        0,
+      ),
       0,
     );
-    const overallMaximum = subjectMaximum * subjectList.length;
     const items: ClassBroadsheetStudent[] = resultRows.map((result) => {
-      const subjects = subjectList.map((configuredSubject) => {
+      const subjects = subjectConfigs.map((configuredSubject) => {
         const score = result.subjectScores?.find(
-          (subjectScore) => subjectScore.subjectId === configuredSubject.id,
+          (subjectScore) => subjectScore.subjectId === configuredSubject.subjectId,
         );
         return {
-          subjectId: configuredSubject.id,
-          subjectName: configuredSubject.name,
+          subjectId: configuredSubject.subjectId,
+          subjectName: configuredSubject.subjectName,
           scores: score?.scores || [],
           totalScore: score?.totalScore ?? undefined,
           grade: score?.grade || undefined,
         };
       });
+      const enteredSubjectTotals = subjects
+        .map((subject) => subject.totalScore)
+        .filter((score): score is number => score !== undefined && score !== null);
+      const totalScore = enteredSubjectTotals.length
+        ? enteredSubjectTotals.reduce((sum, score) => sum + score, 0)
+        : undefined;
       return {
         studentId: result.studentId,
         studentName: result.student
@@ -2133,9 +2351,12 @@ export class ResultsService {
           : '',
         admissionNumber: result.student?.admissionNumber,
         subjects,
-        totalScore: result.totalScore ?? undefined,
+        totalScore,
         maxScore: overallMaximum || undefined,
-        grade: result.grade || undefined,
+        grade:
+          totalScore !== undefined && overallMaximum > 0
+            ? calculateGrade(totalScore, overallMaximum, sheet.gradingSystem)
+            : undefined,
       };
     });
     return {
@@ -2143,9 +2364,7 @@ export class ResultsService {
       total,
       page: safePage,
       limit: safeLimit,
-      subjectIds: subjectList.map((subject) => subject.id),
-      subjectNames: subjectList.map((subject) => subject.name),
-      scoreComponents: sheet.scoreComponents || [],
+      subjects: subjectConfigs,
     };
   };
 }

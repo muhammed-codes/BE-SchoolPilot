@@ -1,11 +1,10 @@
 import { ObjectType, InputType, Field, Float } from '@nestjs/graphql';
-import { IsEnum, IsNumber, Min } from 'class-validator';
-import { ScoreComponent } from '../../common/enums';
+import { IsNotEmpty, IsNumber, IsString, MaxLength, Min } from 'class-validator';
 
 @ObjectType()
 export class ScoreComponentConfig {
-  @Field(() => ScoreComponent)
-  component: ScoreComponent;
+  @Field()
+  component: string;
 
   @Field(() => Float)
   maxScore: number;
@@ -13,9 +12,11 @@ export class ScoreComponentConfig {
 
 @InputType()
 export class ScoreComponentConfigInput {
-  @Field(() => ScoreComponent)
-  @IsEnum(ScoreComponent)
-  component: ScoreComponent;
+  @Field()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(64)
+  component: string;
 
   @Field(() => Float)
   @IsNumber()

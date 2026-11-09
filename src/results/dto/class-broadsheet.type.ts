@@ -23,12 +23,17 @@ export class ClassBroadsheetStudent {
 }
 
 @ObjectType()
+export class ClassBroadsheetSubject {
+  @Field() subjectId!: string;
+  @Field() subjectName!: string;
+  @Field(() => [ScoreComponentConfig]) scoreComponents!: ScoreComponentConfig[];
+}
+
+@ObjectType()
 export class ClassBroadsheetPage {
   @Field(() => [ClassBroadsheetStudent]) items!: ClassBroadsheetStudent[];
   @Field(() => Int) total!: number;
   @Field(() => Int) page!: number;
   @Field(() => Int) limit!: number;
-  @Field(() => [String]) subjectIds!: string[];
-  @Field(() => [String]) subjectNames!: string[];
-  @Field(() => [ScoreComponentConfig]) scoreComponents!: ScoreComponentConfig[];
+  @Field(() => [ClassBroadsheetSubject]) subjects!: ClassBroadsheetSubject[];
 }

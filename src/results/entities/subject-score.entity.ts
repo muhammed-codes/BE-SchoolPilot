@@ -5,6 +5,7 @@ import { StudentResult } from './student-result.entity';
 import { ComponentScore } from '../dto/component-score.type';
 import { Subject } from '../../subjects/entities/subject.entity';
 import { User } from '../../users/entities/user.entity';
+import { ScoreComponentConfig } from '../dto/score-component-config.type';
 
 @ObjectType()
 @Entity('subject_scores')
@@ -29,6 +30,10 @@ export class SubjectScore extends BaseEntity {
   @Field(() => [ComponentScore], { nullable: true })
   @Column({ type: 'jsonb', nullable: true })
   scores!: ComponentScore[];
+
+  @Field(() => [ScoreComponentConfig], { nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
+  scoreComponents!: ScoreComponentConfig[] | null;
 
   @Field(() => Float, { nullable: true })
   @Column({ type: 'float', nullable: true })

@@ -236,6 +236,38 @@ type ClassEntity {
   updatedAt: DateTime!
 }
 
+type ClassBroadsheetPage {
+  items: [ClassBroadsheetStudent!]!
+  limit: Int!
+  page: Int!
+  subjects: [ClassBroadsheetSubject!]!
+  total: Int!
+}
+
+type ClassBroadsheetSubject {
+  scoreComponents: [ScoreComponentConfig!]!
+  subjectId: String!
+  subjectName: String!
+}
+
+type ClassBroadsheetStudent {
+  admissionNumber: String
+  grade: String
+  maxScore: Float
+  studentId: String!
+  studentName: String!
+  subjects: [ClassBroadsheetSubjectScore!]!
+  totalScore: Float
+}
+
+type ClassBroadsheetSubjectScore {
+  grade: String
+  scores: [ComponentScore!]
+  subjectId: String!
+  subjectName: String!
+  totalScore: Float
+}
+
 type ClassFeeLedger {
   classId: String!
   className: String!
@@ -303,12 +335,12 @@ input CloneClassTimetableInput {
 }
 
 type ComponentScore {
-  component: ScoreComponent!
+  component: String!
   score: Float!
 }
 
 input ComponentScoreInput {
-  component: ScoreComponent!
+  component: String!
   score: Float!
 }
 
@@ -490,7 +522,13 @@ input CreateResultSheetInput {
   classId: String!
   gradingSystem: GradingSystem!
   scoreComponents: [ScoreComponentConfigInput!]!
+  subjectScoreComponents: [SubjectScoreComponentConfigInput!]
   termId: String!
+}
+
+input SubjectScoreComponentConfigInput {
+  scoreComponents: [ScoreComponentConfigInput!]!
+  subjectId: String!
 }
 
 input CreateRoomInput {
@@ -1409,6 +1447,7 @@ type Mutation {
   generateBulkReportCards(resultSheetId: String!): String!
   generateInvoices(input: GenerateInvoicesInput!): GenerateInvoicesResult!
   generateReportCard(studentResultId: String!): String!
+  generateReportCardPdf(studentResultId: String!): String!
   generateSchoolDaySchedule(input: GenerateSchoolDayScheduleInput!): SchoolDayScheduleGenerationResult!
 
   """Generate print-ready PDF for a single staff ID card"""
@@ -1872,6 +1911,7 @@ type Query {
   class(id: String!): ClassEntity!
   classAttendance(classId: String!, date: String!): [StudentAttendance!]!
   classAttendanceOverview(date: String!): ClassAttendanceOverview!
+  classBroadsheet(classId: String!, limit: Int! = 25, page: Int! = 1, search: String, termId: String!): ClassBroadsheetPage!
   classById(id: String!): ClassEntity!
   classFeeLedger(classId: String!, search: String, sessionId: String, sortBy: String, status: InvoiceStatus, termId: String): ClassFeeLedger!
   classInvoices(classId: String!, sessionId: String, termId: String): [StudentInvoice!]!
@@ -2000,6 +2040,8 @@ type Query {
   studentAttendanceSummary(studentId: String!, termId: String!): AttendanceSummary!
   studentParents(studentId: String!): [StudentParent!]!
   studentResult(studentId: String!, termId: String!): StudentResult
+  studentResultBySheet(resultSheetId: String!, studentId: String!): StudentResult
+  studentAcademicHistory(studentId: String!): [StudentResult!]!
   studentStatistics(archived: Boolean! = false, classId: String, query: String! = ""): StudentStatistics!
   studentsByClass(classId: String!): [Student!]!
   studentsPage(archived: Boolean! = false, classId: String, gender: Gender, limit: Int! = 50, page: Int! = 1, query: String! = "", skip: Int, status: StudentStatus, take: Int): PaginatedStudent!
@@ -2401,23 +2443,13 @@ type SchoolUsageStats {
   totalUsers: Int!
 }
 
-enum ScoreComponent {
-  ASSIGNMENT
-  CA
-  CA1
-  CA2
-  EXAM
-  MID_TERM
-  PROJECT
-}
-
 type ScoreComponentConfig {
-  component: ScoreComponent!
+  component: String!
   maxScore: Float!
 }
 
 input ScoreComponentConfigInput {
-  component: ScoreComponent!
+  component: String!
   maxScore: Float!
 }
 
@@ -2758,6 +2790,7 @@ type SubjectScore {
   isSubmitted: Boolean!
   resultSheetId: String!
   scores: [ComponentScore!]
+  scoreComponents: [ScoreComponentConfig!]
   studentResult: StudentResult!
   studentResultId: String!
   subject: Subject
