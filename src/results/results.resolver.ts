@@ -12,6 +12,7 @@ import { ResultStats } from './dto/result-stats.type';
 import { ResultAnalytics } from './dto/result-analytics.type';
 import { PaginatedClassScores } from './dto/paginated-class-scores.type';
 import { TeacherScoringAssignment } from './dto/teacher-scoring-assignment.type';
+import { ClassBroadsheetPage } from './dto/class-broadsheet.type';
 import { JwtAuthGuard, RolesGuard, PermissionGuard } from '../common/guards';
 import { CurrentUser, RequirePermission } from '../common/decorators';
 import { UserRole, ResultStatus } from '../common/enums';
@@ -157,6 +158,29 @@ export class ResultsResolver {
       skip,
       take,
       user.schoolId,
+    );
+  }
+
+  @Query(() => ClassBroadsheetPage)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
+  classBroadsheet(
+    @Args('classId') classId: string,
+    @Args('termId') termId: string,
+    @Args('search', { nullable: true }) search: string,
+    @Args('page', { type: () => Int, defaultValue: 1 }) page: number,
+    @Args('limit', { type: () => Int, defaultValue: 25 }) limit: number,
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+  ) {
+    return this.resultsService.getClassBroadsheet(
+      classId,
+      termId,
+      search,
+      page,
+      limit,
+      user.schoolId,
+      user.sub,
+      user.role,
     );
   }
 

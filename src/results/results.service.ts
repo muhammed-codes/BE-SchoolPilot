@@ -45,6 +45,10 @@ import {
 import { calculateGrade } from './utils/grading.util';
 import { createMetricStat } from '../common/dto/metric-stat.type';
 import { ResultStats } from './dto/result-stats.type';
+import {
+  ClassBroadsheetPage,
+  ClassBroadsheetStudent,
+} from './dto/class-broadsheet.type';
 import { TEACHER_ROLES } from '../common/constants/roles.constant';
 
 @Injectable()
@@ -2040,5 +2044,108 @@ export class ResultsService {
         maxScore: singleSubjectMax,
       };
     }
+  };
+
+  getClassBroadsheet = async (
+    classId: string,
+    termId: string,
+    search: string | undefined,
+    page = 1,
+    limit = 25,
+    schoolId: string,
+    userId?: string,
+    userRole?: UserRole,
+  ): Promise<ClassBroadsheetPage> => {
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.min(100, Math.max(1, limit));
+    if (userId && userRole && TEACHER_ROLES.includes(userRole)) {
+      const assignedClassIds = await this.getTeacherResultClassIds(
+        userId,
+        userRole,
+        schoolId,
+      );
+      if (!assignedClassIds?.includes(classId)) {
+        throw new ForbiddenException('You do not have access to this class result');
+      }
+    }
+    const sheet = await this.resultSheetRepo.findOne({
+      where: { classId, termId, schoolId, isArchived: false },
+    });
+    if (!sheet) {
+      return {
+        items: [], total: 0, page: safePage, limit: safeLimit,
+        subjectIds: [], subjectNames: [], scoreComponents: [],
+      };
+    }
+
+    const rosterQuery = this.studentResultRepo
+      .createQueryBuilder('sr')
+      .innerJoin('sr.student', 'student')
+      .where('sr.resultSheetId = :resultSheetId', { resultSheetId: sheet.id })
+      .andWhere('sr.schoolId = :schoolId', { schoolId });
+    if (search?.trim()) {
+      rosterQuery.andWhere(
+        '(LOWER(student.firstName) LIKE :search OR LOWER(student.middleName) LIKE :search OR LOWER(student.lastName) LIKE :search OR LOWER(student.admissionNumber) LIKE :search)',
+        { search: `%${search.trim().toLowerCase()}%` },
+      );
+    }
+    const total = await rosterQuery.getCount();
+    const resultRows = await rosterQuery
+      .leftJoinAndSelect('sr.student', 'studentDetails')
+      .leftJoinAndSelect('sr.subjectScores', 'subjectScore')
+      .leftJoinAndSelect('subjectScore.subject', 'subject')
+      .orderBy('studentDetails.lastName', 'ASC')
+      .addOrderBy('studentDetails.firstName', 'ASC')
+      .skip((safePage - 1) * safeLimit)
+      .take(safeLimit)
+      .getMany();
+    const classSubjects = await this.classSubjectRepo.find({
+      where: { classId, schoolId },
+      relations: ['subject'],
+      order: { createdAt: 'ASC' },
+    });
+    const subjectList = classSubjects
+      .filter((assignment) => assignment.subject)
+      .map((assignment) => ({ id: assignment.subjectId, name: assignment.subject.name }));
+    const subjectMaximum = (sheet.scoreComponents || []).reduce(
+      (sum, component) => sum + Number(component.maxScore || 0),
+      0,
+    );
+    const overallMaximum = subjectMaximum * subjectList.length;
+    const items: ClassBroadsheetStudent[] = resultRows.map((result) => {
+      const subjects = subjectList.map((configuredSubject) => {
+        const score = result.subjectScores?.find(
+          (subjectScore) => subjectScore.subjectId === configuredSubject.id,
+        );
+        return {
+          subjectId: configuredSubject.id,
+          subjectName: configuredSubject.name,
+          scores: score?.scores || [],
+          totalScore: score?.totalScore ?? undefined,
+          grade: score?.grade || undefined,
+        };
+      });
+      return {
+        studentId: result.studentId,
+        studentName: result.student
+          ? [result.student.firstName, result.student.middleName, result.student.lastName]
+              .filter(Boolean).join(' ')
+          : '',
+        admissionNumber: result.student?.admissionNumber,
+        subjects,
+        totalScore: result.totalScore ?? undefined,
+        maxScore: overallMaximum || undefined,
+        grade: result.grade || undefined,
+      };
+    });
+    return {
+      items,
+      total,
+      page: safePage,
+      limit: safeLimit,
+      subjectIds: subjectList.map((subject) => subject.id),
+      subjectNames: subjectList.map((subject) => subject.name),
+      scoreComponents: sheet.scoreComponents || [],
+    };
   };
 }
