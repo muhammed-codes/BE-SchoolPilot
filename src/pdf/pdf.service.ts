@@ -209,16 +209,30 @@ export class PdfService {
     role: UserRole,
   ): Promise<string> => {
     return this.studentResultRepo
-      .findOne({
-        where: { id: studentResultId, schoolId },
-        relations: [
-          'resultSheet',
-          'resultSheet.classEntity',
-          'resultSheet.classEntity.classTeacher',
-          'subjectScores',
-          'subjectScores.subject',
-        ],
-      })
+      .createQueryBuilder('studentResult')
+      .innerJoinAndSelect('studentResult.resultSheet', 'resultSheet')
+      .leftJoinAndSelect('resultSheet.classEntity', 'historicalClass')
+      .leftJoinAndSelect('historicalClass.classTeacher', 'classTeacher')
+      .leftJoin('studentResult.subjectScores', 'subjectScore')
+      .addSelect([
+        'subjectScore.id',
+        'subjectScore.studentResultId',
+        'subjectScore.subjectId',
+        'subjectScore.resultSheetId',
+        'subjectScore.scores',
+        'subjectScore.totalScore',
+        'subjectScore.grade',
+        'subjectScore.teacherRemark',
+        'subjectScore.isSubmitted',
+        'subjectScore.submittedAt',
+        'subjectScore.enteredByUserId',
+        'subjectScore.createdAt',
+        'subjectScore.updatedAt',
+      ])
+      .leftJoinAndSelect('subjectScore.subject', 'subject')
+      .where('studentResult.id = :studentResultId', { studentResultId })
+      .andWhere('studentResult.schoolId = :schoolId', { schoolId })
+      .getOne()
       .then((studentResult) => {
         if (!studentResult)
           throw new NotFoundException('StudentResult not found');
