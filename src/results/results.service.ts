@@ -1179,6 +1179,112 @@ export class ResultsService {
     });
   };
 
+  getStudentAcademicHistory = async (
+    studentId: string,
+    schoolId: string,
+    userId: string,
+    userRole: UserRole,
+  ) => {
+    const student = await this.studentRepo.findOne({
+      where: { id: studentId, schoolId },
+    });
+    if (!student) throw new NotFoundException('Student not found');
+
+    if (userRole === UserRole.PARENT) {
+      const link = await this.studentParentRepo.findOne({
+        where: { studentId, parentId: userId },
+      });
+      if (!link) {
+        throw new ForbiddenException('You do not have access to this student');
+      }
+    }
+
+    const query = this.studentResultRepo
+      .createQueryBuilder('sr')
+      .innerJoinAndSelect('sr.resultSheet', 'rs')
+      .leftJoinAndSelect('rs.classEntity', 'classEntity')
+      .leftJoinAndSelect('rs.term', 'term')
+      .leftJoinAndSelect('term.session', 'session')
+      .leftJoinAndSelect('sr.subjectScores', 'subjectScore')
+      .leftJoinAndSelect('subjectScore.subject', 'subject')
+      .where('sr.studentId = :studentId', { studentId })
+      .andWhere('sr.schoolId = :schoolId', { schoolId })
+      .andWhere('rs.schoolId = :schoolId', { schoolId });
+
+    if (userRole === UserRole.PARENT) {
+      query.andWhere('rs.status = :publishedStatus', {
+        publishedStatus: ResultStatus.PUBLISHED,
+      });
+    }
+
+    const results = await query
+      .orderBy('session.startDate', 'DESC')
+      .addOrderBy('term.startDate', 'DESC')
+      .addOrderBy('classEntity.name', 'ASC')
+      .getMany();
+
+    for (const result of results) {
+      this.applyComputedMetrics(
+        result.resultSheet.scoreComponents || [],
+        [result],
+        result.resultSheet.gradingSystem,
+      );
+    }
+    return results;
+  };
+
+  getStudentResultBySheet = async (
+    studentId: string,
+    resultSheetId: string,
+    schoolId: string,
+    userId: string,
+    userRole: UserRole,
+  ) => {
+    const student = await this.studentRepo.findOne({
+      where: { id: studentId, schoolId },
+    });
+    if (!student) throw new NotFoundException('Student not found');
+
+    if (userRole === UserRole.PARENT) {
+      const link = await this.studentParentRepo.findOne({
+        where: { studentId, parentId: userId },
+      });
+      if (!link) {
+        throw new ForbiddenException('You do not have access to this student');
+      }
+    }
+
+    const query = this.studentResultRepo
+      .createQueryBuilder('sr')
+      .innerJoinAndSelect('sr.resultSheet', 'rs')
+      .leftJoinAndSelect('rs.classEntity', 'classEntity')
+      .leftJoinAndSelect('rs.term', 'term')
+      .leftJoinAndSelect('term.session', 'session')
+      .leftJoinAndSelect('sr.student', 'student')
+      .leftJoinAndSelect('sr.subjectScores', 'subjectScore')
+      .leftJoinAndSelect('subjectScore.subject', 'subject')
+      .where('sr.studentId = :studentId', { studentId })
+      .andWhere('sr.resultSheetId = :resultSheetId', { resultSheetId })
+      .andWhere('sr.schoolId = :schoolId', { schoolId })
+      .andWhere('rs.schoolId = :schoolId', { schoolId });
+
+    if (userRole === UserRole.PARENT) {
+      query.andWhere('rs.status = :publishedStatus', {
+        publishedStatus: ResultStatus.PUBLISHED,
+      });
+    }
+
+    const result = await query.getOne();
+    if (result) {
+      this.applyComputedMetrics(
+        result.resultSheet.scoreComponents || [],
+        [result],
+        result.resultSheet.gradingSystem,
+      );
+    }
+    return result;
+  };
+
   getMyChildResults = (
     studentId: string,
     parentUserId: string,

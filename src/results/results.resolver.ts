@@ -180,6 +180,38 @@ export class ResultsResolver {
   @Query(() => [StudentResult])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
+  studentAcademicHistory(
+    @Args('studentId') studentId: string,
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+  ) {
+    return this.resultsService.getStudentAcademicHistory(
+      studentId,
+      user.schoolId,
+      user.sub,
+      user.role,
+    );
+  }
+
+  @Query(() => StudentResult, { nullable: true })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
+  studentResultBySheet(
+    @Args('studentId') studentId: string,
+    @Args('resultSheetId') resultSheetId: string,
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+  ) {
+    return this.resultsService.getStudentResultBySheet(
+      studentId,
+      resultSheetId,
+      user.schoolId,
+      user.sub,
+      user.role,
+    );
+  }
+
+  @Query(() => [StudentResult])
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, PermissionAction.READ)
   myChildResults(
     @Args('studentId') studentId: string,
     @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
