@@ -1,7 +1,7 @@
 import { ResultsService } from './results.service';
 
 describe('ResultsService class broadsheet', () => {
-  it('returns configured component names, order, and marks in a paginated student page', async () => {
+  it('uses the result sheet shared components for every subject in the page', async () => {
     const rosterQuery = {
       innerJoin: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
@@ -15,15 +15,34 @@ describe('ResultsService class broadsheet', () => {
       getMany: jest.fn().mockResolvedValue([
         {
           studentId: 'student-1',
-          student: { firstName: 'Amina', middleName: 'Zainab', lastName: 'Bello', admissionNumber: 'SR-1' },
+          student: {
+            firstName: 'Amina',
+            middleName: 'Zainab',
+            lastName: 'Bello',
+            admissionNumber: 'SR-1',
+          },
           totalScore: 42,
           grade: 'B',
-          subjectScores: [{
-            subjectId: 'subject-1',
-            scores: [{ component: 'Project Work', score: 12 }, { component: 'Final Paper', score: 30 }],
-            totalScore: 42,
-            grade: 'B',
-          }],
+          subjectScores: [
+            {
+              subjectId: 'subject-1',
+              scores: [
+                { component: 'Project Work', score: 12 },
+                { component: 'Final Paper', score: 30 },
+              ],
+              totalScore: 42,
+              grade: 'B',
+            },
+            {
+              subjectId: 'subject-2',
+              scores: [
+                { component: 'Project Work', score: 18 },
+                { component: 'Final Paper', score: 65 },
+              ],
+              totalScore: 83,
+              grade: 'A',
+            },
+          ],
         },
       ]),
     };
@@ -32,27 +51,40 @@ describe('ResultsService class broadsheet', () => {
       where: jest.fn().mockReturnThis(),
       distinctOn: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
-      getMany: jest.fn().mockResolvedValue([{
-        subjectId: 'subject-1',
-        subject: { name: 'Science' },
+      getMany: jest.fn().mockResolvedValue([
+        {
+          subjectId: 'subject-1',
+          subject: { name: 'Science' },
+        },
+        {
+          subjectId: 'subject-2',
+          subject: { name: 'Mathematics' },
+        },
+      ]),
+    };
+    const resultSheetRepo = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 'sheet-1',
         scoreComponents: [
           { component: 'Project Work', maxScore: 20 },
           { component: 'Final Paper', maxScore: 80 },
         ],
-      }]),
+      }),
     };
-    const resultSheetRepo = { findOne: jest.fn().mockResolvedValue({
-      id: 'sheet-1',
-      scoreComponents: [
-        { component: 'Project Work', maxScore: 20 },
-        { component: 'Final Paper', maxScore: 80 },
-      ],
-    }) };
-    const studentResultRepo = { createQueryBuilder: jest.fn().mockReturnValue(rosterQuery) };
-    const subjectScoreRepo = { createQueryBuilder: jest.fn().mockReturnValue(subjectConfigQuery) };
-    const classSubjectRepo = { find: jest.fn().mockResolvedValue([{
-      subjectId: 'subject-1', subject: { name: 'Science' },
-    }]) };
+    const studentResultRepo = {
+      createQueryBuilder: jest.fn().mockReturnValue(rosterQuery),
+    };
+    const subjectScoreRepo = {
+      createQueryBuilder: jest.fn().mockReturnValue(subjectConfigQuery),
+    };
+    const classSubjectRepo = {
+      find: jest.fn().mockResolvedValue([
+        {
+          subjectId: 'subject-1',
+          subject: { name: 'Science' },
+        },
+      ]),
+    };
     const service = new ResultsService(
       resultSheetRepo as never,
       studentResultRepo as never,
@@ -68,7 +100,12 @@ describe('ResultsService class broadsheet', () => {
     );
 
     const result = await service.getClassBroadsheet(
-      'class-1', 'term-1', undefined, 2, 15, 'school-1',
+      'class-1',
+      'term-1',
+      undefined,
+      2,
+      15,
+      'school-1',
     );
 
     expect(rosterQuery.skip).toHaveBeenCalledWith(15);
@@ -77,23 +114,47 @@ describe('ResultsService class broadsheet', () => {
       total: 31,
       page: 2,
       limit: 15,
-      subjects: [{
-        subjectId: 'subject-1',
-        subjectName: 'Science',
-        scoreComponents: [
-          { component: 'Project Work', maxScore: 20 },
-          { component: 'Final Paper', maxScore: 80 },
-        ],
-      }],
-      items: [{
-        studentName: 'Amina Zainab Bello',
-        admissionNumber: 'SR-1',
-        totalScore: 42,
-        subjects: [{
+      subjects: [
+        {
+          subjectId: 'subject-1',
           subjectName: 'Science',
-          scores: [{ component: 'Project Work', score: 12 }, { component: 'Final Paper', score: 30 }],
-        }],
-      }],
+          scoreComponents: [
+            { component: 'Project Work', maxScore: 20 },
+            { component: 'Final Paper', maxScore: 80 },
+          ],
+        },
+        {
+          subjectId: 'subject-2',
+          subjectName: 'Mathematics',
+          scoreComponents: [
+            { component: 'Project Work', maxScore: 20 },
+            { component: 'Final Paper', maxScore: 80 },
+          ],
+        },
+      ],
+      items: [
+        {
+          studentName: 'Amina Zainab Bello',
+          admissionNumber: 'SR-1',
+          totalScore: 125,
+          subjects: [
+            {
+              subjectName: 'Science',
+              scores: [
+                { component: 'Project Work', score: 12 },
+                { component: 'Final Paper', score: 30 },
+              ],
+            },
+            {
+              subjectName: 'Mathematics',
+              scores: [
+                { component: 'Project Work', score: 18 },
+                { component: 'Final Paper', score: 65 },
+              ],
+            },
+          ],
+        },
+      ],
     });
   });
 });

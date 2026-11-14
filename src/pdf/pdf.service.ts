@@ -299,148 +299,148 @@ export class PdfService {
           subjects,
           totalStudentsInClass,
         ]) => {
-        if (!student) throw new NotFoundException('Student not found');
-        if (!school) throw new NotFoundException('School not found');
-        if (!term || !term.session)
-          throw new NotFoundException('Term or Session not found');
+          if (!student) throw new NotFoundException('Student not found');
+          if (!school) throw new NotFoundException('School not found');
+          if (!term || !term.session)
+            throw new NotFoundException('Term or Session not found');
 
-        const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
-        const fallbackComponents: ScoreComponentData[] = (
-          studentResult.resultSheet?.scoreComponents || []
-        ).map((component) => ({
-          component: component.component,
-          maxScore: component.maxScore,
-        }));
-        const gradingSystem = studentResult.resultSheet?.gradingSystem;
+          const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
+          const fallbackComponents: ScoreComponentData[] = (
+            studentResult.resultSheet?.scoreComponents || []
+          ).map((component) => ({
+            component: component.component,
+            maxScore: component.maxScore,
+          }));
+          const gradingSystem = studentResult.resultSheet?.gradingSystem;
 
-        const subjectScoresData: SubjectScoreData[] = (
-          studentResult.subjectScores || []
-        )
-          .filter((score) => score.isSubmitted)
-          .map((score) => {
-            const configuredComponents: ScoreComponentData[] = (
-              score.scoreComponents?.length
-                ? score.scoreComponents
-                : fallbackComponents
-            ).map((component) => ({
-              component: component.component,
-              maxScore: component.maxScore,
-            }));
-            const componentScores = configuredComponents.map((componentDef) => {
-              const matchingScore = (score.scores || []).find(
-                (componentScore) =>
-                  String(componentScore.component) ===
-                  String(componentDef.component),
+          const subjectScoresData: SubjectScoreData[] = (
+            studentResult.subjectScores || []
+          )
+            .filter((score) => score.isSubmitted)
+            .map((score) => {
+              const configuredComponents: ScoreComponentData[] = fallbackComponents.map((component) => ({
+                component: component.component,
+                maxScore: component.maxScore,
+              }));
+              const componentScores = configuredComponents.map(
+                (componentDef) => {
+                  const matchingScore = (score.scores || []).find(
+                    (componentScore) =>
+                      String(componentScore.component) ===
+                      String(componentDef.component),
+                  );
+                  if (!matchingScore) {
+                    return { ...componentDef, score: null };
+                  }
+                  return {
+                    component: componentDef.component,
+                    maxScore: componentDef.maxScore,
+                    score: this.toSafeNumber(matchingScore.score),
+                  };
+                },
               );
-              if (!matchingScore) {
-                return { ...componentDef, score: null };
-              }
+              const subjectMaximum = configuredComponents.reduce(
+                (sum, component) => sum + component.maxScore,
+                0,
+              );
+
+              const computedGrade =
+                score.totalScore != null && subjectMaximum > 0 && gradingSystem
+                  ? calculateGrade(
+                      score.totalScore,
+                      subjectMaximum,
+                      gradingSystem,
+                    )
+                  : score.grade;
+
               return {
-                component: componentDef.component,
-                maxScore: componentDef.maxScore,
-                score: this.toSafeNumber(matchingScore.score),
+                name:
+                  score.subject?.name ||
+                  subjectMap.get(score.subjectId) ||
+                  'Unknown Subject',
+                componentScores,
+                scoreComponents: configuredComponents,
+                totalScore: score.totalScore,
+                grade: computedGrade,
               };
             });
-            const subjectMaximum = configuredComponents.reduce(
-              (sum, component) => sum + component.maxScore,
-              0,
-            );
 
-            const computedGrade =
-              score.totalScore != null && subjectMaximum > 0 && gradingSystem
-                ? calculateGrade(
-                    score.totalScore,
-                    subjectMaximum,
-                    gradingSystem,
-                  )
-                : score.grade;
+          const overallMaximum = (studentResult.subjectScores || []).reduce(
+            (sum, score) =>
+              sum +
+              fallbackComponents.reduce(
+                (subjectSum, component) => subjectSum + component.maxScore,
+                0,
+              ),
+            0,
+          );
+          const percentage =
+            studentResult.totalScore != null && overallMaximum > 0
+              ? Number(
+                  ((studentResult.totalScore / overallMaximum) * 100).toFixed(
+                    2,
+                  ),
+                )
+              : null;
+          const historicalClass = studentResult.resultSheet?.classEntity;
+          const prefix = this.formatNamePrefix(
+            historicalClass?.classTeacher?.namePrefix,
+          );
+          const rawClassTeacherName =
+            historicalClass?.classTeacher?.fullName || null;
+          const classTeacherName =
+            rawClassTeacherName && prefix
+              ? `${prefix} ${rawClassTeacherName}`
+              : rawClassTeacherName;
 
-            return {
-              name:
-                score.subject?.name ||
-                subjectMap.get(score.subjectId) ||
-                'Unknown Subject',
-              componentScores,
-              scoreComponents: configuredComponents,
-              totalScore: score.totalScore,
-              grade: computedGrade,
-            };
-          });
+          const reportCardData: ReportCardData = {
+            school: {
+              name: school.name,
+              logoUrl: school.logoUrl,
+              stampUrl: school.stampUrl,
+              address: school.address,
+              defaultReportTemplate: school.defaultReportTemplate,
+            },
+            student: {
+              fullName: student.fullName,
+              admissionNumber: student.admissionNumber,
+              passportPhotoUrl: student.passportPhotoUrl || null,
+              currentClass: historicalClass?.name || 'Unknown Class',
+              totalStudentsInClass,
+            },
+            term: {
+              name: term.name,
+              sessionName: term.session.name,
+              totalSchoolDays: term.totalSchoolDays,
+            },
+            result: {
+              totalScore: studentResult.totalScore,
+              percentage,
+              position: studentResult.position,
+              classTeacherRemark: studentResult.classTeacherRemark,
+              principalRemark: studentResult.principalRemark,
+            },
+            scoreComponents: fallbackComponents,
+            subjectScores: subjectScoresData,
+            attendance: {
+              daysPresent: attendance.daysPresent,
+              daysAbsent: attendance.daysAbsent,
+              daysLate: attendance.daysLate,
+            },
+            staff: {
+              classTeacherName,
+              principalName: 'Principal', // Assuming standard principal signing for now
+            },
+          };
 
-        const overallMaximum = (studentResult.subjectScores || []).reduce(
-          (sum, score) =>
-            sum +
-            (score.scoreComponents?.length
-              ? score.scoreComponents
-              : fallbackComponents
-            ).reduce(
-              (subjectSum, component) => subjectSum + component.maxScore,
-              0,
-            ),
-          0,
-        );
-        const percentage =
-          studentResult.totalScore != null && overallMaximum > 0
-            ? Number(
-                ((studentResult.totalScore / overallMaximum) * 100).toFixed(2),
-              )
-            : null;
-        const historicalClass = studentResult.resultSheet?.classEntity;
-        const prefix = this.formatNamePrefix(
-          historicalClass?.classTeacher?.namePrefix,
-        );
-        const rawClassTeacherName =
-          historicalClass?.classTeacher?.fullName || null;
-        const classTeacherName =
-          rawClassTeacherName && prefix
-            ? `${prefix} ${rawClassTeacherName}`
-            : rawClassTeacherName;
+          const templateFn = getReportCardTemplate(
+            school.defaultReportTemplate,
+          );
+          const htmlContent = templateFn(reportCardData);
 
-        const reportCardData: ReportCardData = {
-          school: {
-            name: school.name,
-            logoUrl: school.logoUrl,
-            stampUrl: school.stampUrl,
-            address: school.address,
-            defaultReportTemplate: school.defaultReportTemplate,
-          },
-          student: {
-            fullName: student.fullName,
-            admissionNumber: student.admissionNumber,
-            passportPhotoUrl: student.passportPhotoUrl || null,
-            currentClass: historicalClass?.name || 'Unknown Class',
-            totalStudentsInClass,
-          },
-          term: {
-            name: term.name,
-            sessionName: term.session.name,
-            totalSchoolDays: term.totalSchoolDays,
-          },
-          result: {
-            totalScore: studentResult.totalScore,
-            percentage,
-            position: studentResult.position,
-            classTeacherRemark: studentResult.classTeacherRemark,
-            principalRemark: studentResult.principalRemark,
-          },
-          scoreComponents: fallbackComponents,
-          subjectScores: subjectScoresData,
-          attendance: {
-            daysPresent: attendance.daysPresent,
-            daysAbsent: attendance.daysAbsent,
-            daysLate: attendance.daysLate,
-          },
-          staff: {
-            classTeacherName,
-            principalName: 'Principal', // Assuming standard principal signing for now
-          },
-        };
-
-        const templateFn = getReportCardTemplate(school.defaultReportTemplate);
-        const htmlContent = templateFn(reportCardData);
-
-        return htmlContent;
-      });
+          return htmlContent;
+        },
+      );
   };
 
   generateReportCardPdf = (

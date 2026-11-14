@@ -522,7 +522,6 @@ input CreateResultSheetInput {
   classId: String!
   gradingSystem: GradingSystem!
   scoreComponents: [ScoreComponentConfigInput!]!
-  subjectScoreComponents: [SubjectScoreComponentConfigInput!]
   termId: String!
 }
 
@@ -2784,7 +2783,6 @@ type SubjectScore {
   id: ID!
   isSubmitted: Boolean!
   resultSheetId: String!
-  scoreComponents: [ScoreComponentConfig!]
   scores: [ComponentScore!]
   studentResult: StudentResult!
   studentResultId: String!
@@ -2794,11 +2792,6 @@ type SubjectScore {
   teacherRemark: String
   totalScore: Float
   updatedAt: DateTime!
-}
-
-input SubjectScoreComponentConfigInput {
-  scoreComponents: [ScoreComponentConfigInput!]!
-  subjectId: String!
 }
 
 input SubmitPaymentBatchInput {
