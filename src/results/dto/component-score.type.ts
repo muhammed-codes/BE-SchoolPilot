@@ -1,5 +1,11 @@
 import { ObjectType, InputType, Field, Float } from '@nestjs/graphql';
-import { IsNotEmpty, IsNumber, IsString, MaxLength, Min } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 @ObjectType()
 export class ComponentScore {

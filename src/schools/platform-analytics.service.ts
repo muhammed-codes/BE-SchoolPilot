@@ -34,7 +34,9 @@ export class PlatformAnalyticsService {
         this.usersRepository.count({
           where: { schoolId, role: In(staffRoles) },
         }),
-        this.usersRepository.count({ where: { schoolId, role: UserRole.PARENT } }),
+        this.usersRepository.count({
+          where: { schoolId, role: UserRole.PARENT },
+        }),
         this.usersRepository.count({ where: { schoolId } }),
         this.usersRepository.count({ where: { schoolId, isActive: true } }),
       ]);
@@ -95,10 +97,9 @@ export class PlatformAnalyticsService {
       this.schoolsRepository
         .createQueryBuilder('school')
         .where('school.isActive = :isActive', { isActive: false })
-        .andWhere(
-          'school.verificationStatus NOT IN (:...statuses)',
-          { statuses: ['PENDING', 'SUSPENDED', 'REJECTED'] },
-        )
+        .andWhere('school.verificationStatus NOT IN (:...statuses)', {
+          statuses: ['PENDING', 'SUSPENDED', 'REJECTED'],
+        })
         .getCount(),
       this.schoolsRepository.count({
         where: { createdAt: MoreThanOrEqual(monthStart) },

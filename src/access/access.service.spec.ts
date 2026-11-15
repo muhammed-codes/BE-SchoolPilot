@@ -173,7 +173,11 @@ describe('AccessService effective permissions', () => {
         UserRole.SCHOOL_ADMIN,
         'school-a',
       ),
-    ).resolves.toMatchObject({ id: 'school-row', schoolId: 'school-a', canRead: false });
+    ).resolves.toMatchObject({
+      id: 'school-row',
+      schoolId: 'school-a',
+      canRead: false,
+    });
     expect(rolePermissions[0].canRead).toBe(true);
   });
 

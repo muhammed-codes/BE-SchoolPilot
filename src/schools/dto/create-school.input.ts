@@ -41,4 +41,8 @@ export class CreateSchoolInput {
   @Field({ nullable: true })
   @IsOptional()
   schoolStartTime?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  resultColor?: string;
 }

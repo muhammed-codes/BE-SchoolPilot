@@ -375,7 +375,9 @@ const renderSubjectTable = (
       <tr>
         <th class="subj-head">Subject</th>
         ${scoreComponents
-          .map((c) => `<th>${formatComponentLabel(c.component, c.maxScore)}</th>`)
+          .map(
+            (c) => `<th>${formatComponentLabel(c.component, c.maxScore)}</th>`,
+          )
           .join('')}
         <th>Total</th>
         <th>Grade</th>
@@ -388,10 +390,7 @@ const renderSubjectTable = (
         <tr>
           <td class="subj-name">${esc(score.name)}</td>
           ${score.componentScores
-            .map(
-              (cs) =>
-                `<td>${cs.score != null ? cs.score : '-'}</td>`,
-            )
+            .map((cs) => `<td>${cs.score != null ? cs.score : '-'}</td>`)
             .join('')}
           <td class="subj-total">${score.totalScore != null ? score.totalScore : '-'}</td>
           <td style="font-weight:800;color:${gradeColor(score.grade)};">${esc(score.grade ?? '-')}</td>

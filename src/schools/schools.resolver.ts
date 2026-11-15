@@ -1,9 +1,4 @@
-import {
-  Resolver,
-  Query,
-  Mutation,
-  Args,
-} from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import {
   UseGuards,
   ForbiddenException,
@@ -133,7 +128,9 @@ export class SchoolsResolver {
   schoolAdminAccounts(@Args('schoolId') schoolId: string) {
     return this.schoolsService
       .findById(schoolId)
-      .then(() => this.platformAnalyticsService.getSchoolAdminAccounts(schoolId));
+      .then(() =>
+        this.platformAnalyticsService.getSchoolAdminAccounts(schoolId),
+      );
   }
 
   @Query(() => School)

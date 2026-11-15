@@ -50,14 +50,19 @@ export class UserAccountProvisioningService {
   };
 
   mapLeadershipRoleDatabaseError = (error: unknown, role?: UserRole): never => {
-    const errorCode = typeof error === 'object' && error && 'code' in error
-      ? error.code
-      : undefined;
-    const errorConstraint = typeof error === 'object' && error && 'constraint' in error
-      ? error.constraint
-      : undefined;
+    const errorCode =
+      typeof error === 'object' && error && 'code' in error
+        ? error.code
+        : undefined;
+    const errorConstraint =
+      typeof error === 'object' && error && 'constraint' in error
+        ? error.constraint
+        : undefined;
 
-    if (errorCode === '23505' && errorConstraint === this.leadershipRoleConstraint) {
+    if (
+      errorCode === '23505' &&
+      errorConstraint === this.leadershipRoleConstraint
+    ) {
       if (role) {
         throw new ForbiddenException(
           `This school already has an active ${this.formatRoleLabel(role)}.`,
@@ -72,11 +77,14 @@ export class UserAccountProvisioningService {
 
   createUser = async (input: CreateUserInput, schoolId: string) => {
     await validateUserPhone(input.phone);
-    const isStaffRole = input.role !== UserRole.PARENT && input.role !== UserRole.SUPER_ADMIN;
+    const isStaffRole =
+      input.role !== UserRole.PARENT && input.role !== UserRole.SUPER_ADMIN;
     const staffId = isStaffRole
       ? await this.schoolsService
           .findById(schoolId)
-          .then((school) => this.idCardsService.generateStaffId(schoolId, school.name))
+          .then((school) =>
+            this.idCardsService.generateStaffId(schoolId, school.name),
+          )
       : undefined;
 
     await this.ensureUniqueLeadershipRolePerSchool(schoolId, input.role);
@@ -93,18 +101,23 @@ export class UserAccountProvisioningService {
       staffId,
     });
 
-    return this.usersRepository.save(user).then((createdUser) => {
-      if (createdUser.expoPushToken) {
-        void this.notificationsService.sendPushNotification(
-          createdUser.expoPushToken,
-          'Welcome to SchoolRight',
-          `Your account has been created. Login with your email: ${createdUser.email}`,
-        );
-      }
-      return createdUser;
-    }).catch((error) => this.mapLeadershipRoleDatabaseError(error, input.role));
+    return this.usersRepository
+      .save(user)
+      .then((createdUser) => {
+        if (createdUser.expoPushToken) {
+          void this.notificationsService.sendPushNotification(
+            createdUser.expoPushToken,
+            'Welcome to SchoolRight',
+            `Your account has been created. Login with your email: ${createdUser.email}`,
+          );
+        }
+        return createdUser;
+      })
+      .catch((error) => this.mapLeadershipRoleDatabaseError(error, input.role));
   };
 
   private formatRoleLabel = (role: UserRole) =>
-    role.replace(/_/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase());
+    role
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (character) => character.toUpperCase());
 }

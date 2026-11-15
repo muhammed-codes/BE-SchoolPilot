@@ -537,6 +537,7 @@ input CreateSchoolInput {
   email: String
   name: String!
   phone: String
+  resultColor: String
   schoolCode: String
   schoolStartTime: String
   schoolType: String = "basic"
@@ -2341,6 +2342,7 @@ type School {
   name: String!
   phone: String
   platformStatus: String!
+  resultColor: String
   schoolCapacity: String
   schoolCode: String
   schoolStartTime: String
@@ -3074,6 +3076,7 @@ input UpdateSchoolInput {
   email: String
   name: String
   phone: String
+  resultColor: String
   schoolCode: String
   schoolStartTime: String
   schoolType: String = "basic"

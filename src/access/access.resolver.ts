@@ -35,8 +35,7 @@ export class AccessResolver {
   ) {
     const schoolId =
       user.role === UserRole.SUPER_ADMIN ? requestedSchoolId : user.schoolId;
-    if (!schoolId)
-      throw new ForbiddenException('A school scope is required');
+    if (!schoolId) throw new ForbiddenException('A school scope is required');
     return schoolId;
   }
 

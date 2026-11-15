@@ -181,16 +181,16 @@ export class UsersService {
       }
 
       // Prevent assigning duplicate leadership roles into the same school.
-      return this.accountProvisioningService.ensureUniqueLeadershipRolePerSchool(
-        schoolId,
-        user.role,
-        user.id,
-      )
+      return this.accountProvisioningService
+        .ensureUniqueLeadershipRolePerSchool(schoolId, user.role, user.id)
         .then(() =>
           this.usersRepository
             .update(userId, { schoolId })
             .catch((err) =>
-              this.accountProvisioningService.mapLeadershipRoleDatabaseError(err, user.role),
+              this.accountProvisioningService.mapLeadershipRoleDatabaseError(
+                err,
+                user.role,
+              ),
             ),
         )
         .then(() => this.findById(userId));

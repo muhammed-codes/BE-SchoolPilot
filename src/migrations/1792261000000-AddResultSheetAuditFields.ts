@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddResultSheetAuditFields1792261000000
-  implements MigrationInterface
-{
+export class AddResultSheetAuditFields1792261000000 implements MigrationInterface {
   name = 'AddResultSheetAuditFields1792261000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

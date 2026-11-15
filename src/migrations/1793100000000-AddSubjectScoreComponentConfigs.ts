@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddSubjectScoreComponentConfigs1793100000000
-  implements MigrationInterface
-{
+export class AddSubjectScoreComponentConfigs1793100000000 implements MigrationInterface {
   name = 'AddSubjectScoreComponentConfigs1793100000000';
 
   async up(queryRunner: QueryRunner): Promise<void> {

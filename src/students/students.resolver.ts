@@ -47,12 +47,16 @@ export class StudentsResolver {
     return this.studentsService
       .getTeacherClassIds(user.sub, user.schoolId, user.role)
       .then((classIds) =>
-        this.studentsService.getStudentById(id, user.schoolId).then((student) => {
-          if (!student || !classIds.includes(student.currentClassId || '')) {
-            throw new ForbiddenException('You do not have access to this student');
-          }
-          return student;
-        }),
+        this.studentsService
+          .getStudentById(id, user.schoolId)
+          .then((student) => {
+            if (!student || !classIds.includes(student.currentClassId || '')) {
+              throw new ForbiddenException(
+                'You do not have access to this student',
+              );
+            }
+            return student;
+          }),
       );
   }
 

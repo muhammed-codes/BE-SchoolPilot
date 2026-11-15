@@ -20,12 +20,19 @@ export class UserPasswordService {
     private readonly schoolsService: SchoolsService,
   ) {}
 
-  changePassword = async (userId: string, oldPassword: string, newPassword: string) => {
+  changePassword = async (
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+  ) => {
     this.validatePassword(newPassword);
     const user = await this.usersRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
-    const currentPasswordMatches = await bcrypt.compare(oldPassword, user.passwordHash);
+    const currentPasswordMatches = await bcrypt.compare(
+      oldPassword,
+      user.passwordHash,
+    );
     if (!currentPasswordMatches) {
       throw new UnauthorizedException('Current password is incorrect');
     }
@@ -46,9 +53,12 @@ export class UserPasswordService {
 
     if (
       requesterRole !== UserRole.SUPER_ADMIN &&
-      (requesterRole !== UserRole.SCHOOL_ADMIN || user.schoolId !== requesterSchoolId)
+      (requesterRole !== UserRole.SCHOOL_ADMIN ||
+        user.schoolId !== requesterSchoolId)
     ) {
-      throw new ForbiddenException('You do not have permission to reset this user password');
+      throw new ForbiddenException(
+        'You do not have permission to reset this user password',
+      );
     }
 
     await this.setPassword(userId, newPassword);
@@ -62,7 +72,9 @@ export class UserPasswordService {
   ) => {
     this.validatePassword(newPassword);
     if (requesterRole !== UserRole.SUPER_ADMIN) {
-      throw new ForbiddenException('Only Super Admins can reset school passwords');
+      throw new ForbiddenException(
+        'Only Super Admins can reset school passwords',
+      );
     }
 
     const school = await this.schoolsService.findById(schoolId);
@@ -71,7 +83,10 @@ export class UserPasswordService {
     });
     const contactEmail = school.contactPersonEmail?.toLowerCase();
     const primaryAdmin =
-      (contactEmail && schoolAdmins.find((admin) => admin.email?.toLowerCase() === contactEmail)) ??
+      (contactEmail &&
+        schoolAdmins.find(
+          (admin) => admin.email?.toLowerCase() === contactEmail,
+        )) ??
       (schoolAdmins.length === 1 ? schoolAdmins[0] : undefined);
 
     if (!primaryAdmin) {

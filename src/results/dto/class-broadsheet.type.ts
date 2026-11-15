@@ -16,7 +16,8 @@ export class ClassBroadsheetStudent {
   @Field() studentId!: string;
   @Field() studentName!: string;
   @Field({ nullable: true }) admissionNumber?: string;
-  @Field(() => [ClassBroadsheetSubjectScore]) subjects!: ClassBroadsheetSubjectScore[];
+  @Field(() => [ClassBroadsheetSubjectScore])
+  subjects!: ClassBroadsheetSubjectScore[];
   @Field(() => Float, { nullable: true }) totalScore?: number;
   @Field(() => Float, { nullable: true }) maxScore?: number;
   @Field({ nullable: true }) grade?: string;

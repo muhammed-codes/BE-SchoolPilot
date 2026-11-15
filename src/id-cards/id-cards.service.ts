@@ -570,16 +570,17 @@ export class IdCardsService implements OnModuleInit {
         : input.classId
           ? { currentClassId: input.classId, schoolId }
           : { schoolId };
-    const [students, matchingStudentCount] = await this.studentRepo.findAndCount({
-      where,
-      relations: ['currentClass'],
-      order: { lastName: 'ASC', firstName: 'ASC', id: 'ASC' },
-      ...(isPaginated
-        ? { skip: (page - 1) * pageSize, take: pageSize }
-        : !input.studentIds?.length && !input.classId
-          ? { take: 200 }
-          : {}),
-    });
+    const [students, matchingStudentCount] =
+      await this.studentRepo.findAndCount({
+        where,
+        relations: ['currentClass'],
+        order: { lastName: 'ASC', firstName: 'ASC', id: 'ASC' },
+        ...(isPaginated
+          ? { skip: (page - 1) * pageSize, take: pageSize }
+          : !input.studentIds?.length && !input.classId
+            ? { take: 200 }
+            : {}),
+      });
 
     if (students.length === 0) {
       throw new BadRequestException(

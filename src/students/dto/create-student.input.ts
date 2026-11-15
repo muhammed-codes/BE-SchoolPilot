@@ -1,5 +1,11 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsNotEmpty, IsOptional, IsEnum, IsDateString, Matches } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsDateString,
+  Matches,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 import { Gender, StudentStatus } from '../../common/enums';
 

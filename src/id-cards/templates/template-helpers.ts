@@ -22,7 +22,9 @@ export const sanitizeUrl = (url: string | null | undefined): string => {
   return '';
 };
 
-export const optimizeCardPhotoUrl = (url: string | null | undefined): string => {
+export const optimizeCardPhotoUrl = (
+  url: string | null | undefined,
+): string => {
   if (!url) return '';
   try {
     const parsed = new URL(url);
@@ -43,8 +45,7 @@ export const optimizeCardPhotoUrl = (url: string | null | undefined): string => 
     const pathBeforeTransform = parsed.pathname.slice(0, transformIndex);
     const originalPhotoPath = parsed.pathname.slice(transformIndex);
     const cardPhotoTransform = 'c_fill,w_360,h_400,q_auto,f_auto';
-    parsed.pathname =
-      `${pathBeforeTransform}${cardPhotoTransform}/${originalPhotoPath}`;
+    parsed.pathname = `${pathBeforeTransform}${cardPhotoTransform}/${originalPhotoPath}`;
     return parsed.toString();
   } catch {
     return url;

@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddNigerianBasicGradingSystem1792000000000
-  implements MigrationInterface
-{
+export class AddNigerianBasicGradingSystem1792000000000 implements MigrationInterface {
   name = 'AddNigerianBasicGradingSystem1792000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

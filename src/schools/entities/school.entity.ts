@@ -100,6 +100,10 @@ export class School extends BaseEntity {
   @Column({ default: 'PENDING' })
   verificationStatus?: string;
 
+  @Field({ nullable: true })
+  @Column({ nullable: true })
+  resultColor?: string;
+
   @Field()
   @Column({ unique: true })
   uniqueQrCode!: string;
