@@ -36,6 +36,10 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { CreateResultSheetInput } from './dto/create-result-sheet.input';
 import { SaveSubjectScoresInput } from './dto/save-subject-scores.input';
 import {
+  PreviewSubjectScoresInput,
+  SubjectScoreEntryPreview,
+} from './dto/score-entry-preview.type';
+import {
   UserRole,
   ResultStatus,
   TermStatus,
@@ -341,6 +345,54 @@ export class ResultsService {
     return this.processScores(input, sheet, teacherId);
   };
 
+  previewSubjectScoreTotals = async (
+    input: PreviewSubjectScoresInput,
+    userId: string,
+    schoolId: string,
+    canEnterAnySubject: boolean,
+  ): Promise<SubjectScoreEntryPreview> => {
+    const sheet = await this.resultSheetRepo.findOne({
+      where: { id: input.resultSheetId, schoolId },
+      relations: ['classEntity'],
+    });
+
+    if (!sheet) throw new NotFoundException('Result sheet not found');
+    this.assertSheetIsEditable(sheet);
+
+    if (!canEnterAnySubject && sheet.classEntity.classTeacherId !== userId) {
+      const classSubject = await this.classSubjectRepo.findOne({
+        where: {
+          classId: sheet.classId,
+          subjectId: input.subjectId,
+          subjectTeacherId: userId,
+        },
+      });
+
+      if (!classSubject) {
+        throw new ForbiddenException(
+          'You are not assigned to teach this subject in this class',
+        );
+      }
+    }
+
+    this.validateComponentScores(input, sheet);
+
+    const scoreComponents = sheet.scoreComponents || [];
+    return {
+      maxTotalScore: scoreComponents.reduce(
+        (total, component) => total + component.maxScore,
+        0,
+      ),
+      students: input.scores.map((studentScore) => ({
+        studentId: studentScore.studentId,
+        totalScore: studentScore.componentScores.reduce(
+          (total, componentScore) => total + componentScore.score,
+          0,
+        ),
+      })),
+    };
+  };
+
   saveAdminScores = (
     input: SaveSubjectScoresInput,
     adminId: string,
@@ -388,32 +440,9 @@ export class ResultsService {
       sheet.classId,
     );
     await this.validateSubmitPayload(input, sheet);
+    this.validateComponentScores(input, sheet);
 
     const subjectScoreComponents = sheet.scoreComponents || [];
-    const maxScoreMap = new Map(
-      subjectScoreComponents.map((component) => [
-        component.component,
-        component.maxScore,
-      ]),
-    );
-
-    input.scores.forEach((studentScore) => {
-      studentScore.componentScores.forEach((cs) => {
-        const maxScore = maxScoreMap.get(cs.component);
-        if (maxScore === undefined)
-          throw new BadRequestException(
-            `Score component ${cs.component} is not configured on this sheet`,
-          );
-        if (cs.score > maxScore)
-          throw new BadRequestException(
-            `Score ${cs.score} exceeds max ${maxScore} for component ${cs.component}`,
-          );
-        if (!Number.isFinite(cs.score) || cs.score < 0)
-          throw new BadRequestException(
-            `Score for ${cs.component} must be a valid non-negative number`,
-          );
-      });
-    });
 
     const totalMaxScore = subjectScoreComponents.reduce(
       (sum, sc) => sum + sc.maxScore,
@@ -499,6 +528,39 @@ export class ResultsService {
             .then(() => savedScores)
         : this.recalculateStudentTotals(sheet.id).then(() => savedScores),
     );
+  };
+
+  private validateComponentScores = (
+    input: Pick<SaveSubjectScoresInput, 'scores'>,
+    sheet: ResultSheet,
+  ) => {
+    const maxScoreMap = new Map(
+      (sheet.scoreComponents || []).map((component) => [
+        component.component,
+        component.maxScore,
+      ]),
+    );
+
+    input.scores.forEach((studentScore) => {
+      studentScore.componentScores.forEach((componentScore) => {
+        const maxScore = maxScoreMap.get(componentScore.component);
+        if (maxScore === undefined) {
+          throw new BadRequestException(
+            `Score component ${componentScore.component} is not configured on this sheet`,
+          );
+        }
+        if (!Number.isFinite(componentScore.score) || componentScore.score < 0) {
+          throw new BadRequestException(
+            `Score for ${componentScore.component} must be a valid non-negative number`,
+          );
+        }
+        if (componentScore.score > maxScore) {
+          throw new BadRequestException(
+            `Score ${componentScore.score} exceeds max ${maxScore} for component ${componentScore.component}`,
+          );
+        }
+      });
+    });
   };
 
   private assertSheetIsEditable = (sheet: ResultSheet) => {

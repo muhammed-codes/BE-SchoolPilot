@@ -8,6 +8,10 @@ import { StudentResult } from './entities/student-result.entity';
 import { SubjectScore } from './entities/subject-score.entity';
 import { CreateResultSheetInput } from './dto/create-result-sheet.input';
 import { SaveSubjectScoresInput } from './dto/save-subject-scores.input';
+import {
+  PreviewSubjectScoresInput,
+  SubjectScoreEntryPreview,
+} from './dto/score-entry-preview.type';
 import { ResultStats } from './dto/result-stats.type';
 import { ResultAnalytics } from './dto/result-analytics.type';
 import { PaginatedClassScores } from './dto/paginated-class-scores.type';
@@ -299,6 +303,28 @@ export class ResultsResolver {
       input,
       user.sub,
       user.schoolId,
+    );
+  }
+
+  @Query(() => SubjectScoreEntryPreview)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.RESULTS, PermissionAction.UPDATE)
+  previewSubjectScoreTotals(
+    @Args('input') input: PreviewSubjectScoresInput,
+    @CurrentUser() user: { sub: string; schoolId: string; role: UserRole },
+  ) {
+    const canEnterAnySubject =
+      user.role === UserRole.SUPER_ADMIN ||
+      user.role === UserRole.SCHOOL_ADMIN ||
+      user.role === UserRole.PRINCIPAL ||
+      user.role === UserRole.VICE_PRINCIPAL ||
+      user.role === UserRole.HEAD_TEACHER;
+
+    return this.resultsService.previewSubjectScoreTotals(
+      input,
+      user.sub,
+      user.schoolId,
+      canEnterAnySubject,
     );
   }
 

@@ -1874,6 +1874,12 @@ input PreviewSchoolDayScheduleInput {
   unallocatedTimeAsPeriod: Boolean! = false
 }
 
+input PreviewSubjectScoresInput {
+  resultSheetId: String!
+  scores: [StudentScoreInput!]!
+  subjectId: String!
+}
+
 input PromoteStudentsInput {
   archiveGraduated: Boolean!
   fromClassId: String!
@@ -1985,6 +1991,7 @@ type Query {
   pettyCashTransactions(limit: Int = 50): [PettyCashTransaction!]!
   platformStats: PlatformStats!
   previewSchoolDaySchedule(input: PreviewSchoolDayScheduleInput!): SchoolDaySchedulePreviewResult!
+  previewSubjectScoreTotals(input: PreviewSubjectScoresInput!): SubjectScoreEntryPreview!
   receiptTemplates: [ReceiptTemplate!]!
   recurringExpenses: [RecurringExpense!]!
 
@@ -2735,6 +2742,11 @@ type StudentScoreRecord {
   totalScore: Float!
 }
 
+type StudentScoreTotalPreview {
+  studentId: String!
+  totalScore: Float!
+}
+
 type StudentStatistics {
   active: Int!
   female: Int!
@@ -2792,6 +2804,11 @@ type SubjectScore {
   teacherRemark: String
   totalScore: Float
   updatedAt: DateTime!
+}
+
+type SubjectScoreEntryPreview {
+  maxTotalScore: Float!
+  students: [StudentScoreTotalPreview!]!
 }
 
 input SubmitPaymentBatchInput {
