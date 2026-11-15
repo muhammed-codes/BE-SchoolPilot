@@ -34,6 +34,7 @@ export class CreateResultTemplatesAndSnapshots1794300000000
       CREATE TABLE IF NOT EXISTS "result_template_snapshots" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+        "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         "templateId" uuid NOT NULL,
         "schoolId" uuid NOT NULL,
         "version" integer NOT NULL,

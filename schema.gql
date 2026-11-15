@@ -474,6 +474,7 @@ input CreateExpenseVendorInput {
   address: String
   contactPerson: String
   email: String
+  isActive: Boolean
   name: String!
   notes: String
   phone: String
@@ -538,10 +539,12 @@ input CreateResultSheetInput {
 
 input CreateResultTemplateInput {
   assignedClassIds: [String!] = []
-  config: JSONObject!
+  config: JSONObject
   description: String
   isDefault: Boolean = false
-  name: String!
+  name: String
+  templateName: String
+  title: String
 }
 
 input CreateRoomInput {
