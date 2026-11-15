@@ -99,6 +99,10 @@ export class UsersService {
   findBySchool = (...args: Parameters<UserDirectoryService['findBySchool']>) =>
     this.userDirectoryService.findBySchool(...args);
 
+  findStaffBySchool = (
+    ...args: Parameters<UserDirectoryService['findStaffBySchool']>
+  ) => this.userDirectoryService.findStaffBySchool(...args);
+
   updateUser = (
     id: string,
     input: UpdateUserInput,

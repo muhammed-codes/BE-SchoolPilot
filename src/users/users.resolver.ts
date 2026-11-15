@@ -73,6 +73,23 @@ export class UsersResolver {
     );
   }
 
+  @Query(() => PaginatedUser)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.USERS, PermissionAction.READ)
+  schoolStaff(
+    @Args('role', { type: () => UserRole, nullable: true }) role: UserRole,
+    @Args('search', { type: () => String, nullable: true }) search: string,
+    @Args() pagination: PaginationArgs,
+    @CurrentUser() user: { schoolId: string },
+  ) {
+    return this.usersService.findStaffBySchool(
+      user.schoolId,
+      role,
+      pagination,
+      search,
+    );
+  }
+
   @Query(() => [User])
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.USERS, PermissionAction.READ)
