@@ -2017,6 +2017,7 @@ type Query {
   schoolIdCardSettings: SchoolIdCardSettings!
   schoolPaymentShares(search: String, status: PaymentShareStatus): [PaymentSubmissionStudentShare!]!
   schoolResultSheets(classId: String, status: ResultStatus, termId: String): [ResultSheet!]!
+  schoolStaff(limit: Int! = 50, page: Int! = 1, role: UserRole, search: String): PaginatedUser!
   schoolSubjects(limit: Int! = 50, page: Int! = 1, search: String): PaginatedSubject!
   schoolTeachers: [User!]!
   schoolTypeOptions: [SchoolTypeOption!]!
