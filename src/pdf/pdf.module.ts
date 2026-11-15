@@ -4,6 +4,7 @@ import { PdfService } from './pdf.service';
 import { PdfResolver } from './pdf.resolver';
 import { UploadModule } from '../upload/upload.module';
 import { AttendanceModule } from '../attendance/attendance.module';
+import { ResultsModule } from '../results/results.module';
 import { StudentResult } from '../results/entities/student-result.entity';
 import { ResultSheet } from '../results/entities/result-sheet.entity';
 import { Student } from '../students/entities/student.entity';
@@ -27,6 +28,7 @@ import { Subject } from '../subjects/entities/subject.entity';
     ]),
     UploadModule,
     AttendanceModule,
+    ResultsModule,
   ],
   providers: [PdfService, PdfResolver],
   exports: [PdfService],

@@ -22,6 +22,7 @@ import { AttendanceService } from '../attendance/attendance.service';
 import { Subject } from '../subjects/entities/subject.entity';
 import { UserRole, ResultStatus } from '../common/enums';
 import { calculateGrade } from '../results/utils/grading.util';
+import { ResultTemplatesService } from '../results/result-templates.service';
 import { getReportCardTemplate } from './templates/templates';
 import {
   ReportCardData,
@@ -70,6 +71,7 @@ export class PdfService {
     private readonly subjectRepo: Repository<Subject>,
     private readonly uploadService: UploadService,
     private readonly attendanceService: AttendanceService,
+    private readonly templatesService: ResultTemplatesService,
   ) {}
 
   private computePercentage = (
@@ -449,12 +451,39 @@ export class PdfService {
             },
           };
 
-          const templateFn = getReportCardTemplate(
-            school.defaultReportTemplate,
-          );
-          const htmlContent = templateFn(reportCardData);
+          const classId =
+            historicalClass?.id || studentResult.resultSheet?.classId;
+          const templatePromise = classId
+            ? this.templatesService
+                .getResolvedTemplateForClass(classId, schoolId)
+                .catch(() => null)
+            : Promise.resolve(null);
 
-          return htmlContent;
+          return templatePromise.then((resolvedTemplate) => {
+            if (
+              resolvedTemplate &&
+              studentResult.resultSheet &&
+              !studentResult.resultSheet.templateId
+            ) {
+              this.resultSheetRepo
+                .update(studentResult.resultSheet.id, {
+                  templateId: resolvedTemplate.id,
+                  templateVersion: resolvedTemplate.version,
+                  templateConfig: resolvedTemplate.config,
+                })
+                .catch(() => {});
+            }
+
+            const templateConfig =
+              studentResult.resultSheet?.templateConfig ||
+              resolvedTemplate?.config;
+
+            const templateFn = getReportCardTemplate(
+              school.defaultReportTemplate,
+              templateConfig,
+            );
+            return templateFn(reportCardData);
+          });
         },
       );
   };

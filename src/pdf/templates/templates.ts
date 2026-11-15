@@ -548,8 +548,15 @@ export const standardSchoolRightTemplate = (data: ReportCardData): string => `
 </html>
 `;
 
+import { generateCustomReportCardHtml } from './custom-report-card.template';
+import { ResultTemplateConfig } from '../../results/templates/result-template-config.interface';
+
 export const getReportCardTemplate = (
-  _templateKey: string | null,
+  _templateKey?: string | null,
+  config?: ResultTemplateConfig | null,
 ): ((data: ReportCardData) => string) => {
+  if (config) {
+    return (data: ReportCardData) => generateCustomReportCardHtml(data, config);
+  }
   return standardSchoolRightTemplate;
 };

@@ -1,5 +1,6 @@
-import { ObjectType, Field } from '@nestjs/graphql';
+import { ObjectType, Field, Int } from '@nestjs/graphql';
 import { Entity, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import { GraphQLJSONObject } from '../../common/scalars/json-object.scalar';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { GradingSystem, ResultStatus } from '../../common/enums';
 import { ScoreComponentConfig } from '../dto/score-component-config.type';
@@ -7,6 +8,7 @@ import { StudentResult } from './student-result.entity';
 import { ClassEntity } from '../../classes/entities/class.entity';
 import { Term } from '../../terms/entities/term.entity';
 import { User } from '../../users/entities/user.entity';
+import { ResultTemplateConfig } from '../templates/result-template-config.interface';
 
 @ObjectType()
 @Entity('result_sheets')
@@ -74,6 +76,18 @@ export class ResultSheet extends BaseEntity {
   @Field({ defaultValue: false })
   @Column({ default: false })
   isArchived!: boolean;
+
+  @Field(() => String, { nullable: true })
+  @Column({ type: 'uuid', nullable: true })
+  templateId?: string;
+
+  @Field(() => Int, { nullable: true })
+  @Column({ type: 'int', nullable: true })
+  templateVersion?: number;
+
+  @Field(() => GraphQLJSONObject, { nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
+  templateConfig?: ResultTemplateConfig;
 
   @Field(() => [StudentResult], { nullable: true })
   @OneToMany(() => StudentResult, (sr) => sr.resultSheet, { eager: false })

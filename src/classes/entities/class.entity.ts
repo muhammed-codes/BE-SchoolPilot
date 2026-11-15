@@ -37,4 +37,8 @@ export class ClassEntity extends BaseEntity {
 
   @Field(() => Int, { nullable: true })
   totalNoOfStudents!: number;
+
+  @Field(() => String, { nullable: true })
+  @Column({ type: 'uuid', nullable: true })
+  resultTemplateId?: string;
 }
