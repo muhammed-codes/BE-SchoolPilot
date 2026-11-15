@@ -100,6 +100,12 @@ input AssignPermissionGroupInput {
   userId: String!
 }
 
+input AssignTemplateToClassesInput {
+  classIds: [String!]!
+  setAsSchoolDefault: Boolean = false
+  templateId: String!
+}
+
 """Time filter period for attendance analytics"""
 enum AttendancePeriodFilter {
   MONTH
@@ -265,6 +271,7 @@ type ClassEntity {
   createdAt: DateTime!
   id: ID!
   name: String!
+  resultTemplateId: String
   schoolId: String!
   totalNoOfStudents: Int
   updatedAt: DateTime!
@@ -527,6 +534,14 @@ input CreateResultSheetInput {
   gradingSystem: GradingSystem!
   scoreComponents: [ScoreComponentConfigInput!]!
   termId: String!
+}
+
+input CreateResultTemplateInput {
+  assignedClassIds: [String!] = []
+  config: JSONObject!
+  description: String
+  isDefault: Boolean = false
+  name: String!
 }
 
 input CreateRoomInput {
@@ -1339,6 +1354,9 @@ enum InvoiceStatus {
   PARTIALLY_PAID
 }
 
+"""Arbitrary JSON object value scalar"""
+scalar JSONObject
+
 input LoginInput {
   email: String!
   password: String!
@@ -1390,6 +1408,7 @@ type Mutation {
   assignSubjectTeacher(classId: String!, subjectId: String!, teacherId: String!): ClassSubject!
   assignSubjectTeachers(classId: String!, subjectId: String!, teacherIds: [String!]!): ClassSubject!
   assignSubjectsToClass(classId: String!, subjectIds: [String!]!): ClassEntity!
+  assignTemplateToClasses(input: AssignTemplateToClassesInput!): ResultTemplate!
   assignUserToSchool(schoolId: String!, userId: String!): User!
   bulkCreateFeeOverrides(input: BulkCreateOverrideInput!): [StudentFeeOverride!]!
   bulkCreateFeeStructures(input: BulkCreateFeeStructureInput!): [FeeStructure!]!
@@ -1418,6 +1437,7 @@ type Mutation {
   createReceiptTemplate(name: String!, templateKey: String!, thumbnailUrl: String): ReceiptTemplate!
   createRecurringExpense(input: CreateRecurringExpenseInput!): RecurringExpense!
   createResultSheet(input: CreateResultSheetInput!): ResultSheet!
+  createResultTemplate(input: CreateResultTemplateInput!): ResultTemplate!
   createRoom(input: CreateRoomInput!): Room!
   createSchool(input: CreateSchoolInput!): School!
   createSession(input: CreateSessionInput!): Session!
@@ -1434,9 +1454,11 @@ type Mutation {
   deleteNonTeachingSlot(id: String!): Boolean!
   deletePeriod(deleteGroup: Boolean! = true, id: String!): Boolean!
   deletePermissionGroup(groupId: String!, schoolId: String): Boolean!
+  deleteResultTemplate(id: String!): Boolean!
   deleteRoom(id: String!): Boolean!
   deleteSubject(id: String!): Boolean!
   deleteTimetableEntry(id: String!): Boolean!
+  duplicateResultTemplate(id: String!): ResultTemplate!
   forgotPassword(input: ForgotPasswordInput!): Boolean!
   fundExpenseRequest(id: ID!): ExpenseRequest!
 
@@ -1518,6 +1540,7 @@ type Mutation {
   updatePeriod(input: UpdatePeriodInput!): Period!
   updatePermissionGroup(input: UpdatePermissionGroupInput!, schoolId: String): PermissionGroup!
   updateRecurringExpense(input: UpdateRecurringExpenseInput!): RecurringExpense!
+  updateResultTemplate(id: String!, input: UpdateResultTemplateInput!): ResultTemplate!
   updateRolePermission(input: UpdatePermissionInput!): RolePermission!
   updateRoom(input: UpdateRoomInput!): Room!
   updateSchool(id: String!, input: UpdateSchoolInput!): School!
@@ -1991,6 +2014,7 @@ type Query {
   pettyCashAccount: PettyCashAccount!
   pettyCashTransactions(limit: Int = 50): [PettyCashTransaction!]!
   platformStats: PlatformStats!
+  previewReportCardHtml(config: JSONObject, templateId: String): String!
   previewSchoolDaySchedule(input: PreviewSchoolDayScheduleInput!): SchoolDaySchedulePreviewResult!
   receiptTemplates: [ReceiptTemplate!]!
   recurringExpenses: [RecurringExpense!]!
@@ -2007,10 +2031,13 @@ type Query {
   """Render HTML for a single student ID card with preview"""
   renderStudentIdCard(input: RenderStudentIdCardInput!): IdCardRenderResult!
   resolvedBankAccounts(feeCategoryId: String): [SchoolBankAccount!]!
+  resolvedClassTemplate(classId: String!): ResultTemplate!
   resultAnalytics(classId: String!, sessionId: String!, subjectId: String, termId: String!): ResultAnalytics!
   resultSheet(id: String!): ResultSheet!
   resultSheetsByClass(classId: String!, termId: String!): [ResultSheet!]!
   resultStats: ResultStats!
+  resultTemplate(id: String!): ResultTemplate!
+  resultTemplates: [ResultTemplate!]!
   rooms: [Room!]!
   school(id: String!): School!
   schoolAdminAccounts(schoolId: String!): [SchoolAdminAccount!]!
@@ -2242,6 +2269,9 @@ type ResultSheet {
   scoreComponents: [ScoreComponentConfig!]!
   status: ResultStatus!
   studentResults: [StudentResult!]
+  templateConfig: JSONObject
+  templateId: String
+  templateVersion: Int
   term: Term
   termId: String!
   updatedAt: DateTime!
@@ -2260,6 +2290,20 @@ enum ResultStatus {
   PUBLISHED
   RETURNED
   SCORES_ENTERED
+}
+
+type ResultTemplate {
+  assignedClassIds: [String!]!
+  config: JSONObject!
+  createdAt: DateTime!
+  description: String
+  id: ID!
+  isActive: Boolean!
+  isDefault: Boolean!
+  name: String!
+  schoolId: String!
+  updatedAt: DateTime!
+  version: Int!
 }
 
 input ReviewTeacherAvailabilityInput {
@@ -3050,6 +3094,15 @@ input UpdateRecurringExpenseInput {
   notes: String
   title: String
   vendorId: ID
+}
+
+input UpdateResultTemplateInput {
+  assignedClassIds: [String!]
+  config: JSONObject
+  description: String
+  isActive: Boolean
+  isDefault: Boolean
+  name: String
 }
 
 input UpdateRoomInput {
