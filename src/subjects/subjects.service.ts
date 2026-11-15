@@ -24,7 +24,7 @@ export class SubjectsService {
   ): Promise<Subject> => {
     const trimmedName = name?.trim();
     if (!trimmedName) {
-      throw new BadRequestException('Subject name cannot be empty');
+      throw new BadRequestException('Please enter a subject name');
     }
 
     // Check case-insensitive duplicate name within the school
@@ -84,7 +84,7 @@ export class SubjectsService {
     if (name !== undefined) {
       const trimmedName = name.trim();
       if (!trimmedName) {
-        throw new BadRequestException('Subject name cannot be empty');
+        throw new BadRequestException('Please enter a subject name');
       }
 
       // Check case-insensitive duplicate name for other subjects in same school

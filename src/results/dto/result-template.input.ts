@@ -4,8 +4,14 @@ import { ResultTemplateConfig } from '../templates/result-template-config.interf
 
 @InputType()
 export class CreateResultTemplateInput {
-  @Field()
-  name!: string;
+  @Field({ nullable: true })
+  name?: string;
+
+  @Field({ nullable: true })
+  title?: string;
+
+  @Field({ nullable: true })
+  templateName?: string;
 
   @Field({ nullable: true })
   description?: string;
@@ -16,8 +22,8 @@ export class CreateResultTemplateInput {
   @Field(() => [String], { nullable: true, defaultValue: [] })
   assignedClassIds?: string[];
 
-  @Field(() => GraphQLJSONObject)
-  config!: ResultTemplateConfig;
+  @Field(() => GraphQLJSONObject, { nullable: true })
+  config?: ResultTemplateConfig;
 }
 
 @InputType()

@@ -97,7 +97,7 @@ export class SchoolsService implements OnModuleInit {
       .then((existingUser) => {
         if (existingUser) {
           throw new BadRequestException(
-            'An account with this email already exists',
+            'An account with this email address already exists',
           );
         }
 
@@ -190,7 +190,7 @@ export class SchoolsService implements OnModuleInit {
           statuses: ['PENDING', 'SUSPENDED', 'REJECTED'],
         });
     } else if (status) {
-      throw new BadRequestException('Unsupported school status filter');
+      throw new BadRequestException('The selected school status filter is not supported');
     }
 
     return queryBuilder

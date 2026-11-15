@@ -23,7 +23,7 @@ export class UpdateUserInput {
   @IsOptional()
   @IsString()
   @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
-    message: 'Enter a valid phone number',
+    message: 'Please enter a valid phone number',
   })
   phone?: string;
 

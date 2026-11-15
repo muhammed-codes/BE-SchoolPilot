@@ -24,7 +24,7 @@ export class AllExceptionsFilter implements GqlExceptionFilter {
     const message =
       exception instanceof HttpException
         ? exception.message
-        : 'Internal server error';
+        : 'Something went wrong. Please try again later.';
 
     if (host.getType<GqlContextType>() === 'graphql') {
       const gqlHost = GqlArgumentsHost.create(host);

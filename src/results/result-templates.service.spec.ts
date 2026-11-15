@@ -102,6 +102,23 @@ describe('ResultTemplatesService', () => {
     expect(resolved.id).toBe('tpl-class-specific');
   });
 
+  it('safely creates template even when name is undefined or empty without throwing trim error', async () => {
+    const created = await service.createTemplate(
+      {
+        name: undefined as any,
+        config: getDefaultResultTemplateConfig('School'),
+      },
+      schoolA,
+    );
+
+    expect(created).toBeDefined();
+    expect(mockTemplateRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Custom Result Template',
+      }),
+    );
+  });
+
   it('generates realistic preview HTML with dummy data containing 15 subjects', async () => {
     mockTemplateRepo.findOne.mockResolvedValueOnce({
       id: 'tpl-1',

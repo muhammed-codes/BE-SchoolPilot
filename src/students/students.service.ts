@@ -84,7 +84,7 @@ export class StudentsService {
 
       if (!schoolCode) {
         throw new BadRequestException(
-          'School code is not set. Update school settings to continue.',
+          'The school code has not been set. Please update school settings to continue.',
         );
       }
 
@@ -463,7 +463,7 @@ export class StudentsService {
       this.usersService.findById(parentUserId).then((parentUser) => {
         if (!parentUser) throw new NotFoundException('Parent user not found');
         if (parentUser.role !== UserRole.PARENT) {
-          throw new BadRequestException('User does not have PARENT role');
+          throw new BadRequestException('Only users with a parent role can be linked');
         }
         const record = this.studentParentsRepository.create({
           studentId: student.id,

@@ -42,7 +42,7 @@ export class ExpenseVendorsService {
         if (input.notes) existing.notes = input.notes.trim();
         return this.vendorRepo.save(existing);
       }
-      throw new BadRequestException(`Vendor "${input.name}" already exists`);
+      throw new BadRequestException('A vendor with this name already exists');
     }
 
     const vendor = this.vendorRepo.create({

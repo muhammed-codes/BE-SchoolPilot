@@ -85,7 +85,7 @@ export class ExpensesService {
         if (input.description) existing.description = input.description.trim();
         return categoryRepo.save(existing);
       }
-      throw new BadRequestException(`Category "${input.name}" already exists`);
+      throw new BadRequestException('A category with this name already exists');
     }
 
     const category = categoryRepo.create({
@@ -174,17 +174,17 @@ export class ExpensesService {
     user: User,
   ): Promise<Expense> => {
     const schoolId = user.schoolId;
-    if (!schoolId) throw new ForbiddenException('User must belong to a school');
+    if (!schoolId) throw new ForbiddenException('You must belong to a school to perform this action');
 
     // Validate category
     const category = await this.categoryRepo.findOne({
       where: { id: input.categoryId, schoolId },
     });
-    if (!category) throw new NotFoundException('Selected category not found');
+    if (!category) throw new NotFoundException('The selected category could not be found');
 
     // Amount validation
     if (input.amount <= 0) {
-      throw new BadRequestException('Expense amount must be greater than 0');
+      throw new BadRequestException('The expense amount must be greater than 0');
     }
 
     const amountPaid =
@@ -262,7 +262,7 @@ export class ExpensesService {
     });
     if (!expense) throw new NotFoundException('Expense not found');
     if (expense.isVoided) {
-      throw new BadRequestException('Cannot update a voided expense');
+      throw new BadRequestException('This expense has already been voided and cannot be updated');
     }
 
     if (input.title !== undefined) expense.title = input.title.trim();
@@ -487,7 +487,7 @@ export class ExpensesService {
         'term',
       ],
     });
-    if (!expense) throw new NotFoundException('Expense not found');
+    if (!expense) throw new NotFoundException('The expense could not be found');
     return expense;
   };
 

@@ -75,7 +75,7 @@ export class DashboardService {
     } = input;
 
     if (!schoolId || !user)
-      throw new ForbiddenException('Authenticated school scope required');
+      throw new ForbiddenException('School scope is required to access this data');
     const teacher = TEACHER_ROLES.includes(user.role);
     const parent = user.role === UserRole.PARENT;
     const allowed = async (...resources: AppResource[]) => {

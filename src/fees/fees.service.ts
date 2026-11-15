@@ -1734,7 +1734,7 @@ export class FeesService {
       if (!share) throw new NotFoundException('Payment share not found');
       if (share.batch.schoolId !== schoolId) throw new ForbiddenException();
       if (share.status !== PaymentShareStatus.PENDING) {
-        throw new BadRequestException('Share has already been finalized');
+        throw new BadRequestException('This share has already been finalized');
       }
 
       // Resolve config
@@ -1752,7 +1752,7 @@ export class FeesService {
         const nextStep = sortedSteps.find((s) => !decidedStepIds.has(s.id));
 
         if (!nextStep)
-          throw new BadRequestException('All steps already decided');
+          throw new BadRequestException('All approval steps have already been decided');
 
         const isThisApprover =
           (nextStep.approverType === ApproverType.SPECIFIC_STAFF &&
@@ -1851,7 +1851,7 @@ export class FeesService {
       if (!share) throw new NotFoundException('Payment share not found');
       if (share.batch.schoolId !== schoolId) throw new ForbiddenException();
       if (share.status !== PaymentShareStatus.PENDING) {
-        throw new BadRequestException('Share has already been finalized');
+        throw new BadRequestException('This share has already been finalized');
       }
 
       await manager.save(

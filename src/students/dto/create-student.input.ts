@@ -94,7 +94,7 @@ export class CreateStudentInput {
   @Field({ nullable: true })
   @IsOptional()
   @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
-    message: 'Enter a valid phone number',
+    message: 'Please enter a valid phone number',
   })
   parentPhone?: string;
 
@@ -116,7 +116,7 @@ export class GuardianInput {
   @Field()
   @IsNotEmpty()
   @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})$/, {
-    message: 'Enter a valid phone number',
+    message: 'Please enter a valid phone number',
   })
   phone!: string;
 

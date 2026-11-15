@@ -502,7 +502,7 @@ export class ResultsService {
 
   private assertSheetIsEditable = (sheet: ResultSheet) => {
     if (sheet.status === ResultStatus.PUBLISHED) {
-      throw new BadRequestException('Approved results cannot be edited');
+      throw new BadRequestException('Published results cannot be edited');
     }
   };
 

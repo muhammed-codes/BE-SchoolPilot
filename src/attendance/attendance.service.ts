@@ -150,7 +150,7 @@ export class AttendanceService {
   ) => {
     const normalizedClassId = String(classId || '').trim();
     if (!normalizedClassId) {
-      throw new BadRequestException('classId is required');
+      throw new BadRequestException('The class ID is required');
     }
     return this.getClassAttendanceByRole(
       normalizedClassId,
@@ -309,7 +309,7 @@ export class AttendanceService {
                     record.clockOutPhotoPublicId = uploadResult.publicId;
                     return this.staffAttendanceRepo.save(record);
                   } else {
-                    throw new BadRequestException('Already clocked out today');
+                    throw new BadRequestException('You have already clocked out today');
                   }
                 });
             });
@@ -410,14 +410,14 @@ export class AttendanceService {
     return this.jwtService
       .verifyAsync<{ schoolId?: string; purpose?: string }>(token, { secret })
       .catch(() => {
-        throw new BadRequestException('QR Code has expired, please scan again');
+        throw new BadRequestException('The QR code has expired, please scan a new one');
       })
       .then((decodedToken) => {
         if (
           decodedToken.schoolId !== schoolId ||
           decodedToken.purpose !== 'staff_attendance'
         ) {
-          throw new ForbiddenException('Invalid QR code');
+          throw new ForbiddenException('The QR code is not valid');
         }
 
         const today = new Date().toISOString().split('T')[0];

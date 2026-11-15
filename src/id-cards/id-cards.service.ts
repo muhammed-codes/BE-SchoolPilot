@@ -203,7 +203,7 @@ export class IdCardsService implements OnModuleInit {
         });
         if (!t) {
           throw new BadRequestException(
-            'Invalid or inactive student template selected',
+            'The selected student template is invalid or inactive',
           );
         }
       }
@@ -221,7 +221,7 @@ export class IdCardsService implements OnModuleInit {
         });
         if (!t) {
           throw new BadRequestException(
-            'Invalid or inactive staff template selected',
+            'The selected staff template is invalid or inactive',
           );
         }
       }
@@ -691,7 +691,7 @@ export class IdCardsService implements OnModuleInit {
     }
 
     if (staffList.length === 0) {
-      throw new BadRequestException('No staff records found to generate cards');
+      throw new BadRequestException('No staff records are available to generate ID cards');
     }
 
     const { templateDef, entity } = await this.resolveTemplate(

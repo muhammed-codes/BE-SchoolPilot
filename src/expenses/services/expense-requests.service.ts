@@ -83,7 +83,7 @@ export class ExpenseRequestsService {
     if (!category) throw new NotFoundException('Selected category not found');
 
     if (input.estimatedAmount <= 0) {
-      throw new BadRequestException('Estimated amount must be greater than 0');
+      throw new BadRequestException('The estimated amount must be greater than 0');
     }
 
     // For Reimbursement, receipt is highly recommended
@@ -156,7 +156,7 @@ export class ExpenseRequestsService {
 
     if (!isPending) {
       throw new BadRequestException(
-        `Cannot edit a request that is already ${request.status}`,
+        `This request cannot be edited because its status is ${request.status}`,
       );
     }
 
@@ -220,7 +220,7 @@ export class ExpenseRequestsService {
       request.status !== ExpenseRequestStatus.PENDING_APPROVAL
     ) {
       throw new BadRequestException(
-        `Cannot approve request with status "${request.status}"`,
+        'This request cannot be approved because its status is not pending',
       );
     }
 
@@ -273,7 +273,7 @@ export class ExpenseRequestsService {
       request.status !== ExpenseRequestStatus.PENDING_APPROVAL
     ) {
       throw new BadRequestException(
-        `Cannot reject request with status "${request.status}"`,
+        'This request cannot be rejected because its status is not pending',
       );
     }
 
@@ -364,12 +364,12 @@ export class ExpenseRequestsService {
       request.status !== ExpenseRequestStatus.FUNDED
     ) {
       throw new BadRequestException(
-        'Only approved requests can receive payments',
+        'Payments can only be recorded for approved requests',
       );
     }
     if (request.expenseId) {
       throw new BadRequestException(
-        'This request is already recorded as an expense',
+        'This request has already been recorded as an expense',
       );
     }
 
@@ -423,7 +423,7 @@ export class ExpenseRequestsService {
       request.status !== ExpenseRequestStatus.FUNDED
     ) {
       throw new BadRequestException(
-        `Only approved or funded requests can be converted to an expense. Current status: ${request.status}`,
+        'Only approved or funded requests can be converted to an expense',
       );
     }
 
@@ -433,7 +433,7 @@ export class ExpenseRequestsService {
     const amountPaid = input.amountPaid ?? input.actualAmount;
     if (amountPaid > input.actualAmount) {
       throw new BadRequestException(
-        'Amount paid cannot exceed the actual amount',
+        'The payment amount cannot exceed the actual amount',
       );
     }
     if (
@@ -444,7 +444,7 @@ export class ExpenseRequestsService {
       (paymentStatus === ExpenseRequestPaymentStatus.UNPAID && amountPaid !== 0)
     ) {
       throw new BadRequestException(
-        'Payment status and amount paid do not match',
+        'The payment status and amount do not match',
       );
     }
 
@@ -518,7 +518,7 @@ export class ExpenseRequestsService {
       request.status !== ExpenseRequestStatus.PENDING_APPROVAL
     ) {
       throw new BadRequestException(
-        `Cannot cancel request with status "${request.status}"`,
+        'This request cannot be cancelled because its status is not pending',
       );
     }
 

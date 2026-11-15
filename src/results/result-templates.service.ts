@@ -138,21 +138,42 @@ export class ResultTemplatesService {
     input: CreateResultTemplateInput,
     schoolId: string,
   ): Promise<ResultTemplate> => {
-    const isDefault = Boolean(input.isDefault);
+    const isDefault = Boolean(input?.isDefault);
 
     if (isDefault) {
       await this.templateRepo.update({ schoolId }, { isDefault: false });
     }
 
+    const rawName =
+      input?.name ||
+      (input as any)?.templateName ||
+      (input as any)?.title ||
+      'Custom Result Template';
+    const cleanName = String(rawName).trim() || 'Custom Result Template';
+    const cleanDesc =
+      input?.description !== undefined && input?.description !== null
+        ? String(input.description).trim() || undefined
+        : undefined;
+
+    let templateConfig = input?.config;
+    if (!templateConfig) {
+      const school = await this.schoolRepo.findOne({ where: { id: schoolId } });
+      templateConfig = getDefaultResultTemplateConfig(
+        school?.name || 'SchoolRight Academy',
+      );
+    }
+
     const template = this.templateRepo.create({
       schoolId,
-      name: input.name.trim(),
-      description: input.description?.trim(),
+      name: cleanName,
+      description: cleanDesc,
       version: 1,
       isDefault,
       isActive: true,
-      assignedClassIds: input.assignedClassIds || [],
-      config: input.config,
+      assignedClassIds: Array.isArray(input?.assignedClassIds)
+        ? input.assignedClassIds.filter(Boolean)
+        : [],
+      config: templateConfig,
     });
 
     const saved = await this.templateRepo.save(template);
@@ -185,12 +206,29 @@ export class ResultTemplatesService {
 
     const updatedConfig = input.config || template.config;
 
+    const rawName =
+      input?.name !== undefined
+        ? input.name
+        : (input as any)?.templateName !== undefined
+          ? (input as any).templateName
+          : (input as any)?.title !== undefined
+            ? (input as any).title
+            : template.name;
+    const cleanName =
+      rawName !== undefined && rawName !== null
+        ? String(rawName).trim() || template.name
+        : template.name;
+
+    const cleanDesc =
+      input?.description !== undefined
+        ? input.description !== null
+          ? String(input.description).trim() || undefined
+          : undefined
+        : template.description;
+
     await this.templateRepo.update(id, {
-      name: input.name !== undefined ? input.name.trim() : template.name,
-      description:
-        input.description !== undefined
-          ? input.description?.trim()
-          : template.description,
+      name: cleanName,
+      description: cleanDesc,
       isDefault: input.isDefault !== undefined ? input.isDefault : template.isDefault,
       isActive: input.isActive !== undefined ? input.isActive : template.isActive,
       assignedClassIds:

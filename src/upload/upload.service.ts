@@ -67,7 +67,7 @@ export class UploadService implements OnModuleInit {
     const rawInput = String(base64 || '').trim();
     if (!rawInput) {
       throw new HttpException(
-        'Image payload is required',
+        'Please select a file to upload',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -78,7 +78,7 @@ export class UploadService implements OnModuleInit {
     const payload = (dataUrlMatch?.[2] || rawInput).replace(/\s+/g, '');
     if (!payload) {
       throw new HttpException(
-        'Image payload is empty after normalization',
+        'The file could not be processed',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -166,7 +166,7 @@ export class UploadService implements OnModuleInit {
 
     return Promise.reject(
       new HttpException(
-        'Invalid file upload payload: expected a multipart Upload file',
+        'Please use a valid file upload method',
         HttpStatus.BAD_REQUEST,
       ),
     );
@@ -183,7 +183,7 @@ export class UploadService implements OnModuleInit {
 
     if (!allowedMimeTypes.includes(mimetype.toLowerCase())) {
       throw new HttpException(
-        `Invalid file type: ${mimetype}. Only JPEG, PNG, WEBP, GIF, and PDF are allowed.`,
+        'Please select a valid file type (JPEG, PNG, WebP, GIF, or PDF)',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -202,7 +202,7 @@ export class UploadService implements OnModuleInit {
       .replace(/\\/g, '/')
       .replace(/^\/+|\/+$/g, '');
     if (!normalized || normalized.includes('..') || normalized.length > 120) {
-      throw new HttpException('Invalid upload folder', HttpStatus.BAD_REQUEST);
+      throw new HttpException('The upload folder name is not valid', HttpStatus.BAD_REQUEST);
     }
     return `schoolpilot/${schoolId}/${normalized}`;
   };
@@ -387,7 +387,7 @@ export class UploadService implements OnModuleInit {
     const buffer = Buffer.from(parsed.payload, 'base64');
     if (!buffer.length) {
       throw new HttpException(
-        'Image payload could not be decoded from base64',
+        'The file could not be decoded',
         HttpStatus.BAD_REQUEST,
       );
     }

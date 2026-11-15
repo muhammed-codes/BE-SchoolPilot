@@ -235,7 +235,7 @@ export class AccessService implements OnModuleInit {
     schoolId: string,
   ) {
     if (!input.name.trim())
-      throw new BadRequestException('Group name cannot be empty');
+      throw new BadRequestException('Please enter a group name');
     const group = this.groupRepo.create({
       schoolId,
       name: input.name.trim(),
@@ -254,7 +254,7 @@ export class AccessService implements OnModuleInit {
     schoolId: string,
   ) {
     if (input.name !== undefined && !input.name.trim())
-      throw new BadRequestException('Group name cannot be empty');
+      throw new BadRequestException('Please enter a group name');
     await this.assertSchoolGroup(input.id, schoolId);
     await this.groupRepo.update(input.id, {
       ...(input.name === undefined ? {} : { name: input.name.trim() }),
@@ -665,7 +665,7 @@ export class AccessService implements OnModuleInit {
     requesterSchoolId?: string | null,
   ) => {
     let permission = await this.permissionRepo.findOne({ where: { id } });
-    if (!permission) throw new BadRequestException('Permission not found');
+    if (!permission) throw new BadRequestException('The requested permission could not be found');
 
     if (
       ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN].includes(requesterRole!)

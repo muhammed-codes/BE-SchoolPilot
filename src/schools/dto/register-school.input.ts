@@ -18,11 +18,11 @@ export class RegisterSchoolInput {
   // ── Contact Person Details ──────────────────────────────────────────────────
 
   @Field(() => String)
-  @IsNotEmpty({ message: 'First name is required' })
+  @IsNotEmpty({ message: "Please enter the administrator's first name" })
   adminFirstName: string;
 
   @Field(() => String)
-  @IsNotEmpty({ message: 'Last name is required' })
+  @IsNotEmpty({ message: "Please enter the administrator's last name" })
   adminLastName: string;
 
   @Field(() => String, { nullable: true })
@@ -30,8 +30,8 @@ export class RegisterSchoolInput {
   gender?: string;
 
   @Field(() => String)
-  @IsEmail({}, { message: 'Invalid admin email address' })
-  @IsNotEmpty({ message: 'Admin email is required' })
+  @IsEmail({}, { message: "Please enter a valid email address" })
+  @IsNotEmpty({ message: "Please enter the administrator's email address" })
   adminEmail: string;
 
   @Field(() => String, { nullable: true })
@@ -41,14 +41,14 @@ export class RegisterSchoolInput {
   @Field(() => String, { nullable: true })
   @IsOptional()
   @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
-    message: 'Enter a valid phone number',
+    message: 'Please enter a valid phone number',
   })
   adminPhone?: string;
 
   @Field(() => String, { nullable: true })
   @IsOptional()
   @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
-    message: 'Enter a valid phone number',
+    message: 'Please enter a valid phone number',
   })
   whatsappNumber?: string;
 
@@ -77,7 +77,7 @@ export class RegisterSchoolInput {
   @Field(() => String, { nullable: true })
   @IsOptional()
   @Matches(/^[A-Za-z0-9_-]{2,10}$/, {
-    message: 'School code must be 2–10 alphanumeric characters',
+    message: 'School code must be 2 to 10 characters',
   })
   schoolCode?: string;
 
@@ -88,13 +88,13 @@ export class RegisterSchoolInput {
   @Field(() => String, { nullable: true })
   @IsOptional()
   @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
-    message: 'Enter a valid phone number',
+    message: 'Please enter a valid phone number',
   })
   schoolPhone?: string;
 
   @Field(() => String, { nullable: true })
   @IsOptional()
-  @IsEmail({}, { message: 'Invalid school email address' })
+  @IsEmail({}, { message: 'Please enter a valid email address' })
   schoolEmail?: string;
 
   // ── Security Credentials ────────────────────────────────────────────────────

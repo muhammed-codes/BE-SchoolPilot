@@ -20,11 +20,11 @@ export class CreateExpenseVendorInput {
   @IsString()
   contactPerson?: string;
 
-  @Field({ nullable: true })
+@Field({ nullable: true })
   @IsOptional()
   @IsString()
   @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
-    message: 'Enter a valid phone number',
+    message: 'Please enter a valid phone number',
   })
   phone?: string;
 
@@ -42,6 +42,11 @@ export class CreateExpenseVendorInput {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  isActive?: boolean;
 }
 
 @InputType()

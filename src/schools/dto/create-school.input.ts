@@ -14,7 +14,7 @@ export class CreateSchoolInput {
   @Field({ nullable: true })
   @IsOptional()
   @Matches(/^(?:\+?[1-9]\d{6,14}|0\d{6,14})?$/, {
-    message: 'Enter a valid phone number',
+    message: 'Please enter a valid phone number',
   })
   phone?: string;
 
@@ -30,7 +30,7 @@ export class CreateSchoolInput {
   @Field({ nullable: true })
   @IsOptional()
   @Matches(/^[A-Za-z0-9_-]{2,10}$/, {
-    message: 'schoolCode must be 2-10 alphanumeric characters',
+    message: 'School code must be 2 to 10 characters',
   })
   schoolCode?: string;
 
