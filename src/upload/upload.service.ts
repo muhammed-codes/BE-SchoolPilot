@@ -89,24 +89,39 @@ export class UploadService implements OnModuleInit {
     if (parts.length !== 2) return '';
     return parts[1].split('+')[0].toLowerCase();
   };
-  private readonly getDeliveryUrl = (result: UploadApiResponse) => {
-    const format = (result?.format || '').toLowerCase();
+  private readonly getDeliveryUrl = (
+    result: UploadApiResponse,
+    optionsFormat?: string,
+  ) => {
+    const rawFormat = (
+      result?.format ||
+      optionsFormat ||
+      (result?.public_id?.toLowerCase().endsWith('.pdf') ? 'pdf' : '')
+    ).toLowerCase();
+    const isPdf =
+      rawFormat === 'pdf' ||
+      Boolean(result?.public_id?.toLowerCase().endsWith('.pdf'));
     const base = { url: result?.secure_url || '' };
-    if (format !== 'pdf') return base;
+    if (!isPdf) return base;
 
     const expiresAt =
       Math.floor(Date.now() / 1000) + this.pdfUrlDurationSeconds;
+    const formatArg = result.resource_type === 'raw' ? '' : 'pdf';
     const pdfPrivateUrl = cloudinary.utils.private_download_url(
       result.public_id,
-      format,
+      formatArg,
       {
-        resource_type: result.resource_type || 'image',
+        resource_type: result.resource_type || 'raw',
         type: result.type || 'upload',
         expires_at: expiresAt,
         attachment: true,
       },
     );
-    return { ...base, pdfPrivateUrl, expiresAt };
+    return {
+      url: pdfPrivateUrl || result?.secure_url || '',
+      pdfPrivateUrl: pdfPrivateUrl || result?.secure_url || '',
+      expiresAt,
+    };
   };
   private readonly isObjectRecord = (
     value: unknown,
@@ -338,7 +353,7 @@ export class UploadService implements OnModuleInit {
               );
             }
             resolve({
-              ...this.getDeliveryUrl(result),
+              ...this.getDeliveryUrl(result, options?.format),
               publicId: result.public_id,
             });
           },

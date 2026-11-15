@@ -690,6 +690,12 @@ export class ResultsService {
             approvedByUserId: principalId,
             approvedAt: new Date(),
           })
+          .then(() =>
+            this.subjectScoreRepo.update(
+              { resultSheetId },
+              { isSubmitted: true, submittedAt: new Date() },
+            ),
+          )
           .then(() => this.calculatePositions(resultSheetId))
           .then(() => this.sendResultNotifications(sheet))
           .then(() =>
@@ -718,6 +724,12 @@ export class ResultsService {
             approvedByUserId: userId,
             approvedAt: new Date(),
           })
+          .then(() =>
+            this.subjectScoreRepo.update(
+              { resultSheetId },
+              { isSubmitted: true, submittedAt: new Date() },
+            ),
+          )
           .then(() => this.calculatePositions(resultSheetId))
           .then(() => this.sendResultNotifications(sheet))
           .then(() =>
@@ -967,6 +979,17 @@ export class ResultsService {
           sr.position = null as unknown as number;
         });
       }
+    }
+
+    if (sheet.status === ResultStatus.PUBLISHED) {
+      (sheet.studentResults || []).forEach((sr) => {
+        (sr.subjectScores || []).forEach((ss) => {
+          ss.isSubmitted = true;
+          if (!ss.submittedAt) {
+            ss.submittedAt = sheet.approvedAt || (sheet as any).updatedAt || new Date();
+          }
+        });
+      });
     }
 
     this.applyComputedMetrics(

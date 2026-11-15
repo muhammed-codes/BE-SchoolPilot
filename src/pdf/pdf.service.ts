@@ -313,21 +313,37 @@ export class PdfService {
           }));
           const gradingSystem = studentResult.resultSheet?.gradingSystem;
 
+          const isSheetPublished =
+            studentResult.resultSheet?.status === ResultStatus.PUBLISHED ||
+            studentResult.resultSheet?.status === ResultStatus.SCORES_ENTERED;
+
           const subjectScoresData: SubjectScoreData[] = (
             studentResult.subjectScores || []
           )
-            .filter((score) => score.isSubmitted)
+            .filter(
+              (score) =>
+                score.isSubmitted ||
+                isSheetPublished ||
+                (score.scores && score.scores.length > 0) ||
+                score.totalScore != null,
+            )
             .map((score) => {
-              const configuredComponents: ScoreComponentData[] = fallbackComponents.map((component) => ({
+              let configuredComponents: ScoreComponentData[] = fallbackComponents.map((component) => ({
                 component: component.component,
                 maxScore: component.maxScore,
               }));
+              if (configuredComponents.length === 0 && (score.scores || []).length > 0) {
+                configuredComponents = (score.scores || []).map((cs) => ({
+                  component: cs.component,
+                  maxScore: cs.score > 40 ? 60 : 20,
+                }));
+              }
               const componentScores = configuredComponents.map(
                 (componentDef) => {
                   const matchingScore = (score.scores || []).find(
                     (componentScore) =>
-                      String(componentScore.component) ===
-                      String(componentDef.component),
+                      String(componentScore.component).trim().toLowerCase() ===
+                      String(componentDef.component).trim().toLowerCase(),
                   );
                   if (!matchingScore) {
                     return { ...componentDef, score: null };
@@ -462,7 +478,7 @@ export class PdfService {
           )
           .then(
             (uploadResult) =>
-              uploadResult.url || uploadResult.pdfPrivateUrl || '',
+              uploadResult.pdfPrivateUrl || uploadResult.url || '',
           )
           .catch((err) => {
             this.logger.warn(
@@ -496,12 +512,22 @@ export class PdfService {
         );
       })
       .then((studentResults) => {
+        const isSheetPublished =
+          resultSheet.status === ResultStatus.PUBLISHED ||
+          resultSheet.status === ResultStatus.SCORES_ENTERED;
+
         const hasSubmittedScores = studentResults.some((result) =>
-          (result.subjectScores || []).some((score) => score.isSubmitted),
+          (result.subjectScores || []).some(
+            (score) =>
+              score.isSubmitted ||
+              isSheetPublished ||
+              (score.scores && score.scores.length > 0) ||
+              score.totalScore != null,
+          ),
         );
         if (!hasSubmittedScores) {
           throw new BadRequestException(
-            'At least one submitted subject score is required to generate results',
+            'At least one subject score is required to generate results',
           );
         }
 
@@ -537,7 +563,7 @@ export class PdfService {
                 )
                 .then(
                   (uploadResult) =>
-                    uploadResult.url || uploadResult.pdfPrivateUrl || '',
+                    uploadResult.pdfPrivateUrl || uploadResult.url || '',
                 )
                 .catch((err) => {
                   this.logger.warn(

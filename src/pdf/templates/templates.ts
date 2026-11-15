@@ -384,7 +384,13 @@ const renderSubjectTable = (
       </tr>
     </thead>
     <tbody>
-      ${subjects
+      ${subjects.length === 0 ? `
+        <tr>
+          <td colspan="${scoreComponents.length + 3}" style="padding: 12px; text-align: center; color: ${BRAND.textMuted}; font-style: italic;">
+            No subject scores recorded
+          </td>
+        </tr>
+      ` : subjects
         .map(
           (score) => `
         <tr>
