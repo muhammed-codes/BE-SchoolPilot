@@ -7,6 +7,7 @@ import { ClassSubject } from './entities/class-subject.entity';
 import { CreateClassInput } from './dto/create-class.input';
 import { PaginationArgs } from '../common/pagination';
 import { Student } from '../students/entities/student.entity';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class ClassesService {
@@ -17,12 +18,23 @@ export class ClassesService {
     private readonly classSubjectsRepository: Repository<ClassSubject>,
     @InjectRepository(Student)
     private readonly studentsRepository: Repository<Student>,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
   ) {}
 
   createClass = (input: CreateClassInput, schoolId: string) => {
+    const teacherIds =
+      input.classTeacherIds && input.classTeacherIds.length > 0
+        ? Array.from(new Set(input.classTeacherIds.filter(Boolean)))
+        : input.classTeacherId
+          ? [input.classTeacherId]
+          : [];
+    const primaryTeacherId = teacherIds[0] || input.classTeacherId || null;
+
     const classEntity = this.classesRepository.create({
       name: input.name,
-      classTeacherId: input.classTeacherId,
+      classTeacherId: primaryTeacherId as unknown as string,
+      classTeacherIds: teacherIds,
       schoolId,
     });
     return this.classesRepository.save(classEntity);
@@ -33,8 +45,35 @@ export class ClassesService {
     teacherId: string,
     schoolId: string,
   ) => {
+    const teacherIds = teacherId ? [teacherId] : [];
     return this.classesRepository
-      .update({ id: classId, schoolId }, { classTeacherId: teacherId })
+      .update(
+        { id: classId, schoolId },
+        {
+          classTeacherId: teacherId || (null as unknown as string),
+          classTeacherIds: teacherIds,
+        },
+      )
+      .then(() => this.getClassById(classId, schoolId));
+  };
+
+  assignClassTeachers = (
+    classId: string,
+    teacherIds: string[],
+    schoolId: string,
+  ) => {
+    const cleanTeacherIds = Array.from(
+      new Set((teacherIds || []).filter(Boolean)),
+    );
+    const primaryTeacherId = cleanTeacherIds[0] || null;
+    return this.classesRepository
+      .update(
+        { id: classId, schoolId },
+        {
+          classTeacherId: primaryTeacherId as unknown as string,
+          classTeacherIds: cleanTeacherIds,
+        },
+      )
       .then(() => this.getClassById(classId, schoolId));
   };
 
@@ -94,14 +133,64 @@ export class ClassesService {
               'Subject is not assigned to this class',
             );
           }
+          const teacherIds = teacherId ? [teacherId] : [];
           return this.classSubjectsRepository
-            .update(cs.id, { subjectTeacherId: teacherId })
+            .update(cs.id, {
+              subjectTeacherId: teacherId || (null as unknown as string),
+              teacherIds,
+            })
             .then(() =>
               this.classSubjectsRepository.findOne({
                 where: { id: cs.id },
                 relations: ['subject', 'subjectTeacher'],
               }),
+            )
+            .then(async (updatedCs) => {
+              if (updatedCs) {
+                await this.enrichClassSubjectsWithTeachers([updatedCs]);
+              }
+              return updatedCs!;
+            });
+        }),
+    );
+  };
+
+  assignSubjectTeachers = (
+    classId: string,
+    subjectId: string,
+    teacherIds: string[],
+    schoolId: string,
+  ) => {
+    return this.getClassById(classId, schoolId).then(() =>
+      this.classSubjectsRepository
+        .findOne({ where: { classId, subjectId } })
+        .then((cs) => {
+          if (!cs) {
+            throw new NotFoundException(
+              'Subject is not assigned to this class',
             );
+          }
+          const cleanTeacherIds = Array.from(
+            new Set((teacherIds || []).filter(Boolean)),
+          );
+          const primaryTeacherId = cleanTeacherIds[0] || null;
+          return this.classSubjectsRepository
+            .update(cs.id, {
+              subjectTeacherId: primaryTeacherId as unknown as string,
+              teacherIds: cleanTeacherIds,
+            })
+            .then(() =>
+              this.classSubjectsRepository.findOne({
+                where: { id: cs.id },
+                relations: ['subject', 'subjectTeacher'],
+              }),
+            )
+            .then(async (updatedCs) => {
+              if (updatedCs) {
+                await this.enrichClassSubjectsWithTeachers([updatedCs]);
+              }
+              return updatedCs!;
+            });
         }),
     );
   };
@@ -120,6 +209,105 @@ export class ClassesService {
           return this.classSubjectsRepository.remove(cs).then(() => true);
         }),
     );
+  };
+
+  enrichClassSubjectsWithTeachers = async (
+    classSubjects: ClassSubject[],
+  ): Promise<ClassSubject[]> => {
+    if (!classSubjects.length) return classSubjects;
+    const allTeacherIds = new Set<string>();
+    classSubjects.forEach((cs) => {
+      (cs.teacherIds || []).forEach((id) => allTeacherIds.add(id));
+      if (cs.subjectTeacherId) allTeacherIds.add(cs.subjectTeacherId);
+    });
+    if (allTeacherIds.size === 0) {
+      classSubjects.forEach((cs) => {
+        cs.teachers = cs.subjectTeacher ? [cs.subjectTeacher] : [];
+      });
+      return classSubjects;
+    }
+    const teachers = await this.usersRepository.findBy({
+      id: In(Array.from(allTeacherIds)),
+    });
+    const teacherMap = new Map<string, User>(teachers.map((t) => [t.id, t]));
+    classSubjects.forEach((cs) => {
+      const ids =
+        cs.teacherIds && cs.teacherIds.length > 0
+          ? cs.teacherIds
+          : cs.subjectTeacherId
+            ? [cs.subjectTeacherId]
+            : [];
+      cs.teachers = ids
+        .map((id) => teacherMap.get(id))
+        .filter(Boolean) as User[];
+      if (!cs.subjectTeacher && cs.teachers.length > 0) {
+        cs.subjectTeacher = cs.teachers[0];
+      }
+    });
+    return classSubjects;
+  };
+
+  enrichWithTeachers = async (
+    classes: ClassEntity[],
+  ): Promise<ClassEntity[]> => {
+    if (!classes.length) return classes;
+
+    const allTeacherIds = new Set<string>();
+    classes.forEach((c) => {
+      (c.classTeacherIds || []).forEach((id) => allTeacherIds.add(id));
+      if (c.classTeacherId) allTeacherIds.add(c.classTeacherId);
+      (c.classSubjects || []).forEach((cs) => {
+        (cs.teacherIds || []).forEach((id) => allTeacherIds.add(id));
+        if (cs.subjectTeacherId) allTeacherIds.add(cs.subjectTeacherId);
+      });
+    });
+
+    if (allTeacherIds.size === 0) {
+      classes.forEach((c) => {
+        c.classTeachers = c.classTeacher ? [c.classTeacher] : [];
+        (c.classSubjects || []).forEach((cs) => {
+          cs.teachers = cs.subjectTeacher ? [cs.subjectTeacher] : [];
+        });
+      });
+      return classes;
+    }
+
+    const teachers = await this.usersRepository.findBy({
+      id: In(Array.from(allTeacherIds)),
+    });
+    const teacherMap = new Map<string, User>(teachers.map((t) => [t.id, t]));
+
+    classes.forEach((c) => {
+      const classIds =
+        c.classTeacherIds && c.classTeacherIds.length > 0
+          ? c.classTeacherIds
+          : c.classTeacherId
+            ? [c.classTeacherId]
+            : [];
+      c.classTeachers = classIds
+        .map((id) => teacherMap.get(id))
+        .filter(Boolean) as User[];
+      if (!c.classTeacher && c.classTeachers.length > 0) {
+        c.classTeacher = c.classTeachers[0];
+      }
+
+      (c.classSubjects || []).forEach((cs) => {
+        const subIds =
+          cs.teacherIds && cs.teacherIds.length > 0
+            ? cs.teacherIds
+            : cs.subjectTeacherId
+              ? [cs.subjectTeacherId]
+              : [];
+        cs.teachers = subIds
+          .map((id) => teacherMap.get(id))
+          .filter(Boolean) as User[];
+        if (!cs.subjectTeacher && cs.teachers.length > 0) {
+          cs.subjectTeacher = cs.teachers[0];
+        }
+      });
+    });
+
+    return classes;
   };
 
   private enrichWithStudentCounts = (
@@ -177,12 +365,14 @@ export class ClassesService {
       .take(limit)
       .getManyAndCount()
       .then(([items, total]) =>
-        this.enrichWithStudentCounts(items, schoolId).then((enriched) => ({
-          items: enriched,
-          total,
-          page,
-          totalPages: Math.ceil(total / limit),
-        })),
+        this.enrichWithStudentCounts(items, schoolId)
+          .then((enriched) => this.enrichWithTeachers(enriched))
+          .then((enriched) => ({
+            items: enriched,
+            total,
+            page,
+            totalPages: Math.ceil(total / limit),
+          })),
       );
   };
 
@@ -199,9 +389,9 @@ export class ClassesService {
       })
       .then((classEntity) => {
         if (!classEntity) throw new NotFoundException('Class not found');
-        return this.enrichWithStudentCounts([classEntity], schoolId).then(
-          ([enriched]) => enriched,
-        );
+        return this.enrichWithStudentCounts([classEntity], schoolId)
+          .then(([enriched]) => this.enrichWithTeachers([enriched]))
+          .then(([enriched]) => enriched);
       });
   };
 
@@ -217,10 +407,10 @@ export class ClassesService {
       .where('class."schoolId" = :schoolId', { schoolId })
       .andWhere(
         role === UserRole.CLASS_TEACHER
-          ? 'class."classTeacherId" = :teacherId'
+          ? '(class."classTeacherId" = :teacherId OR :teacherId = ANY(class."classTeacherIds"))'
           : role === UserRole.SUBJECT_TEACHER
             ? '(cs."subjectTeacherId" = :teacherId OR :teacherId = ANY(cs."teacherIds"))'
-            : '(class."classTeacherId" = :teacherId OR cs."subjectTeacherId" = :teacherId OR :teacherId = ANY(cs."teacherIds"))',
+            : '(class."classTeacherId" = :teacherId OR :teacherId = ANY(class."classTeacherIds") OR cs."subjectTeacherId" = :teacherId OR :teacherId = ANY(cs."teacherIds"))',
         { teacherId },
       )
       .groupBy('class.id')
@@ -228,16 +418,18 @@ export class ClassesService {
       .then((partial) => {
         const ids = partial.map((c) => c.id);
         if (ids.length === 0) return [];
-        return this.classesRepository.find({
-          where: { id: In(ids) },
-          relations: [
-            'classTeacher',
-            'classSubjects',
-            'classSubjects.subject',
-            'classSubjects.subjectTeacher',
-          ],
-          order: { name: 'ASC' },
-        });
+        return this.classesRepository
+          .find({
+            where: { id: In(ids) },
+            relations: [
+              'classTeacher',
+              'classSubjects',
+              'classSubjects.subject',
+              'classSubjects.subjectTeacher',
+            ],
+            order: { name: 'ASC' },
+          })
+          .then((classes) => this.enrichWithTeachers(classes));
       });
 
   getClassesForTeacherPaginated = (
@@ -283,10 +475,14 @@ export class ClassesService {
     schoolId: string,
   ): Promise<boolean> => {
     return this.classesRepository
-      .findOne({
-        where: { id: classId, schoolId, classTeacherId: userId },
-        select: { id: true },
-      })
+      .createQueryBuilder('class')
+      .where('class.id = :classId', { classId })
+      .andWhere('class.schoolId = :schoolId', { schoolId })
+      .andWhere(
+        '(class.classTeacherId = :userId OR :userId = ANY(class.classTeacherIds))',
+        { userId },
+      )
+      .getOne()
       .then((classEntity) => Boolean(classEntity));
   };
 }

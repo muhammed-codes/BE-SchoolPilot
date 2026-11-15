@@ -11,4 +11,8 @@ export class CreateClassInput {
   @IsOptional()
   @IsString()
   classTeacherId?: string;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  classTeacherIds?: string[];
 }

@@ -51,6 +51,9 @@ export class ClassSubject extends BaseEntity {
   @JoinColumn({ name: 'subjectTeacherId' })
   subjectTeacher!: User;
 
+  @Field(() => [User], { nullable: true, defaultValue: [] })
+  teachers?: User[];
+
   @Field(() => String, { nullable: true })
   get teacherId(): string | undefined {
     return this.subjectTeacherId;

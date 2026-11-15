@@ -134,6 +134,26 @@ export class ClassesResolver {
   @Mutation(() => ClassEntity)
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
   @RequirePermission(AppResource.CLASSES, PermissionAction.UPDATE)
+  assignClassTeachers(
+    @Args('classId') classId: string,
+    @Args('teacherIds', { type: () => [String] }) teacherIds: string[],
+    @CurrentUser() user: { schoolId: string; role: UserRole },
+  ) {
+    if (!this.canAssignClassTeacherRole(user.role)) {
+      throw new ForbiddenException(
+        'You are not allowed to assign class teachers',
+      );
+    }
+    return this.classesService.assignClassTeachers(
+      classId,
+      teacherIds,
+      user.schoolId,
+    );
+  }
+
+  @Mutation(() => ClassEntity)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.CLASSES, PermissionAction.UPDATE)
   assignSubjectsToClass(
     @Args('classId') classId: string,
     @Args('subjectIds', { type: () => [String] }) subjectIds: string[],
@@ -202,6 +222,45 @@ export class ClassesResolver {
       classId,
       subjectId,
       teacherId,
+      user.schoolId,
+    );
+  }
+
+  @Mutation(() => ClassSubject)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionGuard)
+  @RequirePermission(AppResource.CLASSES, PermissionAction.UPDATE)
+  assignSubjectTeachers(
+    @Args('classId') classId: string,
+    @Args('subjectId') subjectId: string,
+    @Args('teacherIds', { type: () => [String] }) teacherIds: string[],
+    @CurrentUser() user: { schoolId: string; role: UserRole; sub: string },
+  ) {
+    if (!this.canManageClassSubjectsRole(user.role)) {
+      throw new ForbiddenException(
+        'You are not allowed to assign teachers to class subjects',
+      );
+    }
+    if (user.role === UserRole.CLASS_TEACHER) {
+      return this.classesService
+        .isClassTeacherOfClass(classId, user.sub, user.schoolId)
+        .then((isOwner) => {
+          if (!isOwner) {
+            throw new ForbiddenException(
+              'You can only assign teachers in your assigned class',
+            );
+          }
+          return this.classesService.assignSubjectTeachers(
+            classId,
+            subjectId,
+            teacherIds,
+            user.schoolId,
+          );
+        });
+    }
+    return this.classesService.assignSubjectTeachers(
+      classId,
+      subjectId,
+      teacherIds,
       user.schoolId,
     );
   }

@@ -20,7 +20,7 @@ import { ClassEntity } from '../classes/entities/class.entity';
 import { UploadService } from '../upload/upload.service';
 import { AttendanceService } from '../attendance/attendance.service';
 import { Subject } from '../subjects/entities/subject.entity';
-import { UserRole } from '../common/enums';
+import { UserRole, ResultStatus } from '../common/enums';
 import { calculateGrade } from '../results/utils/grading.util';
 import { getReportCardTemplate } from './templates/templates';
 import {
@@ -504,55 +504,55 @@ export class PdfService {
           schoolId,
           role,
           resultSheet.classId,
-        ).then(() =>
-          this.studentResultRepo.find({
-            where: { resultSheetId, schoolId },
-            relations: ['subjectScores'],
-          }),
-        );
-      })
-      .then((studentResults) => {
-        const isSheetPublished =
-          resultSheet.status === ResultStatus.PUBLISHED ||
-          resultSheet.status === ResultStatus.SCORES_ENTERED;
-
-        const hasSubmittedScores = studentResults.some((result) =>
-          (result.subjectScores || []).some(
-            (score) =>
-              score.isSubmitted ||
-              isSheetPublished ||
-              (score.scores && score.scores.length > 0) ||
-              score.totalScore != null,
-          ),
-        );
-        if (!hasSubmittedScores) {
-          throw new BadRequestException(
-            'At least one subject score is required to generate results',
-          );
-        }
-
-        const reportCardsHtml: string[] = [];
-
-        return studentResults
-          .reduce(
-            (promiseChain, currentResult) =>
-              promiseChain.then(() =>
-                this.generateReportCard(
-                  currentResult.id,
-                  userId,
-                  schoolId,
-                  role,
-                ).then((html) => {
-                  reportCardsHtml.push(html);
-                }),
-              ),
-            Promise.resolve(),
+        )
+          .then(() =>
+            this.studentResultRepo.find({
+              where: { resultSheetId, schoolId },
+              relations: ['subjectScores'],
+            }),
           )
-          .then(() => {
-            const combinedHtml = reportCardsHtml.join(
-              '<div style="page-break-before: always;"></div>',
+          .then((studentResults) => {
+            const isSheetPublished =
+              resultSheet.status === ResultStatus.PUBLISHED ||
+              resultSheet.status === ResultStatus.SCORES_ENTERED;
+
+            const hasSubmittedScores = studentResults.some((result) =>
+              (result.subjectScores || []).some(
+                (score) =>
+                  score.isSubmitted ||
+                  isSheetPublished ||
+                  (score.scores && score.scores.length > 0) ||
+                  score.totalScore != null,
+              ),
             );
-            return this.generatePdfFromHtml(combinedHtml).then((pdfBuffer) => {
+            if (!hasSubmittedScores) {
+              throw new BadRequestException(
+                'At least one subject score is required to generate results',
+              );
+            }
+
+            const reportCardsHtml: string[] = [];
+
+            return studentResults
+              .reduce(
+                (promiseChain, currentResult) =>
+                  promiseChain.then(() =>
+                    this.generateReportCard(
+                      currentResult.id,
+                      userId,
+                      schoolId,
+                      role,
+                    ).then((html) => {
+                      reportCardsHtml.push(html);
+                    }),
+                  ),
+                Promise.resolve(),
+              )
+              .then(() => {
+                const combinedHtml = reportCardsHtml.join(
+                  '<div style="page-break-before: always;"></div>',
+                );
+                return this.generatePdfFromHtml(combinedHtml).then((pdfBuffer) => {
               const filename = `bulk_report_cards_${resultSheetId}_${Date.now()}`;
               return this.uploadService
                 .uploadBuffer(
@@ -573,6 +573,7 @@ export class PdfService {
                 });
             });
           });
+        });
       });
   };
 }

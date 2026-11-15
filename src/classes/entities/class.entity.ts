@@ -19,10 +19,17 @@ export class ClassEntity extends BaseEntity {
   @Column({ type: 'uuid', nullable: true })
   classTeacherId!: string;
 
+  @Field(() => [String], { nullable: true, defaultValue: [] })
+  @Column({ type: 'uuid', array: true, default: '{}' })
+  classTeacherIds!: string[];
+
   @Field(() => User, { nullable: true })
   @ManyToOne(() => User, { nullable: true, eager: false })
   @JoinColumn({ name: 'classTeacherId' })
   classTeacher!: User;
+
+  @Field(() => [User], { nullable: true, defaultValue: [] })
+  classTeachers?: User[];
 
   @Field(() => [ClassSubject], { nullable: true })
   @OneToMany(() => ClassSubject, (cs) => cs.classEntity, { eager: false })
