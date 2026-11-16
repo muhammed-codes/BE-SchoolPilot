@@ -9,8 +9,8 @@ import {
   GqlExceptionFilter,
   GqlArgumentsHost,
   GqlContextType,
-  GraphQLException,
 } from '@nestjs/graphql';
+import { GraphQLError } from 'graphql';
 
 @Catch()
 export class AllExceptionsFilter implements GqlExceptionFilter {
@@ -41,8 +41,7 @@ export class AllExceptionsFilter implements GqlExceptionFilter {
         exception instanceof Error ? exception.stack : String(exception),
       );
 
-      return new GraphQLException({
-        message: userFriendlyMessage,
+      return new GraphQLError(userFriendlyMessage, {
         extensions: { code: 'INTERNAL_ERROR' },
       });
     }

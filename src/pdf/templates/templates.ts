@@ -62,8 +62,29 @@ const gradeColor = (grade?: string | null) => {
 };
 
 const getStyles = (): string => `
-  * { box-sizing: border-box; border-radius: 0 !important; }
-  html, body { margin: 0; padding: 0; }
+  * {
+    box-sizing: border-box;
+    border-radius: 0 !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  html::-webkit-scrollbar, body::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
   body {
     font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     color: ${BRAND.ink};

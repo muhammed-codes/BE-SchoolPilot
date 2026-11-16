@@ -444,13 +444,33 @@ export const generateCustomReportCardHtml = (
   <meta charset="UTF-8" />
   <title>${esc(data.student.fullName)} — Academic Report Card</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    *::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      background: transparent !important;
+    }
     html, body {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
       font-family: ${branding.fontFamily || "'IBM Plex Sans', -apple-system, sans-serif"};
       color: ${textColor};
       background: #EFEFEF;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+    }
+    html::-webkit-scrollbar, body::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      background: transparent !important;
     }
     @page {
       size: ${layout.paperSize || 'A4'} ${layout.orientation || 'portrait'};
